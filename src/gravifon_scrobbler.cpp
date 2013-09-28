@@ -42,22 +42,22 @@ int gravifonScrobblerStop()
 
 bool initClient()
 {
-	ConfLock lock;
+	{ ConfLock lock;
+		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+		if (!enabled) {
+			return false;
+		}
 
-	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
-	if (!enabled) {
-		return false;
+		const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
+		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+
+		// TODO support changed configuration
+		if (gravifonClientPtr.get() == nullptr) {
+			gravifonClientPtr.reset(new GravifonClient(scrobblerUrl, username, password));
+		}
+		return true;
 	}
-
-	const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
-	const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
-	const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
-
-	// TODO support changed configuration
-	if (gravifonClientPtr.get() == nullptr) {
-		gravifonClientPtr.reset(new GravifonClient(scrobblerUrl, username, password));
-	}
-	return true;
 }
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
