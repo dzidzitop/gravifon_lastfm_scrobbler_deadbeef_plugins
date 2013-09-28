@@ -14,6 +14,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <deadbeef.h>
+#include <memory>
+#include "GravifonClient.hpp"
+
+using std::unique_ptr;
+
+static unique_ptr<GravifonClient> gravifonClientPtr;
+
+static DB_misc_t plugin = {};
+static DB_functions_t *deadbeef;
+
+struct ConfLock
+{
+	ConfLock() { deadbeef->conf_lock(); }
+	~ConfLock() { deadbeef->conf_unlock(); }
+};
 
 int gravifonScrobblerStart()
 {
@@ -25,14 +40,42 @@ int gravifonScrobblerStop()
 	return 0;
 }
 
-int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
+bool initClient()
 {
-	return 0;
+	ConfLock lock;
+
+	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+	if (!enabled) {
+		return false;
+	}
+
+	const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
+	const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+	const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+
+	// TODO support changed configuration
+	if (gravifonClientPtr.get() == nullptr) {
+		gravifonClientPtr.reset(new GravifonClient(scrobblerUrl, username, password));
+	}
+	return true;
 }
 
-static DB_misc_t plugin;
-
-static DB_functions_t *deadbeefAPI;
+int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
+{
+	switch (id) {
+	case DB_EV_SONGSTARTED:
+		break;
+	case DB_EV_SONGCHANGED:
+		// TODO support no scrobbling when the tracks are changed quickly
+		if (initClient()) {
+			// TODO scrobble track
+		}
+		break;
+	case DB_EV_SONGFINISHED:
+		break;
+	}
+	return 0;
+}
 
 extern "C"
 {
@@ -41,7 +84,7 @@ extern "C"
 
 DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 {
-	deadbeefAPI = api;
+	deadbeef = api;
 
 	plugin.plugin.api_vmajor = 1;
 	plugin.plugin.api_vminor = 0;
@@ -70,7 +113,7 @@ DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 	plugin.plugin.start = gravifonScrobblerStart;
 	plugin.plugin.stop = gravifonScrobblerStop;
 	plugin.plugin.configdialog =
-		"property \"Enable scrobbler\" checkbox gravifonScrobbler.enable 0;"
+		"property \"Enable scrobbler\" checkbox gravifonScrobbler.enabled 0;"
 		"property \"Username\" entry gravifonScrobbler.username \"\";"
 		"property \"Password\" password gravifonScrobbler.password \"\";"
 		"property \"Scrobbler URL\" entry gravifonScrobbler.scrobblerUrl \"\";";
