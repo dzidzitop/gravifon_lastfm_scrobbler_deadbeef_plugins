@@ -25,16 +25,9 @@ int gravifonScrobblerStop()
 	return 0;
 }
 
-static const char gravifonScrobblerSettingsDialog[] =
-	"property \"Enable scrobbler\" checkbox gravifonScrobbler.enable 0;"
-	"property \"Username\" entry gravifonScrobbler.username \"\";"
-	"property \"Password\" password gravifonScrobbler.password \"\";"
-	"property \"Scrobbler URL\" entry gravifonScrobbler.scrobblerUrl \"\";"
-;
-
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
 {
-    return 0;
+	return 0;
 }
 
 static DB_misc_t plugin;
@@ -76,9 +69,13 @@ DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 	plugin.plugin.website = "https://github.com/dzidzitop/gravifon_scrobbler_deadbeef_plugin";
 	plugin.plugin.start = gravifonScrobblerStart;
 	plugin.plugin.stop = gravifonScrobblerStop;
-	plugin.plugin.configdialog = gravifonScrobblerSettingsDialog;
+	plugin.plugin.configdialog =
+		"property \"Enable scrobbler\" checkbox gravifonScrobbler.enable 0;"
+		"property \"Username\" entry gravifonScrobbler.username \"\";"
+		"property \"Password\" password gravifonScrobbler.password \"\";"
+		"property \"Scrobbler URL\" entry gravifonScrobbler.scrobblerUrl \"\";";
+
 	plugin.plugin.message = gravifonScrobblerMessage;
 
 	return DB_PLUGIN(&plugin);
 }
-
