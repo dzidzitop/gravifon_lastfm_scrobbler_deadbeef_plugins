@@ -1,24 +1,47 @@
 srcDir=src
+testDir=test
 buildDir=build
 cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2
 ldFlags=
+cxxFlags_test=-I"$srcDir" -I"$srcDir/algo" -I"$srcDir/cpu" $cxxFlags
+ldFlags_test=-L"$buildDir" $ldFlags
 
 rule cxx
   depfile=$out.d
   command=g++ $cxxFlags -MMD -MF $out.d -c $in -o $out
 
+rule cxx_test
+  depfile=$out.d
+  command=g++ $cxxFlags_test -MMD -MF $out.d -c $in -o $out
+
 rule linkDynamic
   command=g++ $ldFlags -shared -o $out $in
 
+rule bin
+  command=g++ $ldFlags_test -o $out $in $libs
+
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
 build $buildDir/GravifonClient.o: cxx $srcDir/GravifonClient.cpp
+
+build $buildDir/TrackTest.o: cxx_test $testDir/TrackTest.cpp
+build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 
 build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/GravifonClient.o
 
+build $buildDir/gravifon_scrobbler_test: bin $
+    $buildDir/gravifon_scrobbler.o $
+    $buildDir/GravifonClient.o $
+    $buildDir/TrackTest.o $
+    $buildDir/run_tests.o $
+    | $buildDir/gravifon_scrobbler.so
+  libs=-lcppunit
+
 build sharedLib: phony $buildDir/gravifon_scrobbler.so
 
-build all: phony sharedLib
+build testBin: phony $buildDir/gravifon_scrobbler_test
+
+build all: phony sharedLib testBin
 
 default all

@@ -77,6 +77,7 @@ ostream &operator<<(ostream &out, const Track &track)
 	writeJsonString(track.artist, out);
 	out << "\"],\"album\":{\"title\":\"";
 	writeJsonString(track.album, out);
-	out << "\"},\"length\":{\"amount\":" << track.duration << ",\"unit\":\"ms\"},\"number\":" << track.trackNumber;
+	out << "\"},\"length\":{\"amount\":" << track.duration <<
+			",\"unit\":\"ms\"},\"number\":" << track.trackNumber << '}';
 	return out;
 }
