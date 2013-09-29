@@ -24,8 +24,33 @@ namespace
 {
 	inline void writeJsonString(const string &str, ostream&out)
 	{
-		// TODO escape strings
-		out << str;
+		for (const char c : str) {
+			switch (c) {
+			case '\'':
+			case '"':
+			case '\\':
+				out << '\\' << c;
+				break;
+			case '\b':
+				out << "\\b";
+				break;
+			case '\f':
+				out << "\\f";
+				break;
+			case '\n':
+				out << "\\n";
+				break;
+			case '\r':
+				out << "\\r";
+				break;
+			case '\t':
+				out << "\\t";
+				break;
+			default:
+				out << c;
+				break;
+			}
+		}
 	}
 
 	inline void writeJsonTimestamp(const long timestamp, ostream&out)

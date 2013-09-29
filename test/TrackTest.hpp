@@ -23,9 +23,17 @@ class TrackTest : public CppUnit::TestFixture
 {
 CPPUNIT_TEST_SUITE(TrackTest);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields);
+CPPUNIT_TEST(testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters);
+CPPUNIT_TEST(testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters);
 CPPUNIT_TEST_SUITE_END();
 
 	void testSerialiseTrack_WithAllFields();
+	void testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters();
+	void testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters();
+	void testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters();
+	void testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters();
 };
 
 #endif /* TRACKTEST_HPP_ */
