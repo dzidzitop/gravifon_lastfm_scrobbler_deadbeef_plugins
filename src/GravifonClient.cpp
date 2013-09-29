@@ -16,7 +16,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
 #include <stdexcept>
 
+using std::string;
 using std::invalid_argument;
+using std::ostream;
+
+namespace
+{
+	inline void writeJsonString(const string &str, ostream&out)
+	{
+		// TODO escape strings
+		out << str;
+	}
+
+	inline void writeJsonTimestamp(const long timestamp, ostream&out)
+	{
+		// TODO format it as required by https://github.com/gravidence/gravifon/wiki/Date-Time
+		out << '"' << timestamp << '"';
+	}
+}
 
 GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, const char *password)
 {
@@ -38,4 +55,28 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
 	// TODO implement me
+}
+
+ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
+{
+	out << "{\"scrobble_start_datetime\":";
+	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, out);
+	out << ",\"scrobble_end_datetime\":";
+	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, out);
+	out << ",\"duration\":{\"amount\":" << scrobbleInfo.scrobbleDuration <<
+			",\"unit\":\"ms\"},\"track\":" << scrobbleInfo.track;
+	return out;
+}
+
+ostream &operator<<(ostream &out, const Track &track)
+{
+	out << "{\"title\":\"";
+	writeJsonString(track.trackName, out);
+	// A single artist is currently supported.
+	out << "\",\"artists\":[\"";
+	writeJsonString(track.artist, out);
+	out << "\"],\"album\":{\"title\":\"";
+	writeJsonString(track.album, out);
+	out << "\"},\"length\":{\"amount\":" << track.duration << ",\"unit\":\"ms\"},\"number\":" << track.trackNumber;
+	return out;
 }

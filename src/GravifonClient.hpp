@@ -17,16 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define GRAVIFONCLIENT_HPP_
 
 #include <string>
+#include <iostream>
 
 // All strings are utf8-encoded.
 struct Track
 {
-	std::string track;
+	std::string trackName;
 	std::string artist;
 	// TODO think about supporting full album info
 	std::string album;
 	long duration;
 	long trackNumber;
+
+	friend std::ostream &operator<<(std::ostream &out, const Track &track);
 };
 
 struct ScrobbleInfo
@@ -39,6 +42,8 @@ struct ScrobbleInfo
 	long scrobbleDuration;
 	// Track to scrobble.
 	Track track;
+
+	friend std::ostream &operator<<(std::ostream &out, const ScrobbleInfo &scrobbleInfo);
 };
 
 class GravifonClient
