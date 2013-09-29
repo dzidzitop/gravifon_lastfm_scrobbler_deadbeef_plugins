@@ -48,6 +48,8 @@ struct ScrobbleInfo
 
 class GravifonClient
 {
+	GravifonClient(const GravifonClient &) = delete;
+	GravifonClient &operator=(const GravifonClient &) = delete;
 public:
 	// TODO declare exceptions
 	GravifonClient(const char *scrobblerUrl, const char *username, const char *password);
