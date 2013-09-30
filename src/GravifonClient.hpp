@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <string>
 #include <iostream>
+#include <ctime>
 
 // All strings are utf8-encoded.
 struct Track
@@ -26,6 +27,7 @@ struct Track
 	std::string artist;
 	// TODO think about supporting full album info
 	std::string album;
+	// Track duration in milliseconds.
 	long duration;
 	long trackNumber;
 
@@ -35,10 +37,10 @@ struct Track
 struct ScrobbleInfo
 {
 	// Date and time when scrobble event was initiated.
-	long scrobbleStartTimestamp;
+	std::time_t scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.
-	long scrobbleEndTimestamp;
-	// Scrobble length.
+	std::time_t scrobbleEndTimestamp;
+	// Scrobble length in milliseconds.
 	long scrobbleDuration;
 	// Track to scrobble.
 	Track track;

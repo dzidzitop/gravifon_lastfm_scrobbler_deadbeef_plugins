@@ -15,10 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
 #include <stdexcept>
+#include <cassert>
 
 using std::string;
 using std::invalid_argument;
 using std::ostream;
+using std::localtime;
 
 namespace
 {
@@ -53,10 +55,23 @@ namespace
 		}
 	}
 
-	inline void writeJsonTimestamp(const long timestamp, ostream&out)
+	// TODO support conversion to utf-8 instead of converting to the system-default encoding
+	inline void writeJsonTimestamp(const std::time_t timestamp, ostream&out)
 	{
-		// TODO format it as required by https://github.com/gravidence/gravifon/wiki/Date-Time
-		out << '"' << timestamp << '"';
+		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
+		 * Milliseconds are not supported.
+		 */
+		std::tm * const dateTime = localtime(&timestamp);
+		if (dateTime == nullptr) {
+			// TODO
+		}
+		const size_t outputSize = 32; // 25 are really used.
+		char buf[outputSize];
+		const size_t count = std::strftime(buf, outputSize, "%Y-%m-%dT%H-%M-%S%z", dateTime);
+		if (count == 0) {
+			// TODO If count was reached before the entire string could be stored, ​0​ is returned and the contents are undefined.
+		}
+		out << '"' << buf << '"';
 	}
 }
 
