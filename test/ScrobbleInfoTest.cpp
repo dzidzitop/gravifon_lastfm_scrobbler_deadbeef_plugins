@@ -61,6 +61,7 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 	ScrobbleInfo scrobbleInfo;
 	scrobbleInfo.scrobbleStartTimestamp = scrobbleStart;
 	scrobbleInfo.scrobbleEndTimestamp = scrobbleEnd;
+	scrobbleInfo.scrobbleDuration = 1001;
 	Track &track = scrobbleInfo.track;
 	track.trackName = u8"'39";
 	track.album = u8"A Night at the Opera";
@@ -73,7 +74,7 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-01T23-12-33)") + scrobbleStartTimeZone +
 			R"(","scrobble_end_datetime":"2001-02-03T12-10-04)" + scrobbleEndTimeZone +
-			R"(","duration":{"amount":16,"unit":"ms"},"track":{"title":"\'39","artists":[{"name":"Queen"}],)"
+			R"(","duration":{"amount":1001,"unit":"ms"},"track":{"title":"\'39","artists":[{"name":"Queen"}],)"
 			R"("album":{"title":"A Night at the Opera"},)"
 			R"("length":{"amount":210000,"unit":"ms"},"number":5})", buf.str());
 }
