@@ -65,6 +65,7 @@ namespace
 		if (dateTime == nullptr) {
 			// TODO
 		}
+		// TODO support multi-byte system charsets. 32 could be not enough for them.
 		const size_t outputSize = 32; // 25 are really used.
 		char buf[outputSize];
 		const size_t count = std::strftime(buf, outputSize, "%Y-%m-%dT%H-%M-%S%z", dateTime);
