@@ -21,18 +21,31 @@ using std::string;
 
 namespace
 {
-	struct CurlInit
+	class CurlInit
 	{
+		CurlInit(const CurlInit &) = delete;
+		CurlInit(CurlInit &&) = delete;
+		CurlInit &operator=(const CurlInit &) = delete;
+		CurlInit &operator=(CurlInit &&) = delete;
+	public:
+		static CurlInit instance;
+
 		const bool initialised;
 
-		CurlInit() noexcept : initialised(curl_global_init(CURL_GLOBAL_ALL) == 0) {}
 		~CurlInit() noexcept { curl_global_cleanup(); }
+	private:
+		CurlInit() noexcept : initialised(curl_global_init(CURL_GLOBAL_ALL) == 0) {}
 	};
 
-	static const CurlInit curlInit;
+	CurlInit CurlInit::instance;
 
-	struct CurlSession
+	class CurlSession
 	{
+		CurlSession(const CurlSession &) = delete;
+		CurlSession(CurlSession &&) = delete;
+		CurlSession &operator=(const CurlSession &) = delete;
+		CurlSession &operator=(CurlSession &&) = delete;
+	public:
 		CURL * const handler;
 
 		CurlSession()
@@ -73,7 +86,7 @@ namespace
 
 HttpClient::HttpClient()
 {
-	if (!::curlInit.initialised) {
+	if (!::CurlInit::instance.initialised) {
 		// TODO handle error
 	}
 }
