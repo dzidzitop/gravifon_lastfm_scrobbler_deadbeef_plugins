@@ -31,10 +31,9 @@ namespace
 		static CurlInit instance;
 
 		const bool initialised;
-
-		~CurlInit() noexcept { curl_global_cleanup(); }
 	private:
 		CurlInit() noexcept : initialised(curl_global_init(CURL_GLOBAL_ALL) == 0) {}
+		~CurlInit() noexcept { curl_global_cleanup(); }
 	};
 
 	CurlInit CurlInit::instance;
