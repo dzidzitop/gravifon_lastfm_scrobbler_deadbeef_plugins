@@ -25,11 +25,28 @@ namespace
 	{
 		const bool initialised;
 
-		CurlInit() noexcept : initialised (curl_global_init(CURL_GLOBAL_ALL) == 0) {};
-		~CurlInit() noexcept { curl_global_cleanup(); };
+		CurlInit() noexcept : initialised(curl_global_init(CURL_GLOBAL_ALL) == 0) {}
+		~CurlInit() noexcept { curl_global_cleanup(); }
 	};
 
 	static const CurlInit curlInit;
+
+	struct CurlSession
+	{
+		CURL * const handler;
+
+		CurlSession()
+			: handler(curl_easy_init())
+		{
+			if (handler == nullptr) {
+				throw HttpClientException("Unable to establish connection.");
+			}
+		}
+
+		~CurlSession() noexcept { curl_easy_cleanup(handler); };
+
+		operator CURL *() noexcept { return handler; }
+	};
 
 	void waitForSocketData(const int socketfd, const long timeoutMillis)
 	{
@@ -63,10 +80,7 @@ HttpClient::HttpClient()
 
 string HttpClient::send(const string &url, const string &data)
 {
-	CURL * const curl = curl_easy_init();
-	if (curl == nullptr) {
-		throw HttpClientException("Unable to establish connection.");
-	}
+	CurlSession curl;
 
 	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 	curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
@@ -111,6 +125,5 @@ string HttpClient::send(const string &url, const string &data)
 		}
 	}
 
-	curl_easy_cleanup(curl);
 	return response;
 }
