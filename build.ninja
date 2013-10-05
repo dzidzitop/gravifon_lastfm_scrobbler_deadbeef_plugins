@@ -3,8 +3,8 @@ testDir=test
 buildDir=build
 cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2
 ldFlags=
-cxxFlags_test=-I"$srcDir" -I"$srcDir/algo" -I"$srcDir/cpu" $cxxFlags
-ldFlags_test=-L"$buildDir" $ldFlags
+cxxFlags_test=-I"$srcDir" $cxxFlags
+ldFlags_test=-L"$buildDir" -Llib $ldFlags
 
 rule cxx
   depfile=$out.d
@@ -41,7 +41,7 @@ build $buildDir/gravifon_scrobbler_test: bin $
     $buildDir/TrackTest.o $
     $buildDir/run_tests.o $
     | $buildDir/gravifon_scrobbler.so
-  libs=-lcppunit -lcurl
+  libs=-lcppunit -lcurl -lafc
 
 build sharedLib: phony $buildDir/gravifon_scrobbler.so
 

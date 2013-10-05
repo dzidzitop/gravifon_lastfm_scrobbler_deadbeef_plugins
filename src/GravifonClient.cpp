@@ -16,14 +16,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
 #include <stdexcept>
 #include <cassert>
+#include <afc/utils.h>
+#include <sstream>
 
-using std::string;
-using std::invalid_argument;
-using std::ostream;
-using std::localtime;
+using namespace std;
+using namespace afc;
 
 namespace
 {
+	static_assert('\'' == u8"'"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('"' == u8"\""[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\\' == u8"\\"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\b' == u8"\b"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\f' == u8"\f"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\n' == u8"\n"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\r' == u8"\r"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\t' == u8"\t"[0], "A non-ASCII compatible basic charset is used.");
+
 	inline void writeJsonString(const string &str, ostream&out)
 	{
 		for (const char c : str) {
@@ -55,7 +64,6 @@ namespace
 		}
 	}
 
-	// TODO support conversion to utf-8 instead of converting to the system-default encoding
 	inline void writeJsonTimestamp(const std::time_t timestamp, ostream&out)
 	{
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
@@ -72,7 +80,16 @@ namespace
 		if (count == 0) {
 			// TODO If count was reached before the entire string could be stored, ​0​ is returned and the contents are undefined.
 		}
-		out << '"' << buf << '"';
+		out << '"' << convertToUtf8(buf, systemCharset().c_str()) << '"';
+	}
+
+	// writes value to out in utf-8
+	inline void writeJsonLong(const long value, ostream&out)
+	{
+		stringstream buf;
+		buf << value;
+
+		out << convertToUtf8(buf.str(), systemCharset().c_str());
 	}
 }
 
@@ -104,8 +121,9 @@ ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
 	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, out);
 	out << ",\"scrobble_end_datetime\":";
 	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, out);
-	out << ",\"duration\":{\"amount\":" << scrobbleInfo.scrobbleDuration <<
-			",\"unit\":\"ms\"},\"track\":" << scrobbleInfo.track;
+	out << ",\"duration\":{\"amount\":";
+	writeJsonLong(scrobbleInfo.scrobbleDuration, out);
+	out << ",\"unit\":\"ms\"},\"track\":" << scrobbleInfo.track;
 	return out;
 }
 
@@ -118,7 +136,10 @@ ostream &operator<<(ostream &out, const Track &track)
 	writeJsonString(track.artist, out);
 	out << u8R"("}],"album":{"title":")";
 	writeJsonString(track.album, out);
-	out << u8R"("},"length":{"amount":)" << track.duration <<
-			u8R"(,"unit":"ms"},"number":)" << track.trackNumber << '}';
+	out << u8R"("},"length":{"amount":)";
+	writeJsonLong(track.duration, out);
+	out << u8R"(,"unit":"ms"},"number":)";
+	writeJsonLong(track.trackNumber, out);
+	out << u8"}";
 	return out;
 }
