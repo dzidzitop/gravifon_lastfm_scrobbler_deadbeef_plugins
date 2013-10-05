@@ -24,14 +24,14 @@ using namespace afc;
 
 namespace
 {
-	static_assert('\'' == u8"'"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('"' == u8"\""[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\\' == u8"\\"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\b' == u8"\b"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\f' == u8"\f"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\n' == u8"\n"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\r' == u8"\r"[0], "A non-ASCII compatible basic charset is used.");
-	static_assert('\t' == u8"\t"[0], "A non-ASCII compatible basic charset is used.");
+	static_assert('\'' == u8"'"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('"' == u8"\""[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\\' == u8"\\"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\b' == u8"\b"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\f' == u8"\f"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\n' == u8"\n"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\r' == u8"\r"[0], "An ASCII-incompatible basic charset is used.");
+	static_assert('\t' == u8"\t"[0], "An ASCII-incompatible basic charset is used.");
 
 	inline void writeJsonString(const string &str, ostream&out)
 	{
