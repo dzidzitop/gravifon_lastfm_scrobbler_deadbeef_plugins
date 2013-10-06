@@ -43,19 +43,19 @@ namespace
 				out << '\\' << c;
 				break;
 			case '\b':
-				out << "\\b";
+				out << u8"\\b";
 				break;
 			case '\f':
-				out << "\\f";
+				out << u8"\\f";
 				break;
 			case '\n':
-				out << "\\n";
+				out << u8"\\n";
 				break;
 			case '\r':
-				out << "\\r";
+				out << u8"\\r";
 				break;
 			case '\t':
-				out << "\\t";
+				out << u8"\\t";
 				break;
 			default:
 				out << c;
