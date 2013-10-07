@@ -73,7 +73,7 @@ namespace
 
 		void addHeader(const char * const header)
 		{
-			curl_slist *tmp = curl_slist_append(nullptr, header);
+			curl_slist * const tmp = curl_slist_append(nullptr, header);
 			if (tmp == nullptr) {
 				throw HttpClientException("Internal error.");
 			}
