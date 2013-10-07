@@ -61,6 +61,10 @@ namespace
 
 	class CurlHeaders
 	{
+		CurlHeaders(const CurlHeaders &) = delete;
+		CurlHeaders(CurlHeaders &&) = delete;
+		CurlHeaders &operator=(const CurlHeaders &) = delete;
+		CurlHeaders &operator=(CurlHeaders &&) = delete;
 	public:
 		CurlHeaders() : m_headers(nullptr) {}
 		~CurlHeaders() { curl_slist_free_all(m_headers); }
