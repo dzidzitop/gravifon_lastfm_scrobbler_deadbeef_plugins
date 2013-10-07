@@ -15,9 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "HttpClient.hpp"
 #include <curl/curl.h>
-#include <sys/select.h>
 
-using std::string;
+using namespace std;
 
 namespace
 {
@@ -60,26 +59,34 @@ namespace
 		operator CURL *() noexcept { return handler; }
 	};
 
-	void waitForSocketData(const int socketfd, const long timeoutMillis)
+	class CurlHeaders
 	{
-		timeval timeout;
-		timeout.tv_sec = timeoutMillis / 1000;
-		timeout.tv_usec = (timeoutMillis % 1000) * 1000;
+	public:
+		CurlHeaders() : m_headers(nullptr) {}
+		~CurlHeaders() { curl_slist_free_all(m_headers); }
 
-		fd_set readfds;
-		FD_ZERO(&readfds);
-		FD_SET(socketfd, &readfds);
+		operator curl_slist *() { return m_headers; }
 
-		fd_set errfds;
-		FD_ZERO(&errfds);
-		FD_SET(socketfd, &errfds);
-
-		const int status = select(socketfd + 1, &readfds, nullptr, &errfds, &timeout);
-		if (status < 0) {
-			// TODO error
-		} else if (status == 0) {
-			// TODO timeout expired
+		void addHeader(const char * const header)
+		{
+			curl_slist *tmp = curl_slist_append(nullptr, header);
+			if (tmp == nullptr) {
+				throw HttpClientException("Internal error.");
+			}
+			m_headers = tmp;
 		}
+	private:
+		curl_slist *m_headers;
+	};
+
+	size_t writeData(char * const data, const size_t size, const size_t nmemb, void * const userdata)
+	{
+		size_t dataSize = size * nmemb;
+		string * const dest = reinterpret_cast<string *>(userdata);
+
+		dest->append(data, dataSize);
+
+		return dataSize;
 	}
 }
 
@@ -94,47 +101,20 @@ string HttpClient::send(const string &url, const string &data)
 {
 	CurlSession curl;
 
+	CurlHeaders headers;
+	headers.addHeader("Content-Type: application/json");
+
+	string response;
+
 	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(data.size()));
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
 	CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
-		throw HttpClientException("Unable to establish connection.");
-	}
-
-	size_t bytesSent;
-
-	status = curl_easy_send(curl, data.c_str(), data.size(), &bytesSent);
-	if (status != CURLE_OK) {
-		throw HttpClientException("Unable to send data.");
-	}
-
-	curl_socket_t socketfd;
-
-	status = curl_easy_getinfo(curl, CURLINFO_LASTSOCKET, &socketfd);
-	if (status != CURLE_OK) {
-		throw HttpClientException("Unable to process request.");
-	}
-
-	size_t bytesRead;
-	string response;
-	for (;;) {
-		char buf[1024];
-		status = curl_easy_recv(curl, buf, sizeof(buf), &bytesRead);
-
-		if (status == CURLE_OK) {
-			if (bytesRead == 0) {
-				break;
-			} else {
-				// TODO support re-coding into a correct charset
-				response.append(buf, bytesRead);
-			}
-		} else if (status == CURLE_AGAIN) {
-			waitForSocketData(socketfd, 1000);
-		} else if (status == CURLE_UNSUPPORTED_PROTOCOL) {
-			break;
-		} else {
-			throw HttpClientException("Unable to read response data.");
-		}
+		throw HttpClientException("Unable to process the request.");
 	}
 
 	return response;
