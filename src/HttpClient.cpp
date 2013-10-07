@@ -106,7 +106,9 @@ string HttpClient::send(const string &url, const string &data)
 	CurlSession curl;
 
 	CurlHeaders headers;
-	headers.addHeader("Content-Type: application/json");
+	headers.addHeader("Content-Type: application/json; charset=utf-8");
+	headers.addHeader("Accept: application/json");
+	headers.addHeader("Accept-Charset: utf-8");
 
 	string response;
 
