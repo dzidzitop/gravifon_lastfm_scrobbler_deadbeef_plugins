@@ -18,18 +18,69 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <memory>
 #include "GravifonClient.hpp"
 
-using std::unique_ptr;
+using namespace std;
 
-static unique_ptr<GravifonClient> gravifonClientPtr;
-
-static DB_misc_t plugin = {};
-static DB_functions_t *deadbeef;
-
-struct ConfLock
+namespace
 {
-	ConfLock() { deadbeef->conf_lock(); }
-	~ConfLock() { deadbeef->conf_unlock(); }
-};
+	static unique_ptr<GravifonClient> gravifonClientPtr;
+
+	static DB_misc_t plugin = {};
+	static DB_functions_t *deadbeef;
+
+	struct ConfLock
+	{
+		ConfLock() { deadbeef->conf_lock(); }
+		~ConfLock() { deadbeef->conf_unlock(); }
+	};
+
+	struct PlaylistLock
+	{
+		PlaylistLock() { deadbeef->pl_lock(); }
+		~PlaylistLock() { deadbeef->pl_unlock(); }
+	};
+
+	unique_ptr<ScrobbleInfo> getScrobbleInfo(DB_playItem_t * const track)
+	{
+		{ PlaylistLock lock;
+			const char * const title = deadbeef->pl_find_meta(track, "title");
+			if (title == nullptr) {
+				// Track title is a required field.
+				return nullptr;
+			}
+			const char * artist = deadbeef->pl_find_meta(track, "artist");
+			if (artist == nullptr) {
+				artist = deadbeef->pl_find_meta(track, "band");
+				if (artist == nullptr) {
+					artist = deadbeef->pl_find_meta(track, "album artist");
+					if (artist == nullptr) {
+						artist = deadbeef->pl_find_meta(track, "albumartist");
+						if (artist == nullptr) {
+							// Track artist is a required field.
+							return nullptr;
+						}
+					}
+				}
+			}
+			const char * const album = deadbeef->pl_find_meta(track, "album");
+			const float trackDuration = deadbeef->pl_get_item_duration(track);
+
+			unique_ptr<ScrobbleInfo> scrobbleInfoPtr(new ScrobbleInfo());
+			// TODO fill these fields.
+			//scrobbleInfoPtr->scrobbleStartTimestamp;
+			//scrobbleInfoPtr->scrobbleEndTimestamp;
+			//scrobbleInfoPtr->scrobbleDuration;
+			Track &trackInfo = scrobbleInfoPtr->track;
+			trackInfo.trackName = title;
+			trackInfo.artist = artist;
+			if (album != nullptr) {
+				trackInfo.album = album;
+			}
+			// trackDuration is in seconds.
+			trackInfo.duration = static_cast<long>(trackDuration * 1000);
+			return scrobbleInfoPtr;
+		}
+	}
+}
 
 int gravifonScrobblerStart()
 {
@@ -63,10 +114,18 @@ bool initClient()
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
 {
+	cout << "event " << id << endl;
+	// TODO add mutex
 	switch (id) {
 	case DB_EV_SONGSTARTED:
+		cout << "song started" << endl;
+		getScrobbleInfo(reinterpret_cast<ddb_event_track_t *>(ctx)->track);
 		break;
 	case DB_EV_SONGCHANGED:
+		cout << "song changed" << endl;
+		if (reinterpret_cast<ddb_event_trackchange_t *>(ctx)->to != nullptr) {
+			getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx)->from);
+		}
 		// TODO support no scrobbling when the tracks are changed quickly
 		if (initClient()) {
 			// TODO scrobble track
@@ -75,6 +134,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 	case DB_EV_SONGFINISHED:
 		break;
 	}
+	cout << "event processed" << endl;
 	return 0;
 }
 
