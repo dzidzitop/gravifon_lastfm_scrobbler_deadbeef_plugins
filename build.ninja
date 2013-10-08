@@ -2,9 +2,9 @@ srcDir=src
 testDir=test
 buildDir=build
 cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2
-ldFlags=
+ldFlags=-Llib
 cxxFlags_test=-I"$srcDir" $cxxFlags
-ldFlags_test=-L"$buildDir" -Llib $ldFlags
+ldFlags_test=-L"$buildDir" $ldFlags
 
 rule cxx
   depfile=$out.d
@@ -15,7 +15,7 @@ rule cxx_test
   command=g++ $cxxFlags_test -MMD -MF $out.d -c $in -o $out
 
 rule linkDynamic
-  command=g++ $ldFlags -shared -o $out $in
+  command=g++ -shared $ldFlags -shared -o $out $in $libs
 
 rule bin
   command=g++ $ldFlags_test -o $out $in $libs
@@ -32,6 +32,7 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/GravifonClient.o $
     $buildDir/HttpClient.o $
     $buildDir/gravifon_scrobbler.o
+  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl
 
 build $buildDir/gravifon_scrobbler_test: bin $
     $buildDir/gravifon_scrobbler.o $
