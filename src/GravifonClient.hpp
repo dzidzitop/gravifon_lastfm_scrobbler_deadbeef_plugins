@@ -29,7 +29,6 @@ struct Track
 	std::string album;
 	// Track duration in milliseconds.
 	long duration;
-	long trackNumber;
 
 	friend std::ostream &operator<<(std::ostream &out, const Track &track);
 };

@@ -29,14 +29,13 @@ void TrackTest::testSerialiseTrack_WithAllFields()
 	track.album = u8"A Night at the Opera";
 	track.artist = u8"Queen";
 	track.duration = 210000;
-	track.trackNumber = 5;
 
 	stringstream buf;
 	buf << track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"\'39","artists":[{"name":"Queen"}],)"
 			R"("album":{"title":"A Night at the Opera"},)"
-			R"("length":{"amount":210000,"unit":"ms"},"number":5})"), buf.str());
+			R"("length":{"amount":210000,"unit":"ms"}})"), buf.str());
 }
 
 void TrackTest::testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters()
@@ -46,13 +45,12 @@ void TrackTest::testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacter
 	track.album = u8"Vie\u010dar";
 	track.artist = u8"No\u010d";
 	track.duration = 210000;
-	track.trackNumber = 5;
 
 	stringstream buf;
 	buf << track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8"{\"title\":\"Dzie\u0144\",\"artists\":[{\"name\":\"No\u010d\"}],"
-			"\"album\":{\"title\":\"Vie\u010dar\"},\"length\":{\"amount\":210000,\"unit\":\"ms\"},\"number\":5}"),
+			"\"album\":{\"title\":\"Vie\u010dar\"},\"length\":{\"amount\":210000,\"unit\":\"ms\"}}"),
 			buf.str());
 }
 
@@ -63,14 +61,13 @@ void TrackTest::testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters()
 	track.album = u8"Test album";
 	track.artist = u8"Test artist";
 	track.duration = 210000;
-	track.trackNumber = 5;
 
 	stringstream buf;
 	buf << track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" "A\\\"\\'\\\\\\b\\f\\n\\r\\tbc" "\","
 			R"("artists":[{"name":"Test artist"}],"album":{"title":"Test album"},)"
-			R"("length":{"amount":210000,"unit":"ms"},"number":5})"), buf.str());
+			R"("length":{"amount":210000,"unit":"ms"}})"), buf.str());
 }
 
 void TrackTest::testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters()
@@ -80,14 +77,13 @@ void TrackTest::testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters()
 	track.album = u8"\"'\\\b\f\n\r\t++";
 	track.artist = u8"Test artist";
 	track.duration = 210000;
-	track.trackNumber = 5;
 
 	stringstream buf;
 	buf << track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" "A\\\"\\'\\\\\\b\\f\\n\\r\\tbc" "\","
 			R"("artists":[{"name":"Test artist"}],"album":{"title":")" "\\\"\\'\\\\\\b\\f\\n\\r\\t++" R"("},)"
-			R"("length":{"amount":210000,"unit":"ms"},"number":5})"), buf.str());
+			R"("length":{"amount":210000,"unit":"ms"}})"), buf.str());
 }
 
 void TrackTest::testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters()
@@ -97,12 +93,11 @@ void TrackTest::testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters(
 	track.album = u8"Test album";
 	track.artist = u8"_\"'\\\b\f\n\r\t_";
 	track.duration = 210000;
-	track.trackNumber = 5;
 
 	stringstream buf;
 	buf << track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
 			R"("artists":[{"name":")" "_\\\"\\'\\\\\\b\\f\\n\\r\\t_" R"("}],"album":{"title":"Test album"},)"
-			R"("length":{"amount":210000,"unit":"ms"},"number":5})"), buf.str());
+			R"("length":{"amount":210000,"unit":"ms"}})"), buf.str());
 }

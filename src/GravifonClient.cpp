@@ -138,8 +138,6 @@ ostream &operator<<(ostream &out, const Track &track)
 	writeJsonString(track.album, out);
 	out << u8R"("},"length":{"amount":)";
 	writeJsonLong(track.duration, out);
-	out << u8R"(,"unit":"ms"},"number":)";
-	writeJsonLong(track.trackNumber, out);
-	out << u8"}";
+	out << u8R"(,"unit":"ms"}})";
 	return out;
 }
