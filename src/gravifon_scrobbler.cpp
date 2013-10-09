@@ -22,7 +22,7 @@ using namespace std;
 
 namespace
 {
-	static unique_ptr<GravifonClient> gravifonClientPtr;
+	static unique_ptr<GravifonClient> gravifonClient;
 
 	static DB_misc_t plugin = {};
 	static DB_functions_t *deadbeef;
@@ -105,8 +105,8 @@ bool initClient()
 		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 
 		// TODO support changed configuration
-		if (gravifonClientPtr.get() == nullptr) {
-			gravifonClientPtr.reset(new GravifonClient(scrobblerUrl, username, password));
+		if (gravifonClient.get() == nullptr) {
+			gravifonClient.reset(new GravifonClient(scrobblerUrl, username, password));
 		}
 		return true;
 	}
@@ -114,28 +114,28 @@ bool initClient()
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
 {
-	cout << "event " << id << endl;
 	// TODO add mutex
-	switch (id) {
-	case DB_EV_SONGSTARTED:
-		cout << "song started" << endl;
-		getScrobbleInfo(reinterpret_cast<ddb_event_track_t *>(ctx)->track);
-		break;
-	case DB_EV_SONGCHANGED:
-		cout << "song changed" << endl;
-		if (reinterpret_cast<ddb_event_trackchange_t *>(ctx)->to != nullptr) {
-			getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx)->from);
-		}
-		// TODO support no scrobbling when the tracks are changed quickly
-		if (initClient()) {
-			// TODO scrobble track
-		}
-		break;
-	case DB_EV_SONGFINISHED:
-		break;
+	if (id != DB_EV_SONGCHANGED) {
+		return 0;
 	}
-	cout << "event processed" << endl;
-	return 0;
+	DB_playItem_t * const trackListened = reinterpret_cast<ddb_event_trackchange_t *>(ctx)->from;
+	if (trackListened == nullptr) {
+		return 0;
+	}
+	try {
+		// TODO distinguish disabled scobbling and gravifon client init errors
+		if (!initClient()) {
+			return 0;
+		}
+
+		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(trackListened);
+		gravifonClient->scrobble(*scrobbleInfo);
+		return 0;
+	}
+	catch (...) {
+		// TODO handle errors
+		return 1;
+	}
 }
 
 extern "C"

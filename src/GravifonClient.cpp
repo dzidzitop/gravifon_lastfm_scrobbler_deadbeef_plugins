@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cassert>
 #include <afc/utils.h>
 #include <sstream>
+// TODO remove this
+#include <iostream>
 
 using namespace std;
 using namespace afc;
@@ -113,6 +115,7 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
 	// TODO implement me
+	cout << "scrobble: " << scrobbleInfo << endl;
 }
 
 ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
