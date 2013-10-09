@@ -70,13 +70,13 @@ namespace
 			//scrobbleInfoPtr->scrobbleEndTimestamp;
 			//scrobbleInfoPtr->scrobbleDuration;
 			Track &trackInfo = scrobbleInfoPtr->track;
-			trackInfo.trackName = title;
-			trackInfo.artist = artist;
+			trackInfo.setTitle(title);
+			trackInfo.setArtist(artist);
 			if (album != nullptr) {
-				trackInfo.album = album;
+				trackInfo.setAlbumTitle(album);
 			}
 			// trackDuration is in seconds.
-			trackInfo.duration = static_cast<long>(trackDuration * 1000);
+			trackInfo.setDurationMillis(static_cast<long>(trackDuration * 1000));
 			return scrobbleInfoPtr;
 		}
 	}
@@ -123,7 +123,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 		return 0;
 	}
 	try {
-		// TODO distinguish disabled scobbling and gravifon client init errors
+		// TODO distinguish disabled scrobbling and gravifon client init errors
 		if (!initClient()) {
 			return 0;
 		}

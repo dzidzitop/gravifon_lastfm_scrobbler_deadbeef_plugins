@@ -133,14 +133,18 @@ ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
 ostream &operator<<(ostream &out, const Track &track)
 {
 	out << u8R"({"title":")";
-	writeJsonString(track.trackName, out);
+	writeJsonString(track.m_title, out);
 	// A single artist is currently supported.
 	out << u8R"(","artists":[{"name":")";
-	writeJsonString(track.artist, out);
-	out << u8R"("}],"album":{"title":")";
-	writeJsonString(track.album, out);
-	out << u8R"("},"length":{"amount":)";
-	writeJsonLong(track.duration, out);
+	writeJsonString(track.m_artist, out);
+	out << u8R"("}],)";
+	if (track.m_albumSet) {
+		out << u8R"("album":{"title":")";
+		writeJsonString(track.m_album, out);
+		out << u8R"("},)";
+	}
+	out << u8R"("length":{"amount":)";
+	writeJsonLong(track.m_duration, out);
 	out << u8R"(,"unit":"ms"}})";
 	return out;
 }

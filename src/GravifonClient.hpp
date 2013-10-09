@@ -21,14 +21,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <ctime>
 
 // All strings are utf8-encoded.
-struct Track
+class Track
 {
-	std::string trackName;
-	std::string artist;
+public:
+	void setTitle(const std::string &trackTitle) { m_title = trackTitle; m_titleSet = true; }
+	void setArtist(const std::string &artist) { m_artist = artist; m_artistSet = true; }
+	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
+	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
+private:
+	std::string m_title;
+	std::string m_artist;
 	// TODO think about supporting full album info
-	std::string album;
+	std::string m_album;
 	// Track duration in milliseconds.
-	long duration;
+	long m_duration;
+	bool m_titleSet = false;
+	bool m_artistSet = false;
+	bool m_albumSet = false;
+	bool m_durationSet = false;
 
 	friend std::ostream &operator<<(std::ostream &out, const Track &track);
 };

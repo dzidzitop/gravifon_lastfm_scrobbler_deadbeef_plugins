@@ -27,6 +27,7 @@ CPPUNIT_TEST(testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_WithNoAlbum);
 CPPUNIT_TEST_SUITE_END();
 
 	void testSerialiseTrack_WithAllFields();
@@ -34,6 +35,7 @@ CPPUNIT_TEST_SUITE_END();
 	void testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters();
 	void testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters();
 	void testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters();
+	void testSerialiseTrack_WithNoAlbum();
 };
 
 #endif /* TRACKTEST_HPP_ */
