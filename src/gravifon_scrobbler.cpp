@@ -115,6 +115,7 @@ bool initClient()
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
 {
 	// TODO add mutex
+	// TODO use DB_EV_SONGSTARTED and DB_EV_SONGFINISHED because DB_EV_SONGCHANGED does not work as expected.
 	if (id != DB_EV_SONGCHANGED) {
 		return 0;
 	}
