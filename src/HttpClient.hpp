@@ -17,12 +17,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define HTTPCLIENT_HPP_
 
 #include <string>
+#include <vector>
 #include <stdexcept>
 
 struct HttpClientException : public std::runtime_error
 {
 	HttpClientException(const char * const what) : runtime_error(what) {};
 	HttpClientException(const std::string &what) : runtime_error(what) {};
+};
+
+struct HttpRequest
+{
+	// HttpRequest does not own anything.
+	std::string *url;
+	std::string *body;
+	std::vector<const char *> headers;
 };
 
 class HttpClient
@@ -36,7 +45,7 @@ public:
 	~HttpClient() = default;
 
 	// TODO support headers and timeouts
-	std::string send(const std::string &url, const std::string &data);
+	std::string send(const HttpRequest &request);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

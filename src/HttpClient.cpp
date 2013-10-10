@@ -101,20 +101,20 @@ HttpClient::HttpClient()
 	}
 }
 
-string HttpClient::send(const string &url, const string &data)
+string HttpClient::send(const HttpRequest &request)
 {
 	CurlSession curl;
 
 	CurlHeaders headers;
-	headers.addHeader("Content-Type: application/json; charset=utf-8");
-	headers.addHeader("Accept: application/json");
-	headers.addHeader("Accept-Charset: utf-8");
+	for (const char * const header : request.headers) {
+		headers.addHeader(header);
+	}
 
 	string response;
 
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(data.size()));
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+	curl_easy_setopt(curl, CURLOPT_URL, request.url->c_str());
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body->size()));
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body->c_str());
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);

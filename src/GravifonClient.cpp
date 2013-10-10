@@ -18,8 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cassert>
 #include <afc/utils.h>
 #include <sstream>
-// TODO remove this
-#include <iostream>
+#include "HttpClient.hpp"
 
 using namespace std;
 using namespace afc;
@@ -88,9 +87,10 @@ namespace
 	// writes value to out in utf-8
 	inline void writeJsonLong(const long value, ostream&out)
 	{
-		stringstream buf;
+		ostringstream buf;
 		buf << value;
 
+		// TODO avoid copying that is performed by ostringstream::str().
 		out << convertToUtf8(buf.str(), systemCharset().c_str());
 	}
 }
@@ -114,8 +114,24 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
-	// TODO implement me
-	cout << "scrobble: " << scrobbleInfo << endl;
+	ostringstream buf;
+	buf << scrobbleInfo;
+
+	HttpRequest request;
+	request.url = &m_scrobblerUrl;
+	// TODO avoid copying that is performed by ostringstream::str().
+	string body = buf.str();
+	request.body = &body;
+
+	request.headers.reserve(3);
+	request.headers.push_back("Content-Type: application/json; charset=utf-8");
+	request.headers.push_back("Accept: application/json");
+	request.headers.push_back("Accept-Charset: utf-8");
+
+	HttpClient client;
+	// TODO set timeouts
+	// TODO handle response
+	string response = client.send(request);
 }
 
 ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
