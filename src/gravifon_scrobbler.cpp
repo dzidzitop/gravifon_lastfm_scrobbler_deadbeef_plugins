@@ -82,6 +82,9 @@ namespace
 			// TODO use monotonic micro/nano clock to calculate exact duration. These measurements are inaccurate.
 			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
 			scrobbleInfo->scrobbleEndTimestamp = time(nullptr);
+			if (scrobbleInfo->scrobbleEndTimestamp == time_t(-1)) {
+				// TODO handle error
+			}
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
 			trackInfo.setTitle(title);
