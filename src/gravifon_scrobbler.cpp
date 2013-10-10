@@ -17,9 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdint>
 #include <memory>
 #include "GravifonClient.hpp"
-#include <ctime>
+#include <chrono>
 
 using namespace std;
+using std::chrono::system_clock;
 
 namespace
 {
@@ -81,10 +82,7 @@ namespace
 			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
 			// TODO use monotonic micro/nano clock to calculate exact duration. These measurements are inaccurate.
 			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
-			scrobbleInfo->scrobbleEndTimestamp = time(nullptr);
-			if (scrobbleInfo->scrobbleEndTimestamp == time_t(-1)) {
-				// TODO handle error
-			}
+			scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
 			trackInfo.setTitle(title);
