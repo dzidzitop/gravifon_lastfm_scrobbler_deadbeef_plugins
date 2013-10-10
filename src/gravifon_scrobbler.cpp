@@ -79,6 +79,7 @@ namespace
 			const float trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
 			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
+			// TODO use monotonic micro/nano clock to calculate exact duration. These measurements are inaccurate.
 			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
 			scrobbleInfo->scrobbleEndTimestamp = time(nullptr);
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
