@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdint>
 #include <memory>
 #include "GravifonClient.hpp"
+#include <ctime>
 
 using namespace std;
 
@@ -39,9 +40,22 @@ namespace
 		~PlaylistLock() { deadbeef->pl_unlock(); }
 	};
 
-	unique_ptr<ScrobbleInfo> getScrobbleInfo(DB_playItem_t * const track)
+	inline long toLongMillis(const float seconds)
+	{
+		return static_cast<long>(seconds * 1000);
+	}
+
+	unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent)
 	{
 		{ PlaylistLock lock;
+			DB_playItem_t * const track = trackChangeEvent->from;
+			const float trackPlayDuration = trackChangeEvent->playtime; // in seconds
+
+			if (track == nullptr || trackPlayDuration == 0.f) {
+				// Nothing to scrobble.
+				return nullptr;
+			}
+
 			const char * const title = deadbeef->pl_find_meta(track, "title");
 			if (title == nullptr) {
 				// Track title is a required field.
@@ -62,22 +76,20 @@ namespace
 				}
 			}
 			const char * const album = deadbeef->pl_find_meta(track, "album");
-			const float trackDuration = deadbeef->pl_get_item_duration(track);
+			const float trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
-			unique_ptr<ScrobbleInfo> scrobbleInfoPtr(new ScrobbleInfo());
-			// TODO fill these fields.
-			//scrobbleInfoPtr->scrobbleStartTimestamp;
-			//scrobbleInfoPtr->scrobbleEndTimestamp;
-			//scrobbleInfoPtr->scrobbleDuration;
-			Track &trackInfo = scrobbleInfoPtr->track;
+			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
+			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
+			scrobbleInfo->scrobbleEndTimestamp = time(nullptr);
+			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
+			Track &trackInfo = scrobbleInfo->track;
 			trackInfo.setTitle(title);
 			trackInfo.setArtist(artist);
 			if (album != nullptr) {
 				trackInfo.setAlbumTitle(album);
 			}
-			// trackDuration is in seconds.
-			trackInfo.setDurationMillis(static_cast<long>(trackDuration * 1000));
-			return scrobbleInfoPtr;
+			trackInfo.setDurationMillis(toLongMillis(trackDuration));
+			return scrobbleInfo;
 		}
 	}
 }
@@ -114,23 +126,22 @@ bool initClient()
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
 {
-	// TODO add mutex
-	// TODO use DB_EV_SONGSTARTED and DB_EV_SONGFINISHED because DB_EV_SONGCHANGED does not work as expected.
 	if (id != DB_EV_SONGCHANGED) {
 		return 0;
 	}
-	DB_playItem_t * const trackListened = reinterpret_cast<ddb_event_trackchange_t *>(ctx)->from;
-	if (trackListened == nullptr) {
-		return 0;
-	}
+
+	// TODO add plugin-level mutex
 	try {
 		// TODO distinguish disabled scrobbling and gravifon client init errors
 		if (!initClient()) {
 			return 0;
 		}
 
-		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(trackListened);
-		gravifonClient->scrobble(*scrobbleInfo);
+		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
+
+		if (scrobbleInfo != nullptr) {
+			gravifonClient->scrobble(*scrobbleInfo);
+		}
 		return 0;
 	}
 	catch (...) {
@@ -149,7 +160,7 @@ DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 	deadbeef = api;
 
 	plugin.plugin.api_vmajor = 1;
-	plugin.plugin.api_vminor = 0;
+	plugin.plugin.api_vminor = 4;
 	plugin.plugin.version_major = 1;
 	plugin.plugin.version_minor = 0;
 	plugin.plugin.type = DB_PLUGIN_MISC;
