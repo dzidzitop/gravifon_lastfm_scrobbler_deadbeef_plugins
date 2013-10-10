@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <stdexcept>
 #include <cassert>
 #include <afc/utils.h>
-#include <sstream>
 #include "HttpClient.hpp"
 
 using namespace std;
@@ -34,38 +33,39 @@ namespace
 	static_assert('\r' == u8"\r"[0], "An ASCII-incompatible basic charset is used.");
 	static_assert('\t' == u8"\t"[0], "An ASCII-incompatible basic charset is used.");
 
-	inline void writeJsonString(const string &str, ostream&out)
+	inline void writeJsonString(const string &src, string &dest)
 	{
-		for (const char c : str) {
+		for (const char c : src) {
 			switch (c) {
 			case '\'':
 			case '"':
 			case '\\':
-				out << '\\' << c;
+				dest.push_back('\\');
+				dest.push_back(c);
 				break;
 			case '\b':
-				out << u8"\\b";
+				dest.append(u8"\\b");
 				break;
 			case '\f':
-				out << u8"\\f";
+				dest.append(u8"\\f");
 				break;
 			case '\n':
-				out << u8"\\n";
+				dest.append(u8"\\n");
 				break;
 			case '\r':
-				out << u8"\\r";
+				dest.append(u8"\\r");
 				break;
 			case '\t':
-				out << u8"\\t";
+				dest.append(u8"\\t");
 				break;
 			default:
-				out << c;
+				dest.push_back(c);
 				break;
 			}
 		}
 	}
 
-	inline void writeJsonTimestamp(const std::time_t timestamp, ostream&out)
+	inline void writeJsonTimestamp(const std::time_t timestamp, string &dest)
 	{
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
 		 * Milliseconds are not supported.
@@ -81,17 +81,14 @@ namespace
 		if (count == 0) {
 			// TODO If count was reached before the entire string could be stored, ​0​ is returned and the contents are undefined.
 		}
-		out << '"' << convertToUtf8(buf, systemCharset().c_str()) << '"';
+		dest.append(u8"\"").append(convertToUtf8(buf, systemCharset().c_str())).append(u8"\"");
 	}
 
 	// writes value to out in utf-8
-	inline void writeJsonLong(const long value, ostream&out)
+	inline void writeJsonLong(const long value, string &dest)
 	{
-		ostringstream buf;
-		buf << value;
-
 		// TODO avoid copying that is performed by ostringstream::str().
-		out << convertToUtf8(buf.str(), systemCharset().c_str());
+		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
 }
 
@@ -114,13 +111,11 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
-	ostringstream buf;
-	buf << scrobbleInfo;
-
 	HttpRequest request;
 	request.url = &m_scrobblerUrl;
-	// TODO avoid copying that is performed by ostringstream::str().
-	string body = buf.str();
+
+	string body;
+	body += scrobbleInfo;
 	request.body = &body;
 
 	request.headers.reserve(3);
@@ -134,33 +129,34 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	string response = client.send(request);
 }
 
-ostream &operator<<(ostream &out, const ScrobbleInfo &scrobbleInfo)
+string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)
 {
-	out << "{\"scrobble_start_datetime\":";
-	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, out);
-	out << ",\"scrobble_end_datetime\":";
-	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, out);
-	out << ",\"duration\":{\"amount\":";
-	writeJsonLong(scrobbleInfo.scrobbleDuration, out);
-	out << ",\"unit\":\"ms\"},\"track\":" << scrobbleInfo.track;
-	return out;
+	str.append(u8R"({"scrobble_start_datetime":)");
+	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, str);
+	str.append(u8R"(,"scrobble_end_datetime":)");
+	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, str);
+	str.append(u8R"(,"duration":{"amount":)");
+	writeJsonLong(scrobbleInfo.scrobbleDuration, str);
+	str.append(u8R"(,"unit":"ms"},"track":)");
+	str += scrobbleInfo.track;
+	return str;
 }
 
-ostream &operator<<(ostream &out, const Track &track)
+string &operator+=(string &str, const Track &track)
 {
-	out << u8R"({"title":")";
-	writeJsonString(track.m_title, out);
+	str.append(u8R"({"title":")");
+	writeJsonString(track.m_title, str);
 	// A single artist is currently supported.
-	out << u8R"(","artists":[{"name":")";
-	writeJsonString(track.m_artist, out);
-	out << u8R"("}],)";
+	str.append(u8R"(","artists":[{"name":")");
+	writeJsonString(track.m_artist, str);
+	str.append(u8R"("}],)");
 	if (track.m_albumSet) {
-		out << u8R"("album":{"title":")";
-		writeJsonString(track.m_album, out);
-		out << u8R"("},)";
+		str.append(u8R"("album":{"title":")");
+		writeJsonString(track.m_album, str);
+		str.append(u8R"("},)");
 	}
-	out << u8R"("length":{"amount":)";
-	writeJsonLong(track.m_duration, out);
-	out << u8R"(,"unit":"ms"}})";
-	return out;
+	str.append(u8R"("length":{"amount":)");
+	writeJsonLong(track.m_duration, str);
+	str.append(u8R"(,"unit":"ms"}})");
+	return str;
 }

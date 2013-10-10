@@ -18,7 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 CPPUNIT_TEST_SUITE_REGISTRATION(ScrobbleInfoTest);
 
 #include <GravifonClient.hpp>
-#include <sstream>
 #include <ctime>
 
 using namespace std;
@@ -68,12 +67,12 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 	track.setArtist(u8"Queen");
 	track.setDurationMillis(12);
 
-	stringstream buf;
-	buf << scrobbleInfo;
+	string result;
+	result += scrobbleInfo;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-01T23-12-33)") + scrobbleStartTimeZone +
 			R"(","scrobble_end_datetime":"2001-02-03T12-10-04)" + scrobbleEndTimeZone +
 			R"(","duration":{"amount":1001,"unit":"ms"},"track":{"title":"\'39","artists":[{"name":"Queen"}],)"
 			R"("album":{"title":"A Night at the Opera"},)"
-			R"("length":{"amount":12,"unit":"ms"}})", buf.str());
+			R"("length":{"amount":12,"unit":"ms"}})", result);
 }

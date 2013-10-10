@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define GRAVIFONCLIENT_HPP_
 
 #include <string>
-#include <iostream>
 #include <ctime>
 
 // All strings are utf8-encoded.
@@ -40,7 +39,7 @@ private:
 	bool m_albumSet = false;
 	bool m_durationSet = false;
 
-	friend std::ostream &operator<<(std::ostream &out, const Track &track);
+	friend std::string &operator+=(std::string &str, const Track &track);
 };
 
 struct ScrobbleInfo
@@ -54,7 +53,7 @@ struct ScrobbleInfo
 	// Track to scrobble.
 	Track track;
 
-	friend std::ostream &operator<<(std::ostream &out, const ScrobbleInfo &scrobbleInfo);
+	friend std::string &operator+=(std::string &str, const ScrobbleInfo &scrobbleInfo);
 };
 
 class GravifonClient
