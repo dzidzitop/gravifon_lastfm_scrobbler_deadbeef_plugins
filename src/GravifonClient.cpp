@@ -104,22 +104,23 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
-	HttpRequest request;
-	request.url = &m_scrobblerUrl;
-
-	string body;
-	body += scrobbleInfo;
-	request.body = &body;
+	HttpEntity request;
+	request.body += scrobbleInfo;
 
 	request.headers.reserve(3);
 	request.headers.push_back("Content-Type: application/json; charset=utf-8");
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
 
+	HttpEntity response;
+
 	HttpClient client;
 	// TODO set timeouts
+	if (client.send(m_scrobblerUrl, request, response) != 0) {
+		// TODO handle error
+	}
+
 	// TODO handle response
-	string response = client.send(request);
 }
 
 string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)

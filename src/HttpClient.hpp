@@ -19,11 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <vector>
 
-struct HttpRequest
+struct HttpEntity
 {
-	// HttpRequest does not own anything.
-	std::string *url;
-	std::string *body;
+	// HttpEntity does not own anything.
+	std::string body;
 	std::vector<const char *> headers;
 };
 
@@ -37,8 +36,8 @@ public:
 	HttpClient();
 	~HttpClient() = default;
 
-	// TODO support headers and timeouts
-	std::string send(const HttpRequest &request);
+	// TODO support timeouts
+	int send(const std::string &url, const HttpEntity &request, HttpEntity &response);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

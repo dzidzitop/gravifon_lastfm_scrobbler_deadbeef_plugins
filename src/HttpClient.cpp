@@ -98,34 +98,32 @@ HttpClient::HttpClient()
 	}
 }
 
-string HttpClient::send(const HttpRequest &request)
+int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &response)
 {
 	CurlSession curl;
 
 	if (curl.handler == nullptr) {
-		// TODO handler error
-		return "";
+		return 1;
 	}
 
 	CurlHeaders headers;
 	for (const char * const header : request.headers) {
 		if (!headers.addHeader(header)) {
-			// TODO handle error
+			return 1;
 		}
 	}
 
-	string response;
-
-	curl_easy_setopt(curl, CURLOPT_URL, request.url->c_str());
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body->size()));
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body->c_str());
+	// TODO add response headers
+	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
 	CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
-		// TODO handler error
+		return 1;
 	}
 
-	return response;
+	return 0;
 }
