@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <memory>
 #include "GravifonClient.hpp"
 #include <chrono>
+#include <mutex>
 
 using namespace std;
 using std::chrono::system_clock;
@@ -28,6 +29,8 @@ namespace
 
 	static DB_misc_t plugin = {};
 	static DB_functions_t *deadbeef;
+
+	static mutex pluginMutex;
 
 	struct ConfLock
 	{
@@ -98,11 +101,13 @@ namespace
 
 int gravifonScrobblerStart()
 {
+	// TODO move initialisation phase to here (now C++ unit initialisation is used).
 	return 0;
 }
 
 int gravifonScrobblerStop()
 {
+	// TODO discard resources properly
 	return 0;
 }
 
@@ -132,23 +137,24 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 		return 0;
 	}
 
-	// TODO add plugin-level mutex
-	try {
-		// TODO distinguish disabled scrobbling and gravifon client init errors
-		if (!initClient()) {
+	{ lock_guard<mutex> lock(pluginMutex);
+		try {
+			// TODO distinguish disabled scrobbling and gravifon client init errors
+			if (!initClient()) {
+				return 0;
+			}
+
+			unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
+
+			if (scrobbleInfo != nullptr) {
+				gravifonClient->scrobble(*scrobbleInfo);
+			}
 			return 0;
 		}
-
-		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
-
-		if (scrobbleInfo != nullptr) {
-			gravifonClient->scrobble(*scrobbleInfo);
+		catch (...) {
+			// TODO handle errors
+			return 1;
 		}
-		return 0;
-	}
-	catch (...) {
-		// TODO handle errors
-		return 1;
 	}
 }
 
