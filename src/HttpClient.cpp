@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "HttpClient.hpp"
 #include <curl/curl.h>
+#include <cassert>
 
 using namespace std;
 
@@ -46,13 +47,7 @@ namespace
 	public:
 		CURL * const handler;
 
-		CurlSession()
-			: handler(curl_easy_init())
-		{
-			if (handler == nullptr) {
-				throw HttpClientException("Unable to establish connection.");
-			}
-		}
+		CurlSession() : handler(curl_easy_init()) {}
 
 		~CurlSession() noexcept { curl_easy_cleanup(handler); };
 
@@ -71,13 +66,15 @@ namespace
 
 		operator curl_slist *() { return m_headers; }
 
-		void addHeader(const char * const header)
+		bool addHeader(const char * const header)
 		{
 			curl_slist * const tmp = curl_slist_append(m_headers, header);
+
 			if (tmp == nullptr) {
-				throw HttpClientException("Internal error.");
+				return false;
 			}
 			m_headers = tmp;
+			return true;
 		}
 	private:
 		curl_slist *m_headers;
@@ -105,9 +102,16 @@ string HttpClient::send(const HttpRequest &request)
 {
 	CurlSession curl;
 
+	if (curl.handler == nullptr) {
+		// TODO handler error
+		return "";
+	}
+
 	CurlHeaders headers;
 	for (const char * const header : request.headers) {
-		headers.addHeader(header);
+		if (!headers.addHeader(header)) {
+			// TODO handle error
+		}
 	}
 
 	string response;
@@ -120,7 +124,7 @@ string HttpClient::send(const HttpRequest &request)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
 	CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
-		throw HttpClientException("Unable to process the request.");
+		// TODO handler error
 	}
 
 	return response;

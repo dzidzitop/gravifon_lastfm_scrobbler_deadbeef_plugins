@@ -14,7 +14,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
-#include <stdexcept>
 #include <cassert>
 #include <afc/utils.h>
 #include "HttpClient.hpp"
@@ -94,15 +93,9 @@ namespace
 
 GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, const char *password)
 {
-	if (scrobblerUrl == nullptr) {
-		throw invalid_argument("scrobblerUrl");
-	}
-	if (username == nullptr) {
-		throw invalid_argument("username");
-	}
-	if (password == nullptr) {
-		throw invalid_argument("password");
-	}
+	assert(scrobblerUrl != nullptr);
+	assert(username != nullptr);
+	assert(password != nullptr);
 
 	m_scrobblerUrl = scrobblerUrl;
 	m_username = username;

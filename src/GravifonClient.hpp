@@ -65,7 +65,7 @@ public:
 	GravifonClient(const char *scrobblerUrl, const char *username, const char *password);
 	~GravifonClient() {};
 
-	// TODO declare exceptions
+	// TODO support error handling via API
 	void scrobble(const ScrobbleInfo &);
 private:
 	std::string m_scrobblerUrl;

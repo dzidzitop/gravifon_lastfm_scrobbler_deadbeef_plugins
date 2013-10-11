@@ -138,23 +138,17 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 	}
 
 	{ lock_guard<mutex> lock(pluginMutex);
-		try {
-			// TODO distinguish disabled scrobbling and gravifon client init errors
-			if (!initClient()) {
-				return 0;
-			}
-
-			unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
-
-			if (scrobbleInfo != nullptr) {
-				gravifonClient->scrobble(*scrobbleInfo);
-			}
+		// TODO distinguish disabled scrobbling and gravifon client init errors
+		if (!initClient()) {
 			return 0;
 		}
-		catch (...) {
-			// TODO handle errors
-			return 1;
+
+		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
+
+		if (scrobbleInfo != nullptr) {
+			gravifonClient->scrobble(*scrobbleInfo);
 		}
+		return 0;
 	}
 }
 
