@@ -22,8 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 struct HttpClientException : public std::runtime_error
 {
-	HttpClientException(const char * const what) : runtime_error(what) {};
-	HttpClientException(const std::string &what) : runtime_error(what) {};
+	explicit HttpClientException(const char * const what) : runtime_error(what) {};
+	explicit HttpClientException(const std::string &what) : runtime_error(what) {};
 };
 
 struct HttpRequest
