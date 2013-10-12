@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
 #include <cassert>
+#include <afc/base64.hpp>
 #include <afc/utils.h>
 #include "HttpClient.hpp"
 
@@ -98,8 +99,9 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 	assert(password != nullptr);
 
 	m_scrobblerUrl = scrobblerUrl;
+	// TODO check if username and password are to be encoded to utf-8 here.
 	m_username = username;
-	m_username = password;
+	m_password = password;
 }
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
@@ -107,7 +109,13 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	HttpEntity request;
 	request.body += scrobbleInfo;
 
-	request.headers.reserve(3);
+	string authHeader("Authorization: Basic "); // HTTP Basic authentication is used.
+	// TODO think what to do is the username contains colon (':').
+	// TODO think of moving encodeBase64(string(m_username) + ':' + m_password) to the constructor to perform this once.
+	authHeader += encodeBase64(string(m_username) + ':' + m_password);
+
+	request.headers.reserve(4);
+	request.headers.push_back(authHeader.c_str());
 	request.headers.push_back("Content-Type: application/json; charset=utf-8");
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
