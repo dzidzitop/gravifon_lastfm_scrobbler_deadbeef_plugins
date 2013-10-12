@@ -110,8 +110,8 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	request.body += scrobbleInfo;
 
 	string authHeader("Authorization: Basic "); // HTTP Basic authentication is used.
-	// TODO think what to do is the username contains colon (':').
 	// TODO think of moving encodeBase64(string(m_username) + ':' + m_password) to the constructor to perform this once.
+	// Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	authHeader += encodeBase64(string(m_username) + ':' + m_password);
 
 	request.headers.reserve(4);
