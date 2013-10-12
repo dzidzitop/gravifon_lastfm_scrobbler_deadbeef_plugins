@@ -88,6 +88,7 @@ namespace
 			scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
+			// TODO Check whether or not metadata is returned in the system encoding. If yes then encode it to utf-8.
 			trackInfo.setTitle(title);
 			trackInfo.setArtist(artist);
 			if (album != nullptr) {
