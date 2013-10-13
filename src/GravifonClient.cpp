@@ -137,7 +137,7 @@ string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)
 	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, str);
 	str.append(u8R"(,"scrobble_end_datetime":)");
 	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, str);
-	str.append(u8R"(,"duration":{"amount":)");
+	str.append(u8R"(,"scrobble_duration":{"amount":)");
 	writeJsonLong(scrobbleInfo.scrobbleDuration, str);
 	str.append(u8R"(,"unit":"ms"},"track":)");
 	str += scrobbleInfo.track;
