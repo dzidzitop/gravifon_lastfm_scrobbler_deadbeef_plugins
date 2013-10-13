@@ -107,7 +107,9 @@ GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, c
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
 	HttpEntity request;
+	request.body += u8"[";
 	request.body += scrobbleInfo;
+	request.body += u8"]";
 
 	string authHeader("Authorization: Basic "); // HTTP Basic authentication is used.
 	// TODO think of moving encodeBase64(string(m_username) + ':' + m_password) to the constructor to perform this once.
