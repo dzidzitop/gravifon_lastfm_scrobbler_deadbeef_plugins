@@ -74,5 +74,5 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 			R"(","scrobble_end_datetime":"2001-02-03T12:10:04)" + scrobbleEndTimeZone +
 			R"(","scrobble_duration":{"amount":1001,"unit":"ms"},"track":{"title":"\'39","artists":[{"name":"Queen"}],)"
 			R"("album":{"title":"A Night at the Opera"},)"
-			R"("length":{"amount":12,"unit":"ms"}})", result);
+			R"("length":{"amount":12,"unit":"ms"}}})", result);
 }

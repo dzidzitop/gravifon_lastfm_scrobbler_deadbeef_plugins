@@ -143,6 +143,7 @@ string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)
 	writeJsonLong(scrobbleInfo.scrobbleDuration, str);
 	str.append(u8R"(,"unit":"ms"},"track":)");
 	str += scrobbleInfo.track;
+	str.append(u8"}");
 	return str;
 }
 
