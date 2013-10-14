@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/base64.hpp>
 #include <afc/utils.h>
 #include "HttpClient.hpp"
+#include <time.h>
 
 using namespace std;
 using namespace afc;
@@ -70,14 +71,13 @@ namespace
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
 		 * Milliseconds are not supported.
 		 */
-		std::tm * const dateTime = localtime(&timestamp);
-		if (dateTime == nullptr) {
-			// TODO
-		}
+		std::tm dateTime;
+		::localtime_r(&timestamp, &dateTime);
+
 		// TODO support multi-byte system charsets. 32 could be not enough for them.
 		const size_t outputSize = 32; // 25 are really used.
 		char buf[outputSize];
-		const size_t count = std::strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", dateTime);
+		const size_t count = std::strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
 		if (count == 0) {
 			// TODO If count was reached before the entire string could be stored, ​0​ is returned and the contents are undefined.
 		}
