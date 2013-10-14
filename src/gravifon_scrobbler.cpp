@@ -61,6 +61,7 @@ namespace
 				return nullptr;
 			}
 
+			// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
 			const char * const title = deadbeef->pl_find_meta(track, "title");
 			if (title == nullptr) {
 				// Track title is a required field.
@@ -89,7 +90,6 @@ namespace
 			scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
-			// TODO Check whether or not metadata is returned in the system encoding. If yes then encode it to utf-8.
 			trackInfo.setTitle(title);
 			trackInfo.setArtist(artist);
 			if (album != nullptr) {
@@ -121,6 +121,7 @@ bool initClient()
 			return false;
 		}
 
+		// DeaDBeeF configuration records are returned in UTF-8. No additional conversion is needed.
 		const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
 		if (scrobblerUrl[0] == '\0') {
 			return false;

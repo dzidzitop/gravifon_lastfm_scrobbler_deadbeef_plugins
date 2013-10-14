@@ -104,7 +104,6 @@ void GravifonClient::configure(const char * const scrobblerUrl, const char * con
 	assert(password != nullptr);
 
 	m_scrobblerUrl = scrobblerUrl;
-	// TODO check if username and password are to be encoded to utf-8 here.
 	m_username = username;
 	m_password = password;
 }
