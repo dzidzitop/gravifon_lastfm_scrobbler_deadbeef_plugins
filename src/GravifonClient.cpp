@@ -72,6 +72,10 @@ namespace
 		 * Milliseconds are not supported.
 		 */
 		std::tm dateTime;
+		/* Initialises the system time zone data. According to POSIX.1-2004, localtime() is required
+		 * to behave as though tzset(3) was called, while localtime_r() does not have this requirement.
+		 */
+		::tzset();
 		::localtime_r(&timestamp, &dateTime);
 
 		// TODO support multi-byte system charsets. 32 could be not enough for them.
