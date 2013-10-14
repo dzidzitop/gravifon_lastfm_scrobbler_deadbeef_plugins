@@ -25,7 +25,8 @@ using std::chrono::system_clock;
 
 namespace
 {
-	static unique_ptr<GravifonClient> gravifonClient;
+	// TODO Ensure that this code is thread-safe.
+	static GravifonClient gravifonClient;
 
 	static DB_misc_t plugin = {};
 	static DB_functions_t *deadbeef;
@@ -121,13 +122,16 @@ bool initClient()
 		}
 
 		const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
+		if (scrobblerUrl[0] == '\0') {
+			return false;
+		}
+
 		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 
-		// TODO support changed configuration
-		if (gravifonClient.get() == nullptr) {
-			gravifonClient.reset(new GravifonClient(scrobblerUrl, username, password));
-		}
+		// TODO Ensure that this code is thread-safe.
+		gravifonClient.configure(scrobblerUrl, username, password);
+
 		return true;
 	}
 }
@@ -147,7 +151,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
 
 		if (scrobbleInfo != nullptr) {
-			gravifonClient->scrobble(*scrobbleInfo);
+			gravifonClient.scrobble(*scrobbleInfo);
 		}
 		return 0;
 	}

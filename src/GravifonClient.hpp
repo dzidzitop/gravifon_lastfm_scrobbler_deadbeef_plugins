@@ -62,8 +62,10 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 public:
 	// TODO declare exceptions
-	GravifonClient(const char *scrobblerUrl, const char *username, const char *password);
+	GravifonClient() {};
 	~GravifonClient() {};
+
+	void configure(const char *scrobblerUrl, const char *username, const char *password);
 
 	// TODO support error handling via API
 	void scrobble(const ScrobbleInfo &);

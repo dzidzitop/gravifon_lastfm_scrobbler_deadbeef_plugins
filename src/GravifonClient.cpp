@@ -92,7 +92,7 @@ namespace
 	}
 }
 
-GravifonClient::GravifonClient(const char *scrobblerUrl, const char *username, const char *password)
+void GravifonClient::configure(const char * const scrobblerUrl, const char *const username, const char * const password)
 {
 	assert(scrobblerUrl != nullptr);
 	assert(username != nullptr);
