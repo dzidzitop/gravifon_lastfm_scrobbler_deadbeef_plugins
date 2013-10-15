@@ -19,13 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonClient.hpp"
 #include <chrono>
 #include <mutex>
+#include <cstring>
+#include <iostream>
 
 using namespace std;
 using std::chrono::system_clock;
 
 namespace
 {
-	static const char U8_NL = u8"\n"[0];
+	// The character 'Line Feed' in UTF-8.
+	static const char UTF8_LF = 0x0a;
 
 	// TODO Ensure that this code is thread-safe.
 	static GravifonClient gravifonClient;
@@ -93,11 +96,21 @@ namespace
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
 			trackInfo.setTitle(title);
-			trackInfo.addArtist(artist);
 			if (album != nullptr) {
 				trackInfo.setAlbumTitle(album);
 			}
 			trackInfo.setDurationMillis(toLongMillis(trackDuration));
+
+			/* Adding artists, probably multiple ones. DeaDBeeF returns them as
+			 * '\n'-separated values within a single string.
+			 */
+			const char *artistStart = artist, *artistEnd;
+			while ((artistEnd = strchr(artistStart, UTF8_LF)) != nullptr) {
+				trackInfo.addArtist(string(artistStart, artistEnd));
+				artistStart = artistEnd + 1;
+			}
+			trackInfo.addArtist(artistStart);
+
 			return scrobbleInfo;
 		}
 	}
