@@ -40,8 +40,7 @@ build $buildDir/gravifon_scrobbler_test: bin $
     $buildDir/HttpClient.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/TrackTest.o $
-    $buildDir/run_tests.o $
-    | $buildDir/gravifon_scrobbler.so
+    $buildDir/run_tests.o
   libs=-lcppunit -lcurl -lafc
 
 build sharedLib: phony $buildDir/gravifon_scrobbler.so
