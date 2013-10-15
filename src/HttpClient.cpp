@@ -98,7 +98,6 @@ HttpClient::HttpClient()
 	}
 }
 
-// TODO support timeouts
 int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &response,
 		const long connectionTimeoutMillis, const long socketTimeoutMillis)
 {
