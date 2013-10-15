@@ -38,7 +38,6 @@ namespace
 	{
 		for (const char c : src) {
 			switch (c) {
-			case '\'':
 			case '"':
 			case '\\':
 				dest.push_back('\\');

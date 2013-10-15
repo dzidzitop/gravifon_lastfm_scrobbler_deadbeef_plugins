@@ -32,7 +32,7 @@ void TrackTest::testSerialiseTrack_WithAllFields()
 	string result;
 	result += track;
 
-	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"\'39","artists":[{"name":"Queen"}],)"
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"}],)"
 			R"("album":{"title":"A Night at the Opera"},)"
 			R"("length":{"amount":210000,"unit":"ms"}})"), result);
 }
@@ -64,7 +64,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters()
 	string result;
 	result += track;
 
-	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" "A\\\"\\'\\\\\\b\\f\\n\\r\\tbc" "\","
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" "A\\\"'\\\\\\b\\f\\n\\r\\tbc" "\","
 			R"("artists":[{"name":"Test artist"}],"album":{"title":"Test album"},)"
 			R"("length":{"amount":210000,"unit":"ms"}})"), result);
 }
@@ -72,7 +72,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters()
 void TrackTest::testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters()
 {
 	Track track;
-	track.setTitle(u8"A\"'\\\b\f\n\r\tbc");
+	track.setTitle(u8"Test track");
 	track.setAlbumTitle(u8"\"'\\\b\f\n\r\t++");
 	track.setArtist(u8"Test artist");
 	track.setDurationMillis(1234);
@@ -80,8 +80,8 @@ void TrackTest::testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters()
 	string result;
 	result += track;
 
-	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" "A\\\"\\'\\\\\\b\\f\\n\\r\\tbc" "\","
-			R"("artists":[{"name":"Test artist"}],"album":{"title":")" "\\\"\\'\\\\\\b\\f\\n\\r\\t++" R"("},)"
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
+			R"("artists":[{"name":"Test artist"}],"album":{"title":")" "\\\"'\\\\\\b\\f\\n\\r\\t++" R"("},)"
 			R"("length":{"amount":1234,"unit":"ms"}})"), result);
 }
 
@@ -97,7 +97,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters(
 	result += track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
-			R"("artists":[{"name":")" "_\\\"\\'\\\\\\b\\f\\n\\r\\t_" R"("}],"album":{"title":"Test album"},)"
+			R"("artists":[{"name":")" "_\\\"'\\\\\\b\\f\\n\\r\\t_" R"("}],"album":{"title":"Test album"},)"
 			R"("length":{"amount":210000,"unit":"ms"}})"), result);
 }
 
