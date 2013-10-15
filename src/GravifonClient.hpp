@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define GRAVIFONCLIENT_HPP_
 
 #include <string>
+#include <vector>
 #include <ctime>
 
 // All strings are utf8-encoded.
@@ -24,12 +25,12 @@ class Track
 {
 public:
 	void setTitle(const std::string &trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	void setArtist(const std::string &artist) { m_artist = artist; m_artistSet = true; }
+	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); m_artistSet = true; }
 	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 private:
 	std::string m_title;
-	std::string m_artist;
+	std::vector<std::string> m_artists;
 	// TODO think about supporting full album info
 	std::string m_album;
 	// Track duration in milliseconds.

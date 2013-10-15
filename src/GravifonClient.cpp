@@ -156,9 +156,14 @@ string &operator+=(string &str, const Track &track)
 	str.append(u8R"({"title":")");
 	writeJsonString(track.m_title, str);
 	// A single artist is currently supported.
-	str.append(u8R"(","artists":[{"name":")");
-	writeJsonString(track.m_artist, str);
-	str.append(u8R"("}],)");
+	str.append(u8R"(","artists":[)");
+	for (const string &artist : track.m_artists) {
+		str.append(u8R"({"name":")");
+		writeJsonString(artist, str);
+		str.append(u8"\"},");
+	}
+	str.resize(str.size()-1); // removing the last redundant comma.
+	str.append(u8"],");
 	if (track.m_albumSet) {
 		str.append(u8R"("album":{"title":")");
 		writeJsonString(track.m_album, str);

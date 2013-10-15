@@ -64,7 +64,7 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 	Track &track = scrobbleInfo.track;
 	track.setTitle(u8"'39");
 	track.setAlbumTitle(u8"A Night at the Opera");
-	track.setArtist(u8"Queen");
+	track.addArtist(u8"Queen");
 	track.setDurationMillis(12);
 
 	string result;

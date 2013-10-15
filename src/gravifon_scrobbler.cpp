@@ -25,6 +25,8 @@ using std::chrono::system_clock;
 
 namespace
 {
+	static const char U8_NL = u8"\n"[0];
+
 	// TODO Ensure that this code is thread-safe.
 	static GravifonClient gravifonClient;
 
@@ -91,7 +93,7 @@ namespace
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 			Track &trackInfo = scrobbleInfo->track;
 			trackInfo.setTitle(title);
-			trackInfo.setArtist(artist);
+			trackInfo.addArtist(artist);
 			if (album != nullptr) {
 				trackInfo.setAlbumTitle(album);
 			}

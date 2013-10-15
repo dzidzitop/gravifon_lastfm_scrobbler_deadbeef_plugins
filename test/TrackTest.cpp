@@ -26,7 +26,7 @@ void TrackTest::testSerialiseTrack_WithAllFields()
 	Track track;
 	track.setTitle(u8"'39");
 	track.setAlbumTitle(u8"A Night at the Opera");
-	track.setArtist(u8"Queen");
+	track.addArtist(u8"Queen");
 	track.setDurationMillis(210000);
 
 	string result;
@@ -42,7 +42,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacter
 	Track track;
 	track.setTitle(u8"Dzie\u0144");
 	track.setAlbumTitle(u8"Vie\u010dar");
-	track.setArtist(u8"No\u010d");
+	track.addArtist(u8"No\u010d");
 	track.setDurationMillis(210000);
 
 	string result;
@@ -58,7 +58,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters()
 	Track track;
 	track.setTitle(u8"A\"'\\\b\f\n\r\tbc");
 	track.setAlbumTitle(u8"Test album");
-	track.setArtist(u8"Test artist");
+	track.addArtist(u8"Test artist");
 	track.setDurationMillis(210000);
 
 	string result;
@@ -74,7 +74,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters()
 	Track track;
 	track.setTitle(u8"Test track");
 	track.setAlbumTitle(u8"\"'\\\b\f\n\r\t++");
-	track.setArtist(u8"Test artist");
+	track.addArtist(u8"Test artist");
 	track.setDurationMillis(1234);
 
 	string result;
@@ -90,7 +90,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters(
 	Track track;
 	track.setTitle(u8"Test track");
 	track.setAlbumTitle(u8"Test album");
-	track.setArtist(u8"_\"'\\\b\f\n\r\t_");
+	track.addArtist(u8"_\"'\\\b\f\n\r\t_");
 	track.setDurationMillis(210000);
 
 	string result;
@@ -105,12 +105,29 @@ void TrackTest::testSerialiseTrack_WithNoAlbum()
 {
 	Track track;
 	track.setTitle(u8"Test track");
-	track.setArtist(u8"Test artist");
+	track.addArtist(u8"Test artist");
 	track.setDurationMillis(210000);
 
 	string result;
 	result += track;
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track","artists":[{"name":"Test artist"}],)"
+			R"("length":{"amount":210000,"unit":"ms"}})"), result);
+}
+
+void TrackTest::testSerialiseTrack_MultipleArtists()
+{
+	Track track;
+	track.setTitle(u8"'39");
+	track.setAlbumTitle(u8"A Night at the Opera");
+	track.addArtist(u8"Queen");
+	track.addArtist(u8"Scorpions");
+	track.setDurationMillis(210000);
+
+	string result;
+	result += track;
+
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"},{"name":"Scorpions"}],)"
+			R"("album":{"title":"A Night at the Opera"},)"
 			R"("length":{"amount":210000,"unit":"ms"}})"), result);
 }
