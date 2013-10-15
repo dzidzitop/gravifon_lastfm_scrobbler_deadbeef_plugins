@@ -63,7 +63,6 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
-	// TODO declare exceptions
 	GravifonClient() {};
 	~GravifonClient() {};
 
