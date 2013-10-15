@@ -36,8 +36,8 @@ public:
 	HttpClient();
 	~HttpClient() = default;
 
-	// TODO support timeouts
-	int send(const std::string &url, const HttpEntity &request, HttpEntity &response);
+	int send(const std::string &url, const HttpEntity &request, HttpEntity &response,
+			const long connectionTimeoutMillis, const long socketTimeoutMillis);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

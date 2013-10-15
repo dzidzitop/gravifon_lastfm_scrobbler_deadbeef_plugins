@@ -129,8 +129,9 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	HttpEntity response;
 
 	HttpClient client;
-	// TODO set timeouts
-	if (client.send(m_scrobblerUrl, request, response) != 0) {
+	// TODO Check whether or not these timeouts are enough.
+	// TODO Think of making these timeouts configurable.
+	if (client.send(m_scrobblerUrl, request, response, 3000L, 5000L) != 0) {
 		// TODO handle error
 	}
 

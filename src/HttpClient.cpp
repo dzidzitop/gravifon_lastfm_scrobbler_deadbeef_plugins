@@ -98,7 +98,9 @@ HttpClient::HttpClient()
 	}
 }
 
-int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &response)
+// TODO support timeouts
+int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &response,
+		const long connectionTimeoutMillis, const long socketTimeoutMillis)
 {
 	CurlSession curl;
 
@@ -120,6 +122,12 @@ int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &r
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
+
+	// Setting timeouts.
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, connectionTimeoutMillis);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, socketTimeoutMillis);
+
 	CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
 		return 1;
