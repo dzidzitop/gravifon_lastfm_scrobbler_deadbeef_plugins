@@ -29,7 +29,6 @@ bool parseISODateTime(const string &str, time_t &dest)
 			strptime(convertToUtf8(str, systemCharset().c_str()).c_str(), "%FT%T%z", &dateTime);
 
 	if (parseResult == nullptr || *parseResult != 0) {
-		cout << (parseResult == nullptr) << endl;
 		return false;
 	}
 
