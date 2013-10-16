@@ -20,10 +20,12 @@ rule linkDynamic
 rule bin
   command=g++ $ldFlags_test -o $out $in $libs
 
+build $buildDir/dateutil.o: cxx $srcDir/dateutil.cpp
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
 build $buildDir/GravifonClient.o: cxx $srcDir/GravifonClient.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
 
+build $buildDir/DateUtilTest.o: cxx_test $testDir/DateUtilTest.cpp
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
 build $buildDir/TrackTest.o: cxx_test $testDir/TrackTest.cpp
 build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
@@ -31,17 +33,20 @@ build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/GravifonClient.o $
     $buildDir/HttpClient.o $
+    $buildDir/dateutil.o $
     $buildDir/gravifon_scrobbler.o
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl
 
 build $buildDir/gravifon_scrobbler_test: bin $
+    $buildDir/dateutil.o $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/GravifonClient.o $
     $buildDir/HttpClient.o $
+    $buildDir/DateUtilTest.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/TrackTest.o $
     $buildDir/run_tests.o
-  libs=-lcppunit -lcurl -lafc
+  libs=-lcppunit -lcurl -lafc -ljsoncpp
 
 build sharedLib: phony $buildDir/gravifon_scrobbler.so
 
