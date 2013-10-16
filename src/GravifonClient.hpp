@@ -48,10 +48,11 @@ struct ScrobbleInfo
 	ScrobbleInfo() = default;
 	ScrobbleInfo(const ScrobbleInfo &) = default;
 	ScrobbleInfo(ScrobbleInfo &&) = default;
-	ScrobbleInfo(const char *start, const char *end);
 
 	ScrobbleInfo &operator=(const ScrobbleInfo &) = default;
 	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
+
+	static bool parse(const char *start, const char *end, ScrobbleInfo &dest);
 
 	// Date and time when scrobble event was initiated.
 	std::time_t scrobbleStartTimestamp;

@@ -76,7 +76,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera"},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
-	ScrobbleInfo result(&input.c_str()[0], &input.c_str()[input.size()]);
+
+	ScrobbleInfo result;
+	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+
+	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
 	serialisedScrobble += result;
@@ -87,4 +91,66 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera"},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})"), serialisedScrobble);
+}
+
+void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists()
+{
+	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"},{"name":"Scorpions"}],)"
+			u8R"("album":{"title":"A Night at the Opera"},)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+
+	ScrobbleInfo result;
+	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+
+	CPPUNIT_ASSERT(status);
+
+	string serialisedScrobble;
+	serialisedScrobble += result;
+
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"},{"name":"Scorpions"}],)"
+			u8R"("album":{"title":"A Night at the Opera"},)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"), serialisedScrobble);
+}
+
+void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_NoAlbum()
+{
+	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+
+	ScrobbleInfo result;
+	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+
+	CPPUNIT_ASSERT(status);
+
+	string serialisedScrobble;
+	serialisedScrobble += result;
+
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"), serialisedScrobble);
+}
+
+void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
+{
+	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("length":{"amount":207026,"unit":"ms")");
+
+	ScrobbleInfo result;
+	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+
+	CPPUNIT_ASSERT(!status);
 }

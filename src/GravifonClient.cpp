@@ -223,7 +223,7 @@ finish:
 	}
 }
 
-ScrobbleInfo::ScrobbleInfo(const char * const start, const char * const end)
+bool ScrobbleInfo::parse(const char * const start, const char * const end, ScrobbleInfo &dest)
 {
 	assert(start != nullptr);
 	assert(end != nullptr);
@@ -233,21 +233,19 @@ ScrobbleInfo::ScrobbleInfo(const char * const start, const char * const end)
 	Value object;
 	if (!jsonReader.parse(start, end, object, false)) {
 		// TODO Handle error (use jsonReader.getFormattedErrorMessages()).
-		return;
+		return false;
 	}
 	if (!object.isObject() ||
 			!object.isMember("scrobble_start_datetime") ||
 			!object.isMember("scrobble_end_datetime") ||
 			!object.isMember("scrobble_duration") ||
 			!object.isMember("track")) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
-	if (!parseDateTime(object["scrobble_start_datetime"], scrobbleStartTimestamp) ||
-			!parseDateTime(object["scrobble_end_datetime"], scrobbleEndTimestamp) ||
-			!parseDuration(object["scrobble_duration"], scrobbleDuration)) {
-		// TODO Handle error.
-		return;
+	if (!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp) ||
+			!parseDateTime(object["scrobble_end_datetime"], dest.scrobbleEndTimestamp) ||
+			!parseDuration(object["scrobble_duration"], dest.scrobbleDuration)) {
+		return false;
 	}
 
 	const Value trackObject = object["track"];
@@ -255,56 +253,50 @@ ScrobbleInfo::ScrobbleInfo(const char * const start, const char * const end)
 			!trackObject.isMember("title") ||
 			!trackObject.isMember("artists") ||
 			!trackObject.isMember("length")) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
 	const Value &trackTitle = trackObject["title"];
 	if (!trackTitle.isString()) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
-	track.setTitle(trackTitle.asString());
+	dest.track.setTitle(trackTitle.asString());
 
 	if (trackObject.isMember("album")) {
 		const Value &trackAlbum = trackObject["album"];
 		if (!trackAlbum.isObject() ||
 				!trackAlbum.isMember("title")) {
-			// TODO Handle error.
-			return;
+			return false;
 		}
 		const Value &trackAlbumTitle = trackAlbum["title"];
 		if (!trackAlbumTitle.isString()) {
-			// TODO Handle error.
-			return;
+			return false;
 		}
-		track.setAlbumTitle(trackAlbumTitle.asString());
+		dest.track.setAlbumTitle(trackAlbumTitle.asString());
 	}
 
 	long trackDuration;
 	if (!parseDuration(trackObject["length"], trackDuration)) {
-		// TODO Handle error.
+		return false;
 	}
-	track.setDurationMillis(trackDuration);
+	dest.track.setDurationMillis(trackDuration);
 
 	const Value &trackArtists = trackObject["artists"];
 	if (!trackArtists.isArray() || trackArtists.empty()) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
 	for (Json::ArrayIndex i = 0, n = trackArtists.size(); i < n; ++i) {
 		const Value &trackArtist = trackArtists[i];
 		if (!trackArtist.isObject() ||
 				!trackArtist.isMember("name")) {
-			// TODO Handle error.
-			return;
+			return false;
 		}
 		const Value &trackArtistName = trackArtist["name"];
 		if (!trackArtistName.isString()) {
-			// TODO Handle error.
-			return;
+			return false;
 		}
-		track.addArtist(trackArtistName.asString());
+		dest.track.addArtist(trackArtistName.asString());
 	}
+	return true;
 }
 
 string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)
