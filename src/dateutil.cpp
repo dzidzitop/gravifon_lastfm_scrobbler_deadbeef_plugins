@@ -14,19 +14,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "dateutil.hpp"
-#include <chrono>
 #include <time.h>
 #include <afc/utils.h>
 
 using namespace std;
 using namespace afc;
-using std::chrono::system_clock;
 
 bool parseISODateTime(const string &str, time_t &dest)
 {
 	tm dateTime;
+	// The input string is converted to the system default encoding to be interpreted correctly.
 	const char * const parseResult =
-			strptime(convertToUtf8(str, systemCharset().c_str()).c_str(), "%FT%T%z", &dateTime);
+			strptime(convertFromUtf8(str, systemCharset().c_str()).c_str(), "%FT%T%z", &dateTime);
 
 	if (parseResult == nullptr || *parseResult != 0) {
 		return false;
