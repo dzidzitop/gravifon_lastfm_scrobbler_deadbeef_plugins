@@ -45,6 +45,14 @@ private:
 
 struct ScrobbleInfo
 {
+	ScrobbleInfo() = default;
+	ScrobbleInfo(const ScrobbleInfo &) = default;
+	ScrobbleInfo(ScrobbleInfo &&) = default;
+	ScrobbleInfo(const char *start, const char *end);
+
+	ScrobbleInfo &operator=(const ScrobbleInfo &) = default;
+	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
+
 	// Date and time when scrobble event was initiated.
 	std::time_t scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.

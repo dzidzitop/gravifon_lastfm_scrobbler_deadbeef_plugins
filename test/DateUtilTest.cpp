@@ -22,7 +22,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION(DateUtilTest);
 
 using namespace std;
 
-void DateUtilTest::testParseValidISODate_PositiveUTCTimeZone()
+void DateUtilTest::testParseValidISODateTime_PositiveUTCTimeZone()
 {
 	string input("2013-10-16T20:02:26+0000");
 	time_t dest;

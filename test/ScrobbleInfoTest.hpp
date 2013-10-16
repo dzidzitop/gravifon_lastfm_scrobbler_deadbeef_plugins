@@ -23,9 +23,11 @@ class ScrobbleInfoTest : public CppUnit::TestFixture
 {
 CPPUNIT_TEST_SUITE(ScrobbleInfoTest);
 CPPUNIT_TEST(testSerialiseScrobbleInfo_WithAllFields);
+CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_SingleArtist);
 CPPUNIT_TEST_SUITE_END();
 
 	void testSerialiseScrobbleInfo_WithAllFields();
+	void testDeserialiseScrobbleInfo_WithAllFields_SingleArtist();
 };
 
 #endif /* SCROBBLEINFOTEST_HPP_ */

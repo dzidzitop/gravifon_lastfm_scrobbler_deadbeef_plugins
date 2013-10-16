@@ -29,7 +29,7 @@ namespace
 		time_t t;
 		time(&t);
 
-		tm * const dateTime = localtime(&t);
+		tm * const dateTime = gmtime(&t);
 		dateTime->tm_year = year - 1900;
 		dateTime->tm_mon = month - 1;
 		dateTime->tm_mday = day;
@@ -38,13 +38,7 @@ namespace
 		dateTime->tm_sec = second;
 		dateTime->tm_isdst = -1;
 
-		return mktime(dateTime);
-	}
-
-	void getTimeZone(const time_t t, char dest[6])
-	{
-		const size_t count = std::strftime(dest, sizeof(dest), "%z", localtime(&t));
-		CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(5), count);
+		return timegm(dateTime);
 	}
 }
 
@@ -52,10 +46,6 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 {
 	time_t scrobbleStart = t(2000, 1, 1, 23, 12, 33);
 	time_t scrobbleEnd = t(2001, 2, 3, 12, 10, 4);
-	char scrobbleStartTimeZone[6];
-	char scrobbleEndTimeZone[6];
-	getTimeZone(scrobbleStart, scrobbleStartTimeZone);
-	getTimeZone(scrobbleEnd, scrobbleEndTimeZone);
 
 	ScrobbleInfo scrobbleInfo;
 	scrobbleInfo.scrobbleStartTimestamp = scrobbleStart;
@@ -70,9 +60,31 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 	string result;
 	result += scrobbleInfo;
 
-	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-01T23:12:33)") + scrobbleStartTimeZone +
-			R"(","scrobble_end_datetime":"2001-02-03T12:10:04)" + scrobbleEndTimeZone +
-			R"(","scrobble_duration":{"amount":1001,"unit":"ms"},"track":{"title":"'39","artists":[{"name":"Queen"}],)"
-			R"("album":{"title":"A Night at the Opera"},)"
-			R"("length":{"amount":12,"unit":"ms"}}})", result);
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2001-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1001,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("album":{"title":"A Night at the Opera"},)"
+			u8R"("length":{"amount":12,"unit":"ms"}}})"), result);
+}
+
+void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
+{
+	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("album":{"title":"A Night at the Opera"},)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+	ScrobbleInfo result(&input.c_str()[0], &input.c_str()[input.size()]);
+
+	string serialisedScrobble;
+	serialisedScrobble += result;
+
+	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("album":{"title":"A Night at the Opera"},)"
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"), serialisedScrobble);
 }

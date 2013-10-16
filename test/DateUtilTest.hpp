@@ -22,10 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class DateUtilTest : public CppUnit::TestFixture
 {
 CPPUNIT_TEST_SUITE(DateUtilTest);
-CPPUNIT_TEST(testParseValidISODate_PositiveUTCTimeZone);
+CPPUNIT_TEST(testParseValidISODateTime_PositiveUTCTimeZone);
 CPPUNIT_TEST_SUITE_END();
 
-	void testParseValidISODate_PositiveUTCTimeZone();
+	void testParseValidISODateTime_PositiveUTCTimeZone();
 };
 
 #endif /* DATEUTILTEST_HPP_ */

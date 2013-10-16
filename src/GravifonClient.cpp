@@ -17,13 +17,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cassert>
 #include <afc/base64.hpp>
 #include <afc/utils.h>
+#include "dateutil.hpp"
 #include "HttpClient.hpp"
 #include <time.h>
 #include <cstdlib>
 #include <cstdio>
+#include <jsoncpp/json/reader.h>
 
 using namespace std;
 using namespace afc;
+using Json::Value;
 
 namespace
 {
@@ -73,11 +76,7 @@ namespace
 		 * Milliseconds are not supported.
 		 */
 		std::tm dateTime;
-		/* Initialises the system time zone data. According to POSIX.1-2004, localtime() is required
-		 * to behave as though tzset(3) was called, while localtime_r() does not have this requirement.
-		 */
-		::tzset();
-		::localtime_r(&timestamp, &dateTime);
+		::gmtime_r(&timestamp, &dateTime);
 
 		// TODO support multi-byte system charsets. 32 could be not enough for them.
 		const size_t outputSize = 32; // 25 are really used.
@@ -112,6 +111,35 @@ namespace
 		}
 		dest.append("/deadbeef/gravifon_scrobbler_data");
 		return 0;
+	}
+
+	inline bool parseDateTime(const Value &dateTimeObject, time_t &dest)
+	{
+		return dateTimeObject.isString() && parseISODateTime(dateTimeObject.asString(), dest);
+	}
+
+	inline bool parseDuration(const Value &durationObject, long &dest)
+	{
+		if (!durationObject.isObject() ||
+				!durationObject.isMember("amount") ||
+				!durationObject.isMember("unit")) {
+			return false;
+		}
+		const Value &amount = durationObject["amount"];
+		const Value &unit = durationObject["unit"];
+		if (!amount.isInt() || !unit.isString()) {
+			return false;
+		}
+		const long val = amount.asInt();
+		const string unitValue = unit.asString();
+		if (unitValue == "ms") {
+			dest = val;
+			return true;
+		} else if (unitValue == "s") {
+			dest = val * 1000;
+			return true;
+		}
+		return false;
 	}
 }
 
@@ -192,6 +220,90 @@ void GravifonClient::storePendingScrobbles()
 finish:
 	if (fclose(dataFile) != 0) {
 		// TODO Handle error.
+	}
+}
+
+ScrobbleInfo::ScrobbleInfo(const char * const start, const char * const end)
+{
+	assert(start != nullptr);
+	assert(end != nullptr);
+	assert(start <= end);
+
+	Json::Reader jsonReader;
+	Value object;
+	if (!jsonReader.parse(start, end, object, false)) {
+		// TODO Handle error (use jsonReader.getFormattedErrorMessages()).
+		return;
+	}
+	if (!object.isObject() ||
+			!object.isMember("scrobble_start_datetime") ||
+			!object.isMember("scrobble_end_datetime") ||
+			!object.isMember("scrobble_duration") ||
+			!object.isMember("track")) {
+		// TODO Handle error.
+		return;
+	}
+	if (!parseDateTime(object["scrobble_start_datetime"], scrobbleStartTimestamp) ||
+			!parseDateTime(object["scrobble_end_datetime"], scrobbleEndTimestamp) ||
+			!parseDuration(object["scrobble_duration"], scrobbleDuration)) {
+		// TODO Handle error.
+		return;
+	}
+
+	const Value trackObject = object["track"];
+	if (!trackObject.isObject() ||
+			!trackObject.isMember("title") ||
+			!trackObject.isMember("artists") ||
+			!trackObject.isMember("length")) {
+		// TODO Handle error.
+		return;
+	}
+	const Value &trackTitle = trackObject["title"];
+	if (!trackTitle.isString()) {
+		// TODO Handle error.
+		return;
+	}
+	track.setTitle(trackTitle.asString());
+
+	if (trackObject.isMember("album")) {
+		const Value &trackAlbum = trackObject["album"];
+		if (!trackAlbum.isObject() ||
+				!trackAlbum.isMember("title")) {
+			// TODO Handle error.
+			return;
+		}
+		const Value &trackAlbumTitle = trackAlbum["title"];
+		if (!trackAlbumTitle.isString()) {
+			// TODO Handle error.
+			return;
+		}
+		track.setAlbumTitle(trackAlbumTitle.asString());
+	}
+
+	long trackDuration;
+	if (!parseDuration(trackObject["length"], trackDuration)) {
+		// TODO Handle error.
+	}
+	track.setDurationMillis(trackDuration);
+
+	const Value &trackArtists = trackObject["artists"];
+	if (!trackArtists.isArray() || trackArtists.empty()) {
+		// TODO Handle error.
+		return;
+	}
+	for (Json::ArrayIndex i = 0, n = trackArtists.size(); i < n; ++i) {
+		const Value &trackArtist = trackArtists[i];
+		if (!trackArtist.isObject() ||
+				!trackArtist.isMember("name")) {
+			// TODO Handle error.
+			return;
+		}
+		const Value &trackArtistName = trackArtist["name"];
+		if (!trackArtistName.isString()) {
+			// TODO Handle error.
+			return;
+		}
+		track.addArtist(trackArtistName.asString());
 	}
 }
 
