@@ -164,6 +164,7 @@ void GravifonClient::storePendingScrobbles()
 		// TODO Handle error.
 		return;
 	}
+	// TODO Create the parent directory if it does not exist.
 	FILE * const dataFile = fopen(dataFilePath.c_str(), "ab");
 	if (dataFile == nullptr) {
 		// TODO Handle error.
