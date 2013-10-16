@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/utils.h>
 #include "HttpClient.hpp"
 #include <time.h>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 using namespace afc;
@@ -93,6 +95,24 @@ namespace
 		// TODO avoid copying that is performed by ostringstream::str().
 		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
+
+	inline long getDataFilePath(string &dest)
+	{
+		// TODO Handle dir separators accurately.
+		const char * const dataDir = getenv("XDG_DATA_HOME");
+		if (dataDir != nullptr && dataDir[0] != '\0') {
+			dest = dataDir;
+		} else {
+			// Try assign the default data dir ($HOME/.local/share/).
+			const char * const homeDir = getenv("HOME");
+			if (homeDir == nullptr || homeDir == '\0') {
+				return 1;
+			}
+			dest.assign(homeDir).append("/.local/share");
+		}
+		dest.append("/deadbeef/gravifon_scrobbler_data");
+		return 0;
+	}
 }
 
 void GravifonClient::configure(const char * const scrobblerUrl, const char * const username,
@@ -135,6 +155,43 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	}
 
 	// TODO handle response
+}
+
+void GravifonClient::storePendingScrobbles()
+{
+	string dataFilePath;
+	if (getDataFilePath(dataFilePath) != 0) {
+		// TODO Handle error.
+		return;
+	}
+	FILE * const dataFile = fopen(dataFilePath.c_str(), "ab");
+	if (dataFile == nullptr) {
+		// TODO Handle error.
+		return;
+	}
+	string buf;
+	for (const ScrobbleInfo &scrobbleInfo : m_pendingScrobbles) {
+		buf.resize(0);
+		buf += scrobbleInfo;
+		const size_t bufSize = buf.size();
+		if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
+			// TODO Handle error.
+			goto finish;
+		}
+		/* ScrobbleInfo in the JSON form does not contain the character 'line feed' ('\n')
+		 * so that using the latter as a separator is safe.
+		 *
+		 * The file must end with the empty line.
+		 */
+		if (fwrite(u8"\n", sizeof(unsigned char), 1, dataFile) != 1) {
+			// TODO Handle error.
+			goto finish;
+		}
+	}
+finish:
+	if (fclose(dataFile) != 0) {
+		// TODO Handle error.
+	}
 }
 
 string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)

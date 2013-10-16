@@ -71,10 +71,15 @@ public:
 
 	// TODO support error handling via API
 	void scrobble(const ScrobbleInfo &);
+
+	// TODO support error handling via API
+	void storePendingScrobbles();
 private:
 	std::string m_scrobblerUrl;
 	std::string m_username;
 	std::string m_password;
+
+	std::vector<ScrobbleInfo> m_pendingScrobbles;
 };
 
 #endif /* GRAVIFONCLIENT_HPP_ */
