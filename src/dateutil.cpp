@@ -32,6 +32,10 @@ bool parseISODateTime(const string &str, time_t &dest)
 		return false;
 	}
 
-	dest = timegm(&dateTime);
+	// Unfortunately, this code is not portable. It compiles in Debian Wheezy with GCC 4.7.
+	dateTime.tm_sec += dateTime.tm_gmtoff;
+	dateTime.tm_gmtoff = 0;
+
+	dest = mktime(&dateTime) - timezone;
 	return true;
 }

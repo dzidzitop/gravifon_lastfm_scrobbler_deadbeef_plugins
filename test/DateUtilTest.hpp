@@ -23,9 +23,16 @@ class DateUtilTest : public CppUnit::TestFixture
 {
 CPPUNIT_TEST_SUITE(DateUtilTest);
 CPPUNIT_TEST(testParseValidISODateTime_PositiveUTCTimeZone);
+CPPUNIT_TEST(testParseValidISODateTime_NegativeUTCTimeZone);
+CPPUNIT_TEST(testParseValidISODateTime_PositiveNonUTCTimeZone);
+CPPUNIT_TEST(testParseValidISODateTime_NegativeNonUTCTimeZone);
 CPPUNIT_TEST_SUITE_END();
 
 	void testParseValidISODateTime_PositiveUTCTimeZone();
+	void testParseValidISODateTime_NegativeUTCTimeZone();
+
+	void testParseValidISODateTime_PositiveNonUTCTimeZone();
+	void testParseValidISODateTime_NegativeNonUTCTimeZone();
 };
 
 #endif /* DATEUTILTEST_HPP_ */

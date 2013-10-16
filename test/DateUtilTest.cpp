@@ -40,3 +40,60 @@ void DateUtilTest::testParseValidISODateTime_PositiveUTCTimeZone()
 	CPPUNIT_ASSERT(count != 0);
 	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T20:02:26+0000"), string(buf));
 }
+
+void DateUtilTest::testParseValidISODateTime_NegativeUTCTimeZone()
+{
+	string input("2013-10-16T20:02:26-0000");
+	time_t dest;
+
+	const bool result = parseISODateTime(input, dest);
+
+	CPPUNIT_ASSERT(result);
+
+	tm dateTime;
+	gmtime_r(&dest, &dateTime);
+
+	char buf[100];
+	const size_t count = std::strftime(buf, 100, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
+
+	CPPUNIT_ASSERT(count != 0);
+	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T20:02:26+0000"), string(buf));
+}
+
+void DateUtilTest::testParseValidISODateTime_PositiveNonUTCTimeZone()
+{
+	string input("2013-10-16T20:02:26+0300");
+	time_t dest;
+
+	const bool result = parseISODateTime(input, dest);
+
+	CPPUNIT_ASSERT(result);
+
+	tm dateTime;
+	gmtime_r(&dest, &dateTime);
+
+	char buf[100];
+	const size_t count = std::strftime(buf, 100, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
+
+	CPPUNIT_ASSERT(count != 0);
+	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T23:02:26+0000"), string(buf));
+}
+
+void DateUtilTest::testParseValidISODateTime_NegativeNonUTCTimeZone()
+{
+	string input("2013-10-16T20:02:26-0130");
+	time_t dest;
+
+	const bool result = parseISODateTime(input, dest);
+
+	CPPUNIT_ASSERT(result);
+
+	tm dateTime;
+	gmtime_r(&dest, &dateTime);
+
+	char buf[100];
+	const size_t count = std::strftime(buf, 100, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
+
+	CPPUNIT_ASSERT(count != 0);
+	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T18:32:26+0000"), string(buf));
+}
