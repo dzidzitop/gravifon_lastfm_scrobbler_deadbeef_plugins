@@ -103,7 +103,7 @@ namespace
 		if (dataDir != nullptr && dataDir[0] != '\0') {
 			dest = dataDir;
 		} else {
-			// Try assign the default data dir ($HOME/.local/share/).
+			// Trying to assign the default data dir ($HOME/.local/share/).
 			const char * const homeDir = getenv("HOME");
 			if (homeDir == nullptr || homeDir == '\0') {
 				return 1;
