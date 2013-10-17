@@ -200,6 +200,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	m_pendingScrobbles.erase(m_pendingScrobbles.begin(), it);
 }
 
+// TODO Do not load all scrobbles to memory. Use mmap for this?
 bool GravifonClient::loadPendingScrobbles()
 {
 	string dataFilePath;
@@ -254,7 +255,10 @@ void GravifonClient::storePendingScrobbles()
 		return;
 	}
 	// TODO Create the parent directory if it does not exist.
-	FILE * const dataFile = fopen(dataFilePath.c_str(), "ab");
+	/* The assumption that all tracks are loaded into the list of pending scrobbles
+	 * so that the file could be overwritten with the remaining pending scrobbles.
+	 */
+	FILE * const dataFile = fopen(dataFilePath.c_str(), "wb");
 	if (dataFile == nullptr) {
 		// TODO Handle error.
 		return;
