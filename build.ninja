@@ -35,7 +35,7 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/dateutil.o $
     $buildDir/gravifon_scrobbler.o
-  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl
+  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/gravifon_scrobbler_test: bin $
     $buildDir/dateutil.o $
