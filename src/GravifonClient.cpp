@@ -185,6 +185,52 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	// TODO handle response
 }
 
+bool GravifonClient::loadPendingScrobbles()
+{
+	string dataFilePath;
+	if (getDataFilePath(dataFilePath) != 0) {
+		return false;
+	}
+
+	// TODO check if the file exists. If it does not then just return.
+	FILE * const dataFile = fopen(dataFilePath.c_str(), "rb");
+	if (dataFile == nullptr) {
+		return false;
+	}
+
+	bool result = true;
+	string buf;
+	for (;;) {
+		const int c = fgetc(dataFile);
+		if (c == EOF) {
+			break;
+		}
+		if (c == 0x0a) { // c == u8'\n'
+			m_pendingScrobbles.emplace_back();
+			if (!ScrobbleInfo::parse(buf, m_pendingScrobbles.back())) {
+				result = false;
+				goto finish;
+			}
+			buf.clear();
+		} else {
+			buf += (char) c;
+		}
+	}
+	if (feof(dataFile) == 0) {
+		result = false;
+	} else {
+		/* The last byte of the data file must be either 0x0a or just the end
+		 * of the last scrobble. In either case buf is empty.
+		 */
+		result &= buf.empty();
+	}
+finish:
+	if (fclose(dataFile) != 0) {
+		result = false;
+	}
+	return result;
+}
+
 void GravifonClient::storePendingScrobbles()
 {
 	string dataFilePath;
@@ -223,15 +269,11 @@ finish:
 	}
 }
 
-bool ScrobbleInfo::parse(const char * const start, const char * const end, ScrobbleInfo &dest)
+bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 {
-	assert(start != nullptr);
-	assert(end != nullptr);
-	assert(start <= end);
-
 	Json::Reader jsonReader;
 	Value object;
-	if (!jsonReader.parse(start, end, object, false)) {
+	if (!jsonReader.parse(str, object, false)) {
 		// TODO Handle error (use jsonReader.getFormattedErrorMessages()).
 		return false;
 	}

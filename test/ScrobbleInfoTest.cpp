@@ -78,7 +78,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
 	ScrobbleInfo result;
-	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+	const bool status = ScrobbleInfo::parse(input, result);
 
 	CPPUNIT_ASSERT(status);
 
@@ -103,7 +103,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
 	ScrobbleInfo result;
-	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+	const bool status = ScrobbleInfo::parse(input, result);
 
 	CPPUNIT_ASSERT(status);
 
@@ -127,7 +127,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_NoAlbum()
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
 	ScrobbleInfo result;
-	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+	const bool status = ScrobbleInfo::parse(input, result);
 
 	CPPUNIT_ASSERT(status);
 
@@ -150,7 +150,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
 			u8R"("length":{"amount":207026,"unit":"ms")");
 
 	ScrobbleInfo result;
-	const bool status = ScrobbleInfo::parse(&input.c_str()[0], &input.c_str()[input.size()], result);
+	const bool status = ScrobbleInfo::parse(input, result);
 
 	CPPUNIT_ASSERT(!status);
 }

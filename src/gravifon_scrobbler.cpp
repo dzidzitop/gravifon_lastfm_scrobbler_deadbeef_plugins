@@ -118,6 +118,10 @@ namespace
 int gravifonScrobblerStart()
 {
 	// TODO move initialisation phase to here (now C++ unit initialisation is used).
+	// TODO Ensure this code is thread-safe.
+	if (!gravifonClient.loadPendingScrobbles()) {
+		return 1;
+	}
 	return 0;
 }
 
