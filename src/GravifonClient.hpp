@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <string>
 #include <vector>
+#include <list>
 #include <ctime>
 
 // All strings are utf8-encoded.
@@ -66,6 +67,7 @@ struct ScrobbleInfo
 	friend std::string &operator+=(std::string &str, const ScrobbleInfo &scrobbleInfo);
 };
 
+// TODO make GravifonClient thread-safe.
 class GravifonClient
 {
 	GravifonClient(const GravifonClient &) = delete;
@@ -89,7 +91,7 @@ private:
 	std::string m_username;
 	std::string m_password;
 
-	std::vector<ScrobbleInfo> m_pendingScrobbles;
+	std::list<ScrobbleInfo> m_pendingScrobbles;
 };
 
 #endif /* GRAVIFONCLIENT_HPP_ */

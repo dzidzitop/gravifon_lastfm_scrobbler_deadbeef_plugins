@@ -157,10 +157,23 @@ void GravifonClient::configure(const char * const scrobblerUrl, const char * con
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 {
+	m_pendingScrobbles.emplace_back(scrobbleInfo);
+
+	// TODO move this functionality to a different thread.
 	HttpEntity request;
-	request.body += u8"[";
-	request.body += scrobbleInfo;
-	request.body += u8"]";
+	string &body = request.body;
+	body += u8"[";
+
+	// Adding up to 20 scrobbles to the request.
+	// 20 is the max number of scrobbles in a single request.
+	auto it = m_pendingScrobbles.begin();
+	auto end = m_pendingScrobbles.end();
+	for (int i = 0; i < 20 && it != end; ++i, ++it) {
+		body += *it;
+		body += u8",";
+	}
+	body.pop_back(); // Removing the redundant comma.
+	body += u8"]";
 
 	string authHeader("Authorization: Basic "); // HTTP Basic authentication is used.
 	// TODO think of moving encodeBase64(string(m_username) + ':' + m_password) to the constructor to perform this once.
@@ -179,10 +192,12 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
 	if (client.send(m_scrobblerUrl, request, response, 3000L, 5000L) != 0) {
-		// TODO handle error
+		// TODO Handle error.
+		return;
 	}
-
 	// TODO handle response
+	// TODO put each failed scrobble back to the list (probably sort by start date).
+	m_pendingScrobbles.erase(m_pendingScrobbles.begin(), it);
 }
 
 bool GravifonClient::loadPendingScrobbles()
