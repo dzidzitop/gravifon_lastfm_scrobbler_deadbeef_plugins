@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdlib>
 #include <cstdio>
 #include <jsoncpp/json/reader.h>
+#include <sys/stat.h>
 
 using namespace std;
 using namespace afc;
@@ -141,6 +142,24 @@ namespace
 		}
 		return false;
 	}
+
+	// The last path element is considered as a file and therefore is not created.
+	inline bool createParentDirs(const string &path)
+	{
+		if (path.empty()) {
+			return true;
+		}
+		for (size_t start = path[0] == '/' ? 1 : 0;;) {
+			const size_t end = path.find_first_of('/', start);
+			if (end == string::npos) {
+				return true;
+			}
+			if (mkdir(path.substr(0, end).c_str(), 0775) != 0 && errno != EEXIST) {
+				return false;
+			}
+			start = end + 1;
+		}
+	}
 }
 
 void GravifonClient::configure(const char * const scrobblerUrl, const char * const username,
@@ -208,7 +227,19 @@ bool GravifonClient::loadPendingScrobbles()
 		return false;
 	}
 
-	// TODO check if the file exists. If it does not then just return.
+	/* - if the file does not exist then return success (i.e. there are no pending scrobbles)
+	 * - if he file exists but it is not a regular file or a symbolic link then return failure
+	 *   because such a file cannot be used to store pending scrobbles
+	 * - if the file exists and it a regular file or a symbolic link then proceed with loading
+	 *   pending scrobbles stored in it
+	 */
+	struct stat fileStatus;
+	if (!stat(dataFilePath.c_str(), &fileStatus)) {
+		return errno == ENOTDIR || errno == ENOENT;
+	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
+		return false;
+	}
+
 	FILE * const dataFile = fopen(dataFilePath.c_str(), "rb");
 	if (dataFile == nullptr) {
 		return false;
@@ -254,6 +285,29 @@ void GravifonClient::storePendingScrobbles()
 		// TODO Handle error.
 		return;
 	}
+
+	/* - if the file or some parent directories do not exist then create missing parts.
+	 * - if he file exists but it is not a regular file or a symbolic link then return failure
+	 *   because such a file cannot be used to store pending scrobbles
+	 * - if the file exists and it a regular file or a symbolic link then proceed with storing
+	 *   pending scrobbles into it
+	 */
+	struct stat fileStatus;
+	if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
+		if (errno == ENOTDIR || errno == ENOENT) {
+			if (!createParentDirs(dataFilePath)) {
+				// TODO Handle error.
+				return;
+			}
+		} else {
+			// TODO Handle error.
+			return;
+		}
+	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
+		// TODO Handle error.
+		return;
+	}
+
 	// TODO Create the parent directory if it does not exist.
 	/* The assumption that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.

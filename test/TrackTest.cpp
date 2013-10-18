@@ -117,6 +117,9 @@ void TrackTest::testSerialiseTrack_WithNoAlbum()
 
 void TrackTest::testSerialiseTrack_MultipleArtists()
 {
+	GravifonClient client;
+	client.storePendingScrobbles();
+
 	Track track;
 	track.setTitle(u8"'39");
 	track.setAlbumTitle(u8"A Night at the Opera");
