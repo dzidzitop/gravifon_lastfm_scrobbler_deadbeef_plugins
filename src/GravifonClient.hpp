@@ -80,7 +80,6 @@ public:
 
 	void configure(const char *scrobblerUrl, const char *username, const char *password);
 
-	// TODO support error handling via API
 	void scrobble(const ScrobbleInfo &);
 
 	bool loadPendingScrobbles();
