@@ -128,7 +128,6 @@ int gravifonScrobblerStart()
 int gravifonScrobblerStop()
 {
 	int result = 0;
-	// TODO Handle storing error (if applicable).
 	if (!gravifonClient.storePendingScrobbles()) {
 		result = 1;
 	}
