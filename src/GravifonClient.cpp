@@ -278,12 +278,11 @@ finish:
 	return result;
 }
 
-void GravifonClient::storePendingScrobbles()
+bool GravifonClient::storePendingScrobbles()
 {
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
 
 	/* - if the file or some parent directories do not exist then create missing parts.
@@ -296,16 +295,13 @@ void GravifonClient::storePendingScrobbles()
 	if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
 		if (errno == ENOTDIR || errno == ENOENT) {
 			if (!createParentDirs(dataFilePath)) {
-				// TODO Handle error.
-				return;
+				return false;
 			}
 		} else {
-			// TODO Handle error.
-			return;
+			return false;
 		}
 	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
 
 	// TODO Create the parent directory if it does not exist.
@@ -314,16 +310,18 @@ void GravifonClient::storePendingScrobbles()
 	 */
 	FILE * const dataFile = fopen(dataFilePath.c_str(), "wb");
 	if (dataFile == nullptr) {
-		// TODO Handle error.
-		return;
+		return false;
 	}
+
+	bool result = true;
+
 	string buf;
 	for (const ScrobbleInfo &scrobbleInfo : m_pendingScrobbles) {
 		buf.resize(0);
 		buf += scrobbleInfo;
 		const size_t bufSize = buf.size();
 		if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
-			// TODO Handle error.
+			result = false;
 			goto finish;
 		}
 		/* ScrobbleInfo in the JSON form does not contain the character 'line feed' ('\n')
@@ -332,14 +330,15 @@ void GravifonClient::storePendingScrobbles()
 		 * The file must end with the empty line.
 		 */
 		if (fwrite(u8"\n", sizeof(unsigned char), 1, dataFile) != 1) {
-			// TODO Handle error.
+			result = false;
 			goto finish;
 		}
 	}
 finish:
 	if (fclose(dataFile) != 0) {
-		// TODO Handle error.
+		result = false;
 	}
+	return result;
 }
 
 bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)

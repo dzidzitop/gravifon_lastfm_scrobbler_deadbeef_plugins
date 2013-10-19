@@ -127,10 +127,13 @@ int gravifonScrobblerStart()
 
 int gravifonScrobblerStop()
 {
+	int result = 0;
 	// TODO Handle storing error (if applicable).
-	gravifonClient.storePendingScrobbles();
+	if (!gravifonClient.storePendingScrobbles()) {
+		result = 1;
+	}
 	// TODO Discard other resources properly.
-	return 0;
+	return result;
 }
 
 bool initClient()

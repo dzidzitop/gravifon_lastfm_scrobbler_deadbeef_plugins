@@ -84,8 +84,7 @@ public:
 	void scrobble(const ScrobbleInfo &);
 
 	bool loadPendingScrobbles();
-	// TODO support error handling via API
-	void storePendingScrobbles();
+	bool storePendingScrobbles();
 private:
 	std::string m_scrobblerUrl;
 	std::string m_username;
