@@ -234,7 +234,7 @@ bool GravifonClient::loadPendingScrobbles()
 	 *   pending scrobbles stored in it
 	 */
 	struct stat fileStatus;
-	if (!stat(dataFilePath.c_str(), &fileStatus)) {
+	if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
 		return errno == ENOTDIR || errno == ENOENT;
 	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
 		return false;
