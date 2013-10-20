@@ -26,8 +26,19 @@ struct HttpEntity
 	std::vector<const char *> headers;
 };
 
+struct HttpResponseEntity : public HttpEntity
+{
+	int statusCode;
+};
+
 class HttpClient
 {
+public:
+	enum class StatusCode
+	{
+		SUCCESS, UNKNOWN_ERROR, UNABLE_TO_CONNECT
+	};
+private:
 	HttpClient(const HttpClient &) = delete;
 	HttpClient(HttpClient &&) = delete;
 	HttpClient &operator=(const HttpClient &) = delete;
@@ -36,7 +47,7 @@ public:
 	HttpClient();
 	~HttpClient() = default;
 
-	int send(const std::string &url, const HttpEntity &request, HttpEntity &response,
+	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
 			const long connectionTimeoutMillis, const long socketTimeoutMillis);
 };
 

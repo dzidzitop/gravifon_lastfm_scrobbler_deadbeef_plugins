@@ -205,12 +205,12 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
 
-	HttpEntity response;
+	HttpResponseEntity response;
 
 	HttpClient client;
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
-	if (client.send(m_scrobblerUrl, request, response, 3000L, 5000L) != 0) {
+	if (client.send(m_scrobblerUrl, request, response, 3000L, 5000L) != HttpClient::StatusCode::SUCCESS) {
 		// TODO Handle error.
 		return;
 	}

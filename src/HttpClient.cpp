@@ -89,6 +89,16 @@ namespace
 
 		return dataSize;
 	}
+
+	HttpClient::StatusCode toStatusCode(CURLcode curlErrorCode)
+	{
+		switch (curlErrorCode) {
+		case CURLE_COULDNT_CONNECT:
+			return HttpClient::StatusCode::UNABLE_TO_CONNECT;
+		default:
+			return HttpClient::StatusCode::UNKNOWN_ERROR;
+		}
+	}
 }
 
 HttpClient::HttpClient()
@@ -98,19 +108,19 @@ HttpClient::HttpClient()
 	}
 }
 
-int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &response,
+HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
 		const long connectionTimeoutMillis, const long socketTimeoutMillis)
 {
 	CurlSession curl;
 
 	if (curl.handler == nullptr) {
-		return 1;
+		return StatusCode::UNKNOWN_ERROR;
 	}
 
 	CurlHeaders headers;
 	for (const char * const header : request.headers) {
 		if (!headers.addHeader(header)) {
-			return 1;
+			return StatusCode::UNKNOWN_ERROR;
 		}
 	}
 
@@ -129,8 +139,15 @@ int HttpClient::send(const string &url, const HttpEntity &request, HttpEntity &r
 
 	CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
-		return 1;
+		return toStatusCode(status);
 	}
 
-	return 0;
+	long statusCode;
+	if (curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &statusCode) != 0) {
+		return toStatusCode(status);
+	}
+
+	response.statusCode = static_cast<int>(statusCode);
+
+	return StatusCode::SUCCESS;
 }
