@@ -214,6 +214,11 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		// TODO Handle error.
 		return;
 	}
+
+	if (response.statusCode != 200) {
+		// TODO Handle error (probably distinguish different status codes).
+		return;
+	}
 	// TODO handle response
 	// TODO put each failed scrobble back to the list (probably sort by start date).
 	m_pendingScrobbles.erase(m_pendingScrobbles.begin(), it);
