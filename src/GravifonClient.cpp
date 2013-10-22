@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdio>
 #include <jsoncpp/json/reader.h>
 #include <sys/stat.h>
+#include "logger.hpp"
 
 using namespace std;
 using namespace afc;
@@ -214,6 +215,9 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		// TODO Handle error.
 		return;
 	}
+
+	logDebug(string("[GravifonClient] Response status code: ") + to_string(response.statusCode) +
+			"; response body: " + response.body);
 
 	if (response.statusCode != 200) {
 		// TODO Handle error (probably distinguish different status codes).
