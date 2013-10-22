@@ -185,9 +185,9 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	// Adding up to 20 scrobbles to the request.
 	// 20 is the max number of scrobbles in a single request.
-	auto it = m_pendingScrobbles.begin();
-	auto end = m_pendingScrobbles.end();
-	for (int i = 0; i < 20 && it != end; ++i, ++it) {
+	int submittedCount = 0;
+	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
+			submittedCount < 20 && it != end; ++submittedCount, ++it) {
 		body += *it;
 		body += u8",";
 	}
@@ -219,9 +219,55 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		// TODO Handle error (probably distinguish different status codes).
 		return;
 	}
-	// TODO handle response
-	// TODO put each failed scrobble back to the list (probably sort by start date).
-	m_pendingScrobbles.erase(m_pendingScrobbles.begin(), it);
+
+	Json::Reader jsonReader;
+	Value object;
+	if (!jsonReader.parse(response.body, object, false)) {
+		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+		return;
+	}
+	if (object.isObject()) { // if the response is a global error.
+		if (!object.isMember("ok")) {
+			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+			return;
+		}
+		const Value &success = object["ok"];
+		if (!success.isBool()) {
+			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+			return;
+		}
+		if (success.asBool() == true) {
+			fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: %s", response.body.c_str());
+			return;
+		}
+		// TODO Report error (use status' error code and error description fields).
+	}
+	if (!object.isArray() || object.size() != Json::ArrayIndex(submittedCount)) {
+		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+		return;
+	}
+	auto it = m_pendingScrobbles.begin();
+	for (Json::ArrayIndex i = 0, n = object.size(); i < n; ++i) {
+		const Value &status = object[i];
+		if (!status.isObject() || !status.isMember("ok")) {
+			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+			++it;
+			continue;
+		}
+		const Value &success = status["ok"];
+		if (!success.isBool()) {
+			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+			++it;
+			continue;
+		}
+		// If the track is scrobbled successfully then it is removed from the queue.
+		if (success.asBool() == true) {
+			it = m_pendingScrobbles.erase(it);
+		} else {
+			// TODO Report error (use status' error code and error description fields).
+			++it;
+		}
+	}
 }
 
 // TODO Do not load all scrobbles to memory. Use mmap for this?
