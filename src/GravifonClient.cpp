@@ -206,6 +206,8 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
 
+	logDebug(string("[GravifonClient] Request body: ") + request.body);
+
 	HttpResponseEntity response;
 
 	HttpClient client;
