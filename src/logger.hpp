@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	#include <string>
 
 	// stdout is flushed so that the message logged becomes visible immediately.
-	#define logDebug(msg) printf("%s\n", static_cast<std::string>(msg).c_str()); fflush(stdout);
+	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
 
 #endif /* LOGGER_HPP_ */
