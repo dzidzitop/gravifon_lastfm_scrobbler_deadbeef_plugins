@@ -97,9 +97,28 @@ namespace
 		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
 
+	// Removes trailing slash if it is not the only character in the path.
+	inline void appendToPath(string &path, const char *child)
+	{
+		const bool needsSeparator = path.size() > 1 && path.back() != '/';
+		const bool childHasSeparator = child[0] == '/';
+		if (needsSeparator) {
+			if (!childHasSeparator) {
+				path += '/';
+			}
+		} else {
+			if (childHasSeparator) {
+				/* This works even if the path is an empty string.
+				 * Child's heading separator is deleted.
+				 */
+				++child;
+			}
+		}
+		path += child;
+	}
+
 	inline long getDataFilePath(string &dest)
 	{
-		// TODO Handle dir separators accurately.
 		const char * const dataDir = getenv("XDG_DATA_HOME");
 		if (dataDir != nullptr && dataDir[0] != '\0') {
 			dest = dataDir;
@@ -109,9 +128,10 @@ namespace
 			if (homeDir == nullptr || homeDir == '\0') {
 				return 1;
 			}
-			dest.assign(homeDir).append("/.local/share");
+			dest = homeDir;
+			appendToPath(dest, ".local/share");
 		}
-		dest.append("/deadbeef/gravifon_scrobbler_data");
+		appendToPath(dest, "deadbeef/gravifon_scrobbler_data");
 		return 0;
 	}
 
