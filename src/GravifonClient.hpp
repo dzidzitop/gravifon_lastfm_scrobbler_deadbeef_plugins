@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <vector>
 #include <list>
 #include <ctime>
+#include <mutex>
 
 // All strings are utf8-encoded.
 class Track
@@ -68,6 +69,7 @@ struct ScrobbleInfo
 };
 
 // TODO make GravifonClient thread-safe.
+// TODO think if GravifonClient's destructor should use lock_guard<mutex> lock(m_mutex);
 class GravifonClient
 {
 	GravifonClient(const GravifonClient &) = delete;
@@ -90,6 +92,8 @@ private:
 	std::string m_password;
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;
+
+	std::mutex m_mutex;
 };
 
 #endif /* GRAVIFONCLIENT_HPP_ */

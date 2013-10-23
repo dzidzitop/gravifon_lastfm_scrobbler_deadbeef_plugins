@@ -165,7 +165,7 @@ namespace
 
 void GravifonClient::configure(const char * const scrobblerUrl, const char * const username,
 		const char * const password)
-{
+{ lock_guard<mutex> lock(m_mutex);
 	assert(scrobblerUrl != nullptr);
 	assert(username != nullptr);
 	assert(password != nullptr);
@@ -176,7 +176,7 @@ void GravifonClient::configure(const char * const scrobblerUrl, const char * con
 }
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
-{
+{ lock_guard<mutex> lock(m_mutex);
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
 
 	// TODO move this functionality to a different thread.
@@ -278,7 +278,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 // TODO Do not load all scrobbles to memory. Use mmap for this?
 bool GravifonClient::loadPendingScrobbles()
-{
+{ lock_guard<mutex> lock(m_mutex);
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {
 		return false;
@@ -336,7 +336,7 @@ finish:
 }
 
 bool GravifonClient::storePendingScrobbles()
-{
+{ lock_guard<mutex> lock(m_mutex);
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {
 		return false;
