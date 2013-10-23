@@ -33,7 +33,6 @@ public:
 private:
 	std::string m_title;
 	std::vector<std::string> m_artists;
-	// TODO think about supporting full album info
 	std::string m_album;
 	// Track duration in milliseconds.
 	long m_duration;
