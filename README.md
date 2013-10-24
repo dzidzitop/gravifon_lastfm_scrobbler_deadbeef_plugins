@@ -19,12 +19,11 @@ Here, `${basedir}` denotes the root directory of the gravifon scrobbler codebase
 7. execute `ninja sharedLib` from `${basedir}`. The shared library `gravifon_scrobbler.so` will be created in `${basedir}/build`
 8. copy `${basedir}/build/gravifon_scrobbler.so` to `$HOME/.local/lib/deadbeef`
 
-
 System requirements
 -------------------
 
 * DeaDBeeF 0.5.6
 * GCC g++ 4.7+
 * libcurl 7.26.0+
-* libjsoncpp 0.6.0+
+* libjsoncpp 0.5.0+
 * ninja 0.1.3+
