@@ -152,7 +152,6 @@ bool initClient()
 		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 
-		// TODO Ensure that this code is thread-safe.
 		gravifonClient.configure(scrobblerUrl, username, password);
 
 		return true;
