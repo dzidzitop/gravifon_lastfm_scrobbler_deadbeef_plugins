@@ -206,7 +206,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	// Adding up to 20 scrobbles to the request.
 	// 20 is the max number of scrobbles in a single request.
-	int submittedCount = 0;
+	unsigned submittedCount = 0;
 	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
 			submittedCount < 20 && it != end; ++submittedCount, ++it) {
 		body += *it;
@@ -268,12 +268,12 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		}
 		// TODO Report error (use status' error code and error description fields).
 	}
-	if (!object.isArray() || object.size() != Json::ArrayIndex(submittedCount)) {
+	if (!object.isArray() || object.size() != submittedCount) {
 		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 		return;
 	}
 	auto it = m_pendingScrobbles.begin();
-	for (Json::ArrayIndex i = 0, n = object.size(); i < n; ++i) {
+	for (auto i = 0u, n = object.size(); i < n; ++i) {
 		const Value &status = object[i];
 		if (!status.isObject() || !status.isMember("ok")) {
 			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
@@ -475,7 +475,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	if (!trackArtists.isArray() || trackArtists.empty()) {
 		return false;
 	}
-	for (Json::ArrayIndex i = 0, n = trackArtists.size(); i < n; ++i) {
+	for (auto i = 0u, n = trackArtists.size(); i < n; ++i) {
 		const Value &trackArtist = trackArtists[i];
 		if (!trackArtist.isObject() ||
 				!trackArtist.isMember("name")) {
