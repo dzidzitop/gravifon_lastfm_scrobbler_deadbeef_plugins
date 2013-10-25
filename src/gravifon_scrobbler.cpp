@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <chrono>
 #include <mutex>
 #include <cstring>
+#include "logger.hpp"
 
 using namespace std;
 using std::chrono::system_clock;
@@ -131,6 +132,7 @@ namespace
 
 int gravifonScrobblerStart()
 {
+	logDebug("[gravifon_scrobbler] Starting...");
 	// TODO move initialisation phase to here (now C++ unit initialisation is used).
 	// TODO Ensure this code is thread-safe.
 	if (!gravifonClient.loadPendingScrobbles()) {
@@ -141,6 +143,7 @@ int gravifonScrobblerStart()
 
 int gravifonScrobblerStop()
 {
+	logDebug("[gravifon_scrobbler] Stopping...");
 	int result = 0;
 	if (!gravifonClient.storePendingScrobbles()) {
 		result = 1;
