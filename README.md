@@ -26,4 +26,4 @@ System requirements
 * GCC g++ 4.7+
 * libcurl 7.26.0+
 * libjsoncpp 0.5.0+
-* ninja 0.1.3+
+* ninja 1.3.3+
