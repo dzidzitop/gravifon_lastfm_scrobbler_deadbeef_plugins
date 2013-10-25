@@ -24,20 +24,26 @@ class TrackTest : public CppUnit::TestFixture
 CPPUNIT_TEST_SUITE(TrackTest);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields);
 CPPUNIT_TEST(testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters);
-CPPUNIT_TEST(testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters);
-CPPUNIT_TEST(testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters);
-CPPUNIT_TEST(testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_TrackNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_AlbumNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_AlbumArtistNameWithEscapeCharacters);
+CPPUNIT_TEST(testSerialiseTrack_ArtistNameWithEscapeCharacters);
 CPPUNIT_TEST(testSerialiseTrack_WithNoAlbum);
+CPPUNIT_TEST(testSerialiseTrack_WithNoAlbumArtists);
 CPPUNIT_TEST(testSerialiseTrack_MultipleArtists);
+CPPUNIT_TEST(testSerialiseTrack_MultipleAlbumArtists);
 CPPUNIT_TEST_SUITE_END();
 
 	void testSerialiseTrack_WithAllFields();
 	void testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacters();
-	void testSerialiseTrack_WithAllFields_TrackNameWithEscapeCharacters();
-	void testSerialiseTrack_WithAllFields_AlbumNameWithEscapeCharacters();
-	void testSerialiseTrack_WithAllFields_ArtistNameWithEscapeCharacters();
+	void testSerialiseTrack_TrackNameWithEscapeCharacters();
+	void testSerialiseTrack_AlbumNameWithEscapeCharacters();
+	void testSerialiseTrack_AlbumArtistNameWithEscapeCharacters();
+	void testSerialiseTrack_ArtistNameWithEscapeCharacters();
 	void testSerialiseTrack_WithNoAlbum();
+	void testSerialiseTrack_WithNoAlbumArtists();
 	void testSerialiseTrack_MultipleArtists();
+	void testSerialiseTrack_MultipleAlbumArtists();
 };
 
 #endif /* TRACKTEST_HPP_ */

@@ -164,6 +164,26 @@ namespace
 		return false;
 	}
 
+	template<typename AddArtistOp>
+	inline bool parseArtists(const Value &artists, const bool artistsRequired, AddArtistOp addArtistOp)
+	{
+		if (!artists.isArray() || artists.empty()) {
+			return !artistsRequired;
+		}
+		for (auto i = 0u, n = artists.size(); i < n; ++i) {
+			const Value &artist = artists[i];
+			if (!artist.isObject() || !artist.isMember("name")) {
+				return false;
+			}
+			const Value &artistName = artist["name"];
+			if (!artistName.isString()) {
+				return false;
+			}
+			addArtistOp(artistName.asString());
+		}
+		return true;
+	}
+
 	// The last path element is considered as a file and therefore is not created.
 	inline bool createParentDirs(const string &path)
 	{
@@ -439,6 +459,8 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 		return false;
 	}
 
+	Track &track = dest.track;
+
 	const Value trackObject = object["track"];
 	if (!trackObject.isObject() ||
 			!trackObject.isMember("title") ||
@@ -450,7 +472,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	if (!trackTitle.isString()) {
 		return false;
 	}
-	dest.track.setTitle(trackTitle.asString());
+	track.setTitle(trackTitle.asString());
 
 	if (trackObject.isMember("album")) {
 		const Value &trackAlbum = trackObject["album"];
@@ -462,30 +484,23 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 		if (!trackAlbumTitle.isString()) {
 			return false;
 		}
-		dest.track.setAlbumTitle(trackAlbumTitle.asString());
+		track.setAlbumTitle(trackAlbumTitle.asString());
+
+		if (!parseArtists(trackAlbum["artists"], false,
+				[&](string &&artistName) { track.addAlbumArtist(artistName); })) {
+			return false;
+		}
 	}
 
 	long trackDuration;
 	if (!parseDuration(trackObject["length"], trackDuration)) {
 		return false;
 	}
-	dest.track.setDurationMillis(trackDuration);
+	track.setDurationMillis(trackDuration);
 
-	const Value &trackArtists = trackObject["artists"];
-	if (!trackArtists.isArray() || trackArtists.empty()) {
+	if (!parseArtists(trackObject["artists"], true,
+			[&](string &&artistName) { track.addArtist(artistName); })) {
 		return false;
-	}
-	for (auto i = 0u, n = trackArtists.size(); i < n; ++i) {
-		const Value &trackArtist = trackArtists[i];
-		if (!trackArtist.isObject() ||
-				!trackArtist.isMember("name")) {
-			return false;
-		}
-		const Value &trackArtistName = trackArtist["name"];
-		if (!trackArtistName.isString()) {
-			return false;
-		}
-		dest.track.addArtist(trackArtistName.asString());
 	}
 	return true;
 }
@@ -515,12 +530,22 @@ string &operator+=(string &str, const Track &track)
 		writeJsonString(artist, str);
 		str.append(u8"\"},");
 	}
-	str.resize(str.size()-1); // removing the last redundant comma.
+	str.pop_back(); // removing the last redundant comma.
 	str.append(u8"],");
 	if (track.m_albumSet) {
 		str.append(u8R"("album":{"title":")");
 		writeJsonString(track.m_album, str);
-		str.append(u8R"("},)");
+		str.append(u8"\"");
+		if (track.m_albumArtistSet) {
+			str.append(u8R"(,"artists":[)");
+			for (const string &artist : track.m_albumArtists) {
+				str.append(u8R"({"name":")");
+				writeJsonString(artist, str);
+				str.append(u8"\"},");
+			}
+			str.back() = u8"]"[0]; // removing the last redundant comma as well.
+		}
+		str.append(u8R"(},)");
 	}
 	str.append(u8R"("length":{"amount":)");
 	writeJsonLong(track.m_duration, str);

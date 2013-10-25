@@ -54,6 +54,21 @@ namespace
 		return static_cast<long>(seconds * 1000);
 	}
 
+	template<typename AddTagOp>
+	inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
+	{
+		/* Adding tags one by one. DeaDBeeF returns them as
+		 * '\n'-separated values within a single string.
+		 */
+		const char *start = multiTag, *end;
+		while ((end = strchr(start, UTF8_LF)) != nullptr) {
+			addTagOp(string(start, end));
+			start = end + 1;
+		}
+		// Adding the last tag.
+		addTagOp(start);
+	}
+
 	unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent)
 	{
 		{ PlaylistLock lock;
@@ -71,17 +86,20 @@ namespace
 				// Track title is a required field.
 				return nullptr;
 			}
-			const char * artist = deadbeef->pl_find_meta(track, "artist");
+
+			const char *albumArtist = deadbeef->pl_find_meta(track, "album artist");
+			if (albumArtist == nullptr) {
+				albumArtist = deadbeef->pl_find_meta(track, "albumartist");
+			}
+
+			const char *artist = deadbeef->pl_find_meta(track, "artist");
 			if (artist == nullptr) {
 				artist = deadbeef->pl_find_meta(track, "band");
 				if (artist == nullptr) {
-					artist = deadbeef->pl_find_meta(track, "album artist");
+					artist = albumArtist;
 					if (artist == nullptr) {
-						artist = deadbeef->pl_find_meta(track, "albumartist");
-						if (artist == nullptr) {
-							// Track artist is a required field.
-							return nullptr;
-						}
+						// Track artist is a required field.
+						return nullptr;
 					}
 				}
 			}
@@ -100,15 +118,11 @@ namespace
 			}
 			trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-			/* Adding artists, probably multiple ones. DeaDBeeF returns them as
-			 * '\n'-separated values within a single string.
-			 */
-			const char *artistStart = artist, *artistEnd;
-			while ((artistEnd = strchr(artistStart, UTF8_LF)) != nullptr) {
-				trackInfo.addArtist(string(artistStart, artistEnd));
-				artistStart = artistEnd + 1;
+			addMultiTag(artist, [&](string &&artistName) { trackInfo.addArtist(artistName); });
+
+			if (albumArtist != nullptr) {
+				addMultiTag(artist, [&](string &&artistName) { trackInfo.addAlbumArtist(artistName); });
 			}
-			trackInfo.addArtist(artistStart);
 
 			return scrobbleInfo;
 		}

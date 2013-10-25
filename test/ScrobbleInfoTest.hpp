@@ -25,14 +25,18 @@ CPPUNIT_TEST_SUITE(ScrobbleInfoTest);
 CPPUNIT_TEST(testSerialiseScrobbleInfo_WithAllFields);
 CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_SingleArtist);
 CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists);
-CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_NoAlbum);
+CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumArtists);
+CPPUNIT_TEST(testDeserialiseScrobbleInfo_NoAlbum);
+CPPUNIT_TEST(testDeserialiseScrobbleInfo_NoAlbumArtists);
 CPPUNIT_TEST(testDeserialiseScrobbleInfo_MalformedJson);
 CPPUNIT_TEST_SUITE_END();
 
 	void testSerialiseScrobbleInfo_WithAllFields();
 	void testDeserialiseScrobbleInfo_WithAllFields_SingleArtist();
 	void testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists();
-	void testDeserialiseScrobbleInfo_WithAllFields_NoAlbum();
+	void testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumArtists();
+	void testDeserialiseScrobbleInfo_NoAlbum();
+	void testDeserialiseScrobbleInfo_NoAlbumArtists();
 	void testDeserialiseScrobbleInfo_MalformedJson();
 };
 
