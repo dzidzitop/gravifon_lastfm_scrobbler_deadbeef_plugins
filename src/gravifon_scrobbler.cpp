@@ -90,17 +90,17 @@ namespace
 			const char *albumArtist = deadbeef->pl_find_meta(track, "album artist");
 			if (albumArtist == nullptr) {
 				albumArtist = deadbeef->pl_find_meta(track, "albumartist");
+				if (albumArtist == nullptr) {
+					albumArtist = deadbeef->pl_find_meta(track, "band");
+				}
 			}
 
 			const char *artist = deadbeef->pl_find_meta(track, "artist");
 			if (artist == nullptr) {
-				artist = deadbeef->pl_find_meta(track, "band");
+				artist = albumArtist;
 				if (artist == nullptr) {
-					artist = albumArtist;
-					if (artist == nullptr) {
-						// Track artist is a required field.
-						return nullptr;
-					}
+					// Track artist is a required field.
+					return nullptr;
 				}
 			}
 			const char * const album = deadbeef->pl_find_meta(track, "album");
