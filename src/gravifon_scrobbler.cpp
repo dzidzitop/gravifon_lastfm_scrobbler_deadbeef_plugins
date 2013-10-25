@@ -121,7 +121,7 @@ namespace
 			addMultiTag(artist, [&](string &&artistName) { trackInfo.addArtist(artistName); });
 
 			if (albumArtist != nullptr) {
-				addMultiTag(artist, [&](string &&artistName) { trackInfo.addAlbumArtist(artistName); });
+				addMultiTag(albumArtist, [&](string &&artistName) { trackInfo.addAlbumArtist(artistName); });
 			}
 
 			return scrobbleInfo;
