@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 using namespace std;
 using namespace afc;
 using Json::Value;
+using Json::ValueType;
 
 namespace
 {
@@ -40,6 +41,13 @@ namespace
 	static_assert('\n' == u8"\n"[0], "An ASCII-incompatible basic charset is used.");
 	static_assert('\r' == u8"\r"[0], "An ASCII-incompatible basic charset is used.");
 	static_assert('\t' == u8"\t"[0], "An ASCII-incompatible basic charset is used.");
+
+	static const ValueType nullValue = ValueType::nullValue;
+	static const ValueType objectValue = ValueType::objectValue;
+	static const ValueType arrayValue = ValueType::arrayValue;
+	static const ValueType stringValue = ValueType::stringValue;
+	static const ValueType intValue = ValueType::intValue;
+	static const ValueType booleanValue = ValueType::booleanValue;
 
 	inline void writeJsonString(const string &src, string &dest)
 	{
@@ -135,21 +143,24 @@ namespace
 		return 0;
 	}
 
+	inline bool isType(const Value &val, const ValueType type)
+	{
+		return val.type() == type;
+	}
+
 	inline bool parseDateTime(const Value &dateTimeObject, time_t &dest)
 	{
-		return dateTimeObject.isString() && parseISODateTime(dateTimeObject.asString(), dest);
+		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asString(), dest);
 	}
 
 	inline bool parseDuration(const Value &durationObject, long &dest)
 	{
-		if (!durationObject.isObject() ||
-				!durationObject.isMember("amount") ||
-				!durationObject.isMember("unit")) {
+		if (!isType(durationObject, objectValue)) {
 			return false;
 		}
 		const Value &amount = durationObject["amount"];
 		const Value &unit = durationObject["unit"];
-		if (!amount.isInt() || !unit.isString()) {
+		if (!isType(amount, intValue) || !isType(unit, stringValue)) {
 			return false;
 		}
 		const long val = amount.asInt();
@@ -167,16 +178,16 @@ namespace
 	template<typename AddArtistOp>
 	inline bool parseArtists(const Value &artists, const bool artistsRequired, AddArtistOp addArtistOp)
 	{
-		if (!artists.isArray() || artists.empty()) {
+		if (!isType(artists, arrayValue) || artists.empty()) {
 			return !artistsRequired;
 		}
 		for (auto i = 0u, n = artists.size(); i < n; ++i) {
 			const Value &artist = artists[i];
-			if (!artist.isObject() || !artist.isMember("name")) {
+			if (!isType(artist, objectValue)) {
 				return false;
 			}
 			const Value &artistName = artist["name"];
-			if (!artistName.isString()) {
+			if (!isType(artistName, stringValue)) {
 				return false;
 			}
 			addArtistOp(artistName.asString());
@@ -272,13 +283,10 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 		return;
 	}
-	if (object.isObject()) { // if the response is a global error.
-		if (!object.isMember("ok")) {
-			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
-			return;
-		}
+	const ValueType objectType = object.type();
+	if (objectType == objectValue) { // if the response is a global error.
 		const Value &success = object["ok"];
-		if (!success.isBool()) {
+		if (!isType(success, booleanValue)) {
 			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 			return;
 		}
@@ -288,20 +296,20 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		}
 		// TODO Report error (use status' error code and error description fields).
 	}
-	if (!object.isArray() || object.size() != submittedCount) {
+	if (objectType != arrayValue || object.size() != submittedCount) {
 		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 		return;
 	}
 	auto it = m_pendingScrobbles.begin();
 	for (auto i = 0u, n = object.size(); i < n; ++i) {
 		const Value &status = object[i];
-		if (!status.isObject() || !status.isMember("ok")) {
+		if (!isType(status, objectValue)) {
 			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 			++it;
 			continue;
 		}
 		const Value &success = status["ok"];
-		if (!success.isBool()) {
+		if (!isType(success, booleanValue)) {
 			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
 			++it;
 			continue;
@@ -446,11 +454,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 		// TODO Handle error (use jsonReader.getFormattedErrorMessages()).
 		return false;
 	}
-	if (!object.isObject() ||
-			!object.isMember("scrobble_start_datetime") ||
-			!object.isMember("scrobble_end_datetime") ||
-			!object.isMember("scrobble_duration") ||
-			!object.isMember("track")) {
+	if (!isType(object, objectValue)) {
 		return false;
 	}
 	if (!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp) ||
@@ -462,26 +466,23 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	Track &track = dest.track;
 
 	const Value trackObject = object["track"];
-	if (!trackObject.isObject() ||
-			!trackObject.isMember("title") ||
-			!trackObject.isMember("artists") ||
-			!trackObject.isMember("length")) {
+	if (!isType(trackObject, objectValue)) {
 		return false;
 	}
 	const Value &trackTitle = trackObject["title"];
-	if (!trackTitle.isString()) {
+	if (!isType(trackTitle, stringValue)) {
 		return false;
 	}
 	track.setTitle(trackTitle.asString());
 
-	if (trackObject.isMember("album")) {
-		const Value &trackAlbum = trackObject["album"];
-		if (!trackAlbum.isObject() ||
-				!trackAlbum.isMember("title")) {
+	const Value &trackAlbum = trackObject["album"];
+	const ValueType trackAlbumObjType = trackAlbum.type();
+	if (trackAlbumObjType != nullValue) {
+		if (trackAlbumObjType != objectValue) {
 			return false;
 		}
 		const Value &trackAlbumTitle = trackAlbum["title"];
-		if (!trackAlbumTitle.isString()) {
+		if (!isType(trackAlbumTitle, stringValue)) {
 			return false;
 		}
 		track.setAlbumTitle(trackAlbumTitle.asString());
