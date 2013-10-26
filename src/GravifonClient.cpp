@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <time.h>
 #include <cstdlib>
 #include <cstdio>
+#include <cerrno>
 #include <jsoncpp/json/reader.h>
 #include <sys/stat.h>
 #include "logger.hpp"
