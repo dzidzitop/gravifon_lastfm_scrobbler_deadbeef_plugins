@@ -36,7 +36,7 @@ class HttpClient
 public:
 	enum class StatusCode
 	{
-		SUCCESS, UNKNOWN_ERROR, UNABLE_TO_CONNECT
+		SUCCESS, UNKNOWN_ERROR, UNABLE_TO_CONNECT, OPERATION_TIMEOUT
 	};
 private:
 	HttpClient(const HttpClient &) = delete;

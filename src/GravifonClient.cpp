@@ -31,6 +31,7 @@ using namespace std;
 using namespace afc;
 using Json::Value;
 using Json::ValueType;
+using StatusCode = HttpClient::StatusCode;
 
 namespace
 {
@@ -213,6 +214,23 @@ namespace
 			start = end + 1;
 		}
 	}
+
+	inline void reportHttpClientError(const StatusCode result)
+	{
+		assert(result != StatusCode::SUCCESS);
+		const char *message;
+		switch (result) {
+		case StatusCode::UNABLE_TO_CONNECT:
+			message = "unable to connect";
+			break;
+		case StatusCode::OPERATION_TIMEOUT:
+			message = "sending the scrobble message has timed out";
+			break;
+		default:
+			message = "unknown error";
+		}
+		fprintf(stderr, "[GravifonClient] Unable to send the scrobble message: %s.", message);
+	}
 }
 
 void GravifonClient::configure(const char * const scrobblerUrl, const char * const username,
@@ -263,10 +281,12 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	HttpResponseEntity response;
 
 	HttpClient client;
+
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
-	if (client.send(m_scrobblerUrl, request, response, 3000L, 5000L) != HttpClient::StatusCode::SUCCESS) {
-		// TODO Handle error.
+	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L);
+	if (result != StatusCode::SUCCESS) {
+		reportHttpClientError(result);
 		return;
 	}
 

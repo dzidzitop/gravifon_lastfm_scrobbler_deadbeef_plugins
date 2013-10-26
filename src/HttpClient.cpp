@@ -95,6 +95,8 @@ namespace
 		switch (curlErrorCode) {
 		case CURLE_COULDNT_CONNECT:
 			return HttpClient::StatusCode::UNABLE_TO_CONNECT;
+		case CURLE_OPERATION_TIMEDOUT:
+			return HttpClient::StatusCode::OPERATION_TIMEOUT;
 		default:
 			return HttpClient::StatusCode::UNKNOWN_ERROR;
 		}
