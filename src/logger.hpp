@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
-#ifdef NDEBUG
+#ifdef NDEBUG1
 	#define logDebug(msg) static_cast<void>
 #else
 	#include <cstdio>
@@ -25,5 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	// stdout is flushed so that the message logged becomes visible immediately.
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
+	inline void logError(std::string msg) { std::fprintf(stderr, "%s\n", msg.c_str()); std::fflush(stderr); }
 
 #endif /* LOGGER_HPP_ */

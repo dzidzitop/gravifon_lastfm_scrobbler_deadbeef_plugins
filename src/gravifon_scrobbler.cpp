@@ -21,8 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <cstring>
 #include "logger.hpp"
+#include <afc/utils.h>
 
 using namespace std;
+using namespace afc;
 using std::chrono::system_clock;
 
 namespace
@@ -160,16 +162,20 @@ bool initClient()
 			return false;
 		}
 
-		// DeaDBeeF configuration records are returned in UTF-8. No additional conversion is needed.
-		const char * const scrobblerUrl = deadbeef->conf_get_str_fast("gravifonScrobbler.scrobblerUrl", "");
-		if (scrobblerUrl[0] == '\0') {
+		// DeaDBeeF configuration records are returned in UTF-8.
+		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
+				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
+		if (gravifonUrlInUtf8[0] == 0) {
+			logError("URL to Gravifon API is undefined.");
 			return false;
 		}
 
-		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
-		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 
-		gravifonClient.configure(scrobblerUrl, username, password);
+		// TODO do not re-configure is settings are the same.
+		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
+				usernameInUtf8, passwordInUtf8);
 
 		return true;
 	}
@@ -210,10 +216,10 @@ DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 	plugin.plugin.version_major = 1;
 	plugin.plugin.version_minor = 0;
 	plugin.plugin.type = DB_PLUGIN_MISC;
-	plugin.plugin.name = "gravifon scrobbler";
-	plugin.plugin.descr = "An audio track scrobbler to Gravifon.";
+	plugin.plugin.name = u8"gravifon scrobbler";
+	plugin.plugin.descr = u8"An audio track scrobbler to Gravifon.";
 	plugin.plugin.copyright =
-		"Copyright (C) 2013 Dźmitry Laŭčuk\n"
+		u8"Copyright (C) 2013 Dźmitry Laŭčuk\n"
 		"\n"
 		"This program is free software: you can redistribute it and/or modify\n"
 		"it under the terms of the GNU General Public License as published by\n"
@@ -228,14 +234,14 @@ DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 		"You should have received a copy of the GNU General Public License\n"
 		"along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
 
-	plugin.plugin.website = "https://github.com/dzidzitop/gravifon_scrobbler_deadbeef_plugin";
+	plugin.plugin.website = u8"https://github.com/dzidzitop/gravifon_scrobbler_deadbeef_plugin";
 	plugin.plugin.start = gravifonScrobblerStart;
 	plugin.plugin.stop = gravifonScrobblerStop;
 	plugin.plugin.configdialog =
-		"property \"Enable scrobbler\" checkbox gravifonScrobbler.enabled 0;"
-		"property \"Username\" entry gravifonScrobbler.username \"\";"
-		"property \"Password\" password gravifonScrobbler.password \"\";"
-		"property \"Scrobbler URL\" entry gravifonScrobbler.scrobblerUrl \"\";";
+		R"(property "Enable scrobbler" checkbox gravifonScrobbler.enabled 0;)"
+		R"(property "Username" entry gravifonScrobbler.username "";)"
+		R"(property "Password" password gravifonScrobbler.password "";)"
+		R"(property "URL to Gravifon API" entry gravifonScrobbler.gravifonUrl ")" u8"http://api.gravifon.org/v1" "\";";
 
 	plugin.plugin.message = gravifonScrobblerMessage;
 

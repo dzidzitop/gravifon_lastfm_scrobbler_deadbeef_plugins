@@ -82,7 +82,8 @@ public:
 	GravifonClient() {};
 	~GravifonClient() {};
 
-	void configure(const char *scrobblerUrl, const char *username, const char *password);
+	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
+	void configure(const char *gravifonUrl, const char *username, const char *password);
 
 	void scrobble(const ScrobbleInfo &);
 

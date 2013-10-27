@@ -233,14 +233,15 @@ namespace
 	}
 }
 
-void GravifonClient::configure(const char * const scrobblerUrl, const char * const username,
+void GravifonClient::configure(const char * const gravifonUrl, const char * const username,
 		const char * const password)
 { lock_guard<mutex> lock(m_mutex);
-	assert(scrobblerUrl != nullptr);
+	assert(gravifonUrl != nullptr);
 	assert(username != nullptr);
 	assert(password != nullptr);
 
-	m_scrobblerUrl = scrobblerUrl;
+	m_scrobblerUrl = gravifonUrl;
+	appendToPath(m_scrobblerUrl, "scrobbles");
 	m_username = username;
 	m_password = password;
 }
