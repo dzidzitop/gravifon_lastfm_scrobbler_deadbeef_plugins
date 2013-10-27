@@ -229,7 +229,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		fprintf(stderr, "[GravifonClient] Unable to send the scrobble message: %s.", message);
+		fprintf(stderr, "[GravifonClient] Unable to send the scrobble message: %s\n", message);
 	}
 }
 
