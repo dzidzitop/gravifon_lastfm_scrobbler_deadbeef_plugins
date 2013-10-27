@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef LOGGER_HPP_
 #define LOGGER_HPP_
 
-#ifdef NDEBUG1
+#ifdef NDEBUG
 	#define logDebug(msg) static_cast<void>
 #else
 	#include <cstdio>
