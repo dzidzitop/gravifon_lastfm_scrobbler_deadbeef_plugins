@@ -165,11 +165,6 @@ bool initClient()
 		// DeaDBeeF configuration records are returned in UTF-8.
 		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
-		if (gravifonUrlInUtf8[0] == 0) {
-			logError("URL to Gravifon API is undefined.");
-			return false;
-		}
-
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 

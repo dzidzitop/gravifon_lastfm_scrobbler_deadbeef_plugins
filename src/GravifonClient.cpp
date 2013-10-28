@@ -241,7 +241,9 @@ void GravifonClient::configure(const char * const gravifonUrl, const char * cons
 	assert(password != nullptr);
 
 	m_scrobblerUrl = gravifonUrl;
-	appendToPath(m_scrobblerUrl, "scrobbles");
+	if (!m_scrobblerUrl.empty()) {
+		appendToPath(m_scrobblerUrl, "scrobbles");
+	}
 	m_username = username;
 	m_password = password;
 }
@@ -249,6 +251,15 @@ void GravifonClient::configure(const char * const gravifonUrl, const char * cons
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 { lock_guard<mutex> lock(m_mutex);
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
+
+	if (m_scrobblerUrl.empty()) {
+		/* There is no sense to try to send a request because the URL to Gravifon API
+		 * is undefined. The scrobble is added to the list of pending scrobbles
+		 * (see above) to be submitted * (among other scrobbles) when the URL is configured
+		 * to point to an instance of Gravifon.
+		 */
+		logError("URL to Gravifon API is undefined.");
+	}
 
 	// TODO move this functionality to a different thread.
 	HttpEntity request;
