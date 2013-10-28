@@ -231,6 +231,18 @@ namespace
 		}
 		fprintf(stderr, "[GravifonClient] Unable to send the scrobble message: %s\n", message);
 	}
+
+	template<typename SuccessOp, typename FailureOp, typename InvalidOp>
+	inline void processStatus(const Value &status, SuccessOp successOp, FailureOp failureOp, InvalidOp invalidOp)
+	{
+		if (isType(status, objectValue)) {
+			const Value &success = status["ok"];
+			if (isType(success, booleanValue)) {
+				return success.asBool() == true ? successOp() : failureOp();
+			}
+		}
+		invalidOp();
+	}
 }
 
 void GravifonClient::configure(const char * const gravifonUrl, const char * const username,
@@ -310,24 +322,34 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		return;
 	}
 
+	const string &responseBody = response.body;
+
 	Json::Reader jsonReader;
 	Value object;
 	if (!jsonReader.parse(response.body, object, false)) {
-		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+		fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
 		return;
 	}
 	const ValueType objectType = object.type();
 	if (objectType == objectValue) { // if the response is a global error.
-		const Value &success = object["ok"];
-		if (!isType(success, booleanValue)) {
-			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
-			return;
-		}
-		if (success.asBool() == true) {
-			fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: %s", response.body.c_str());
-			return;
-		}
-		// TODO Report error (use status' error code and error description fields).
+		processStatus(object,
+				// Success status. It is not expected. Report an error and finish processing.
+				[&responseBody]()
+				{
+					fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: %s",
+							responseBody.c_str());
+				},
+				// Error status: report an error and finish processing.
+				// TODO Report error (use status' error code and error description fields).
+				[&responseBody]()
+				{
+					fprintf(stderr, "[GravifonClient] Error global status response: %s", responseBody.c_str());
+				},
+				// Invalid status: report an error and finish processing.
+				[&responseBody]()
+				{
+					fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
+				});
 	}
 	if (objectType != arrayValue || object.size() != submittedCount) {
 		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
@@ -335,25 +357,19 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	}
 	auto it = m_pendingScrobbles.begin();
 	for (auto i = 0u, n = object.size(); i < n; ++i) {
-		const Value &status = object[i];
-		if (!isType(status, objectValue)) {
-			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
-			++it;
-			continue;
-		}
-		const Value &success = status["ok"];
-		if (!isType(success, booleanValue)) {
-			fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
-			++it;
-			continue;
-		}
-		// If the track is scrobbled successfully then it is removed from the queue.
-		if (success.asBool() == true) {
-			it = m_pendingScrobbles.erase(it);
-		} else {
-			// TODO Report error (use status' error code and error description fields).
-			++it;
-		}
+		processStatus(object[i],
+				// Successful status: if the track is scrobbled successfully then it is removed from the queue.
+				[&responseBody, &it, this]() { it = m_pendingScrobbles.erase(it); },
+				// Error status.
+				// TODO Report error (use status' error code and error description fields).
+				// TODO Remove scrobbles with unprocessable data.
+				[&responseBody, &it]() { ++it; },
+				// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
+				[&responseBody, &it]()
+				{
+					fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
+					++it;
+				});
 	}
 }
 
