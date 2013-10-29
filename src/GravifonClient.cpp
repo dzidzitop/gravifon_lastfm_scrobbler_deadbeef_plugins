@@ -238,10 +238,31 @@ namespace
 		if (isType(status, objectValue)) {
 			const Value &success = status["ok"];
 			if (isType(success, booleanValue)) {
-				return success.asBool() == true ? successOp() : failureOp();
+				if (success.asBool() == true) {
+					successOp();
+					return;
+				} else {
+					const Value &errCodeValue = status["error_code"];
+					if (isType(errCodeValue, intValue)) {
+						const unsigned long errorCode = static_cast<unsigned long>(errCodeValue.asInt());
+						const Value &errorDescription = status["error_description"];
+						if (isType(errorDescription, stringValue)) {
+							failureOp(errorCode, errorDescription.asString());
+							return;
+						} else if (isType(errorDescription, nullValue)) {
+							failureOp(errorCode, string());
+							return;
+						} // else invalid error description type
+					}
+				}
 			}
 		}
 		invalidOp();
+	}
+
+	inline bool isRecoverableError(const unsigned long errorCode)
+	{
+		return errorCode < 10000 || errorCode == 10003 || errorCode > 10005;
 	}
 }
 
@@ -327,7 +348,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	Json::Reader jsonReader;
 	Value object;
 	if (!jsonReader.parse(response.body, object, false)) {
-		fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
+		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 		return;
 	}
 	const ValueType objectType = object.type();
@@ -336,38 +357,58 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 				// Success status. It is not expected. Report an error and finish processing.
 				[&responseBody]()
 				{
-					fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: %s",
+					fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: '%s'.\n",
 							responseBody.c_str());
 				},
+
 				// Error status: report an error and finish processing.
-				// TODO Report error (use status' error code and error description fields).
-				[&responseBody]()
+				[&responseBody](const unsigned long errorCode, const string &errorDescription)
 				{
-					fprintf(stderr, "[GravifonClient] Error global status response: %s", responseBody.c_str());
+					fprintf(stderr, "[GravifonClient] Error global status response: '%s'. Error: '%s' (%lu).\n",
+							responseBody.c_str(), errorDescription.c_str(), errorCode);
 				},
+
 				// Invalid status: report an error and finish processing.
 				[&responseBody]()
 				{
-					fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
+					fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 				});
+		return;
 	}
 	if (objectType != arrayValue || object.size() != submittedCount) {
-		fprintf(stderr, "[GravifonClient] Invalid response: %s", response.body.c_str());
+		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", response.body.c_str());
 		return;
 	}
 	auto it = m_pendingScrobbles.begin();
 	for (auto i = 0u, n = object.size(); i < n; ++i) {
 		processStatus(object[i],
-				// Successful status: if the track is scrobbled successfully then it is removed from the queue.
+				// Successful status: if the track is scrobbled successfully then it is removed from the list.
 				[&responseBody, &it, this]() { it = m_pendingScrobbles.erase(it); },
-				// Error status.
-				// TODO Report error (use status' error code and error description fields).
-				// TODO Remove scrobbles with unprocessable data.
-				[&responseBody, &it]() { ++it; },
+
+				/* Error status. If the error is unprocessable then the scrobble is removed from the list;
+				 * otherwise another attempt will be done to submit it.
+				 */
+				[&responseBody, &it, this](const unsigned long errorCode, const string &errorDescription)
+				{
+					string scrobbleAsStr;
+					scrobbleAsStr += *it;
+					if (isRecoverableError(errorCode)) {
+						fprintf(stderr, "[GravifonClient] Scrobble '%s' is not processed. "
+								"Error: '%s' (%lu). It will be re-submitted later.\n",
+								scrobbleAsStr.c_str(), errorDescription.c_str(), errorCode);
+						++it;
+					} else {
+						fprintf(stderr, "[GravifonClient] Scrobble '%s' cannot be processed. "
+								"Error: '%s' (%lu). It is removed as non-processable.\n",
+								scrobbleAsStr.c_str(), errorDescription.c_str(), errorCode);
+						it = m_pendingScrobbles.erase(it);
+					}
+				},
+
 				// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
 				[&responseBody, &it]()
 				{
-					fprintf(stderr, "[GravifonClient] Invalid response: %s", responseBody.c_str());
+					fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 					++it;
 				});
 	}
