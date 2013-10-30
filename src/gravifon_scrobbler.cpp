@@ -197,12 +197,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 	}
 }
 
-extern "C"
-{
-	DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api);
-}
-
-DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
+extern "C" DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 {
 	deadbeef = api;
 
