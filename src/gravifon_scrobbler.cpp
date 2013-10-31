@@ -87,8 +87,8 @@ namespace
 			const double trackPlayDuration = trackChangeEvent->playtime; // in seconds
 			const double trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
-			if (trackDuration <= 0.f || (trackPlayDuration / trackDuration) < scrobbleThreshold) {
-				// The track is not played long enough to be scrobbled or its duration is zero or negative.
+			if (trackDuration <= 0.f || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
+				// The track was not played long enough to be scrobbled or its duration is zero or negative.
 				logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
 						to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
 				return nullptr;
