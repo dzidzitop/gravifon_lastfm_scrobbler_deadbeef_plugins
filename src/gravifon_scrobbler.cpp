@@ -84,8 +84,8 @@ namespace
 				return nullptr;
 			}
 
-			const float trackPlayDuration = trackChangeEvent->playtime; // in seconds
-			const float trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
+			const double trackPlayDuration = trackChangeEvent->playtime; // in seconds
+			const double trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
 			if (trackDuration <= 0.f || (trackPlayDuration / trackDuration) < scrobbleThreshold) {
 				// The track is not played long enough to be scrobbled or its duration is zero or negative.
@@ -177,9 +177,9 @@ bool initClient()
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
-		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.);
-		if (threshold < 0. || threshold > 100.) {
-			threshold = 0;
+		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
+		if (threshold < 0.d || threshold > 100.d) {
+			threshold = 0.d;
 		}
 		scrobbleThreshold.store(threshold / 100.d, memory_order_relaxed);
 
