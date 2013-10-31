@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include "logger.hpp"
 #include <afc/utils.h>
+#include <atomic>
 
 using namespace std;
 using namespace afc;
@@ -37,6 +38,7 @@ namespace
 
 	static DB_misc_t plugin = {};
 	static DB_functions_t *deadbeef;
+	static atomic<double> scrobbleThreshold(0.d);
 
 	static mutex pluginMutex;
 
@@ -76,10 +78,19 @@ namespace
 	{
 		{ PlaylistLock lock;
 			DB_playItem_t * const track = trackChangeEvent->from;
-			const float trackPlayDuration = trackChangeEvent->playtime; // in seconds
 
-			if (track == nullptr || trackPlayDuration == 0.f) {
+			if (track == nullptr) {
 				// Nothing to scrobble.
+				return nullptr;
+			}
+
+			const float trackPlayDuration = trackChangeEvent->playtime; // in seconds
+			const float trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
+
+			if (trackDuration <= 0.f || (trackPlayDuration / trackDuration) < scrobbleThreshold) {
+				// The track is not played long enough to be scrobbled or its duration is zero or negative.
+				logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
+						to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
 				return nullptr;
 			}
 
@@ -107,7 +118,6 @@ namespace
 				}
 			}
 			const char * const album = deadbeef->pl_find_meta(track, "album");
-			const float trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
 			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
 			// TODO use monotonic micro/nano clock to calculate exact duration. These measurements are inaccurate.
@@ -167,6 +177,11 @@ bool initClient()
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.);
+		if (threshold < 0. || threshold > 100.) {
+			threshold = 0;
+		}
+		scrobbleThreshold.store(threshold / 100.d, memory_order_relaxed);
 
 		// TODO do not re-configure is settings are the same.
 		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
@@ -231,7 +246,8 @@ extern "C" DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 		R"(property "Enable scrobbler" checkbox gravifonScrobbler.enabled 0;)"
 		R"(property "Username" entry gravifonScrobbler.username "";)"
 		R"(property "Password" password gravifonScrobbler.password "";)"
-		R"(property "URL to Gravifon API" entry gravifonScrobbler.gravifonUrl ")" u8"http://api.gravifon.org/v1" "\";";
+		R"(property "URL to Gravifon API" entry gravifonScrobbler.gravifonUrl ")" u8"http://api.gravifon.org/v1" "\";"
+		R"_(property "Scrobble threshold (%)" entry gravifonScrobbler.threshold "0.0";)_";
 
 	plugin.plugin.message = gravifonScrobblerMessage;
 
