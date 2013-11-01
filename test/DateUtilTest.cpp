@@ -22,6 +22,22 @@ CPPUNIT_TEST_SUITE_REGISTRATION(DateUtilTest);
 
 using namespace std;
 
+void DateUtilTest::setUp()
+{
+	m_timeZoneBackup = getenv("TZ");
+	// This time zone is set to ensure that conversion is performed via UTC.
+	setenv("TZ", "ABC-12:30", true);
+}
+
+void DateUtilTest::tearDown()
+{
+	if (m_timeZoneBackup == nullptr) {
+		setenv("TZ", m_timeZoneBackup, true);
+	} else {
+		unsetenv("TZ");
+	}
+}
+
 void DateUtilTest::testParseValidISODateTime_PositiveUTCTimeZone()
 {
 	string input("2013-10-16T20:02:26+0000");
@@ -76,7 +92,7 @@ void DateUtilTest::testParseValidISODateTime_PositiveNonUTCTimeZone()
 	const size_t count = std::strftime(buf, 100, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
 
 	CPPUNIT_ASSERT(count != 0);
-	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T23:02:26+0000"), string(buf));
+	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T17:02:26+0000"), string(buf));
 }
 
 void DateUtilTest::testParseValidISODateTime_NegativeNonUTCTimeZone()
@@ -95,5 +111,5 @@ void DateUtilTest::testParseValidISODateTime_NegativeNonUTCTimeZone()
 	const size_t count = std::strftime(buf, 100, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
 
 	CPPUNIT_ASSERT(count != 0);
-	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T18:32:26+0000"), string(buf));
+	CPPUNIT_ASSERT_EQUAL(string("2013-10-16T21:32:26+0000"), string(buf));
 }

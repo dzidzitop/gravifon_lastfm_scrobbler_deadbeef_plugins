@@ -21,12 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 class DateUtilTest : public CppUnit::TestFixture
 {
-CPPUNIT_TEST_SUITE(DateUtilTest);
-CPPUNIT_TEST(testParseValidISODateTime_PositiveUTCTimeZone);
-CPPUNIT_TEST(testParseValidISODateTime_NegativeUTCTimeZone);
-CPPUNIT_TEST(testParseValidISODateTime_PositiveNonUTCTimeZone);
-CPPUNIT_TEST(testParseValidISODateTime_NegativeNonUTCTimeZone);
-CPPUNIT_TEST_SUITE_END();
+	CPPUNIT_TEST_SUITE(DateUtilTest);
+	CPPUNIT_TEST(testParseValidISODateTime_PositiveUTCTimeZone);
+	CPPUNIT_TEST(testParseValidISODateTime_NegativeUTCTimeZone);
+	CPPUNIT_TEST(testParseValidISODateTime_PositiveNonUTCTimeZone);
+	CPPUNIT_TEST(testParseValidISODateTime_NegativeNonUTCTimeZone);
+	CPPUNIT_TEST_SUITE_END();
+
+	const char *m_timeZoneBackup;
+public:
+	void setUp() override;
+	void tearDown() override;
 
 	void testParseValidISODateTime_PositiveUTCTimeZone();
 	void testParseValidISODateTime_NegativeUTCTimeZone();
