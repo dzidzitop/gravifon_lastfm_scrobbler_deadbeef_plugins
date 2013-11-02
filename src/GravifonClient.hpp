@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <list>
 #include <ctime>
 #include <mutex>
-#include <atomic>
 
 // All strings are utf8-encoded.
 class Track
@@ -79,16 +78,14 @@ class GravifonClient
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
 	GravifonClient()
-			: m_started(false)
-	{
-		// Synchronising memory after this GravifonClient is initialised.
-		std::atomic_thread_fence(std::memory_order_seq_cst);
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_started = false;
 	}
 
 	~GravifonClient()
 	{
 		// Synchronising memory before destructing the member fields of this GravifonClient.
-		std::atomic_thread_fence(std::memory_order_seq_cst);
+		std::lock_guard<std::mutex> lock(m_mutex);
 	}
 
 	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
