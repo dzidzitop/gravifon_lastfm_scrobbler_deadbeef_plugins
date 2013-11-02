@@ -79,7 +79,7 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
-	GravifonClient() {};
+	GravifonClient() : m_started(false) {};
 	~GravifonClient() {};
 
 	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
@@ -100,6 +100,7 @@ private:
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
 	std::mutex m_mutex;
+	bool m_started;
 };
 
 #endif /* GRAVIFONCLIENT_HPP_ */
