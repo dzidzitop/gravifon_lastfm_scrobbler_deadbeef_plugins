@@ -1,7 +1,7 @@
 srcDir=src
 testDir=test
 buildDir=build
-cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2 -fno-exceptions -fno-rtti --save-temps
+cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2 -fno-exceptions -fno-rtti
 ldFlags=-Llib
 cxxFlags_test=-I"$srcDir" -I"include" -Wall -fPIC -std=c++11 -O2
 ldFlags_test=-L"$buildDir" $ldFlags
