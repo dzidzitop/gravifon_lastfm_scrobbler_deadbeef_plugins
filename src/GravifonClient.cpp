@@ -288,7 +288,7 @@ void GravifonClient::configure(const char * const gravifonUrl, const char * cons
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
-		// This gravifon client is not started or is already stopped.
+		// This GravifonClient is not started or is already stopped.
 		return;
 	}
 
@@ -423,7 +423,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 bool GravifonClient::start()
 { lock_guard<mutex> lock(m_mutex);
 	if (m_started) {
-		// This gravifon client is already started.
+		// This GravifonClient is already started.
 		return false;
 	}
 
@@ -437,7 +437,7 @@ bool GravifonClient::start()
 bool GravifonClient::stop()
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
-		// This gravifon client is not started or is already stopped.
+		// This GravifonClient is not started or is already stopped.
 		return false;
 	}
 
