@@ -84,6 +84,9 @@ public:
 
 	~GravifonClient()
 	{
+		/* TODO Check if there could be the case that m_mutex is visible uncorrectly initialised here
+		 * (if a pointer to this object is passed to a different thread). If this could happen
+		 * then find a way to fix this. */
 		// Synchronising memory before destructing the member fields of this GravifonClient.
 		std::lock_guard<std::mutex> lock(m_mutex);
 	}
