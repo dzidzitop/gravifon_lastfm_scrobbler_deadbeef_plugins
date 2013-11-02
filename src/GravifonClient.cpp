@@ -415,9 +415,24 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	}
 }
 
+bool GravifonClient::start()
+{ lock_guard<mutex> lock(m_mutex);
+	if (!loadPendingScrobbles()) {
+		return false;
+	}
+	m_started = true;
+	return true;
+}
+
+bool GravifonClient::start()
+{ lock_guard<mutex> lock(m_mutex);
+	m_started = false;
+	return storePendingScrobbles();
+}
+
 // TODO Do not load all scrobbles to memory. Use mmap for this?
 bool GravifonClient::loadPendingScrobbles()
-{ lock_guard<mutex> lock(m_mutex);
+{
 	logDebug("[GravifonClient] Loading pending scrobbles...");
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {
@@ -478,7 +493,7 @@ finish:
 }
 
 bool GravifonClient::storePendingScrobbles()
-{ lock_guard<mutex> lock(m_mutex);
+{
 	logDebug("[GravifonClient] Storing pending scrobbles...");
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {

@@ -147,7 +147,7 @@ int gravifonScrobblerStart()
 	logDebug("[gravifon_scrobbler] Starting...");
 	// TODO move initialisation phase to here (now C++ unit initialisation is used).
 	// TODO Ensure this code is thread-safe.
-	if (!gravifonClient.loadPendingScrobbles()) {
+	if (!gravifonClient.start()) {
 		return 1;
 	}
 	return 0;
@@ -157,7 +157,7 @@ int gravifonScrobblerStop()
 {
 	logDebug("[gravifon_scrobbler] Stopping...");
 	int result = 0;
-	if (!gravifonClient.storePendingScrobbles()) {
+	if (!gravifonClient.stop()) {
 		result = 1;
 	}
 	// TODO Discard other resources properly.

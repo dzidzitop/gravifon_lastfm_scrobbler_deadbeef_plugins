@@ -87,9 +87,12 @@ public:
 
 	void scrobble(const ScrobbleInfo &);
 
+	bool start();
+	bool stop();
+private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();
-private:
+
 	std::string m_scrobblerUrl;
 	std::string m_username;
 	std::string m_password;
