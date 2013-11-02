@@ -70,8 +70,6 @@ struct ScrobbleInfo
 	friend std::string &operator+=(std::string &str, const ScrobbleInfo &scrobbleInfo);
 };
 
-// TODO make GravifonClient thread-safe.
-// TODO think if GravifonClient's destructor should use lock_guard<mutex> lock(m_mutex);
 class GravifonClient
 {
 	GravifonClient(const GravifonClient &) = delete;
@@ -79,8 +77,16 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
-	GravifonClient() : m_started(false) {};
-	~GravifonClient() {};
+	GravifonClient()
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_started = false;
+	}
+
+	~GravifonClient()
+	{
+		// Synchronising memory before destructing the member fields of this GravifonClient.
+		std::lock_guard<std::mutex> lock(m_mutex);
+	}
 
 	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
 	void configure(const char *gravifonUrl, const char *username, const char *password);
@@ -99,7 +105,7 @@ private:
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	bool m_started;
 };
 
