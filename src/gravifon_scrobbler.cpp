@@ -145,7 +145,7 @@ namespace
 	{
 		const char *ptr = src;
 		for (;;) {
-			unsigned char c = *ptr++;
+			const unsigned char c = *ptr++;
 			if (c >= 128) {
 				return false;
 			}
