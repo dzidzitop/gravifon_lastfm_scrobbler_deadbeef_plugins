@@ -141,7 +141,7 @@ namespace
 		}
 	}
 
-	bool utf8ToAscii(const char * const src, string &dest)
+	inline bool utf8ToAscii(const char * const src, string &dest)
 	{
 		const char *ptr = src;
 		for (;;) {
