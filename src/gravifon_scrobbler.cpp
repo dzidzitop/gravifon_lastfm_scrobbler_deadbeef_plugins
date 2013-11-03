@@ -191,16 +191,19 @@ bool initClient()
 		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 
+		// TODO record scrobbles if there are non-ASCII characters in the username or password.
 		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		string usernameInAscii;
 		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
 			return false;
 		}
 
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 		string passwordInAscii;
 		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
 			return false;
 		}
 
