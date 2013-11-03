@@ -140,6 +140,21 @@ namespace
 			return scrobbleInfo;
 		}
 	}
+
+	bool utf8ToAscii(const char * const src, string &dest)
+	{
+		const char *ptr = src;
+		for (;;) {
+			unsigned char c = *ptr++;
+			if (c >= 128) {
+				return false;
+			}
+			if (c == 0) {
+				return true;
+			}
+			dest.push_back(c);
+		}
+	}
 }
 
 int gravifonScrobblerStart()
@@ -175,8 +190,20 @@ bool initClient()
 		// DeaDBeeF configuration records are returned in UTF-8.
 		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
+
+		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+		string usernameInAscii;
+		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
+			return false;
+		}
+
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+		string passwordInAscii;
+		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
+			return false;
+		}
+
 		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
 		if (threshold < 0.d || threshold > 100.d) {
 			threshold = 0.d;
@@ -185,7 +212,7 @@ bool initClient()
 
 		// TODO do not re-configure is settings are the same.
 		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
-				usernameInUtf8, passwordInUtf8);
+				usernameInAscii.c_str(), passwordInAscii.c_str());
 
 		return true;
 	}
