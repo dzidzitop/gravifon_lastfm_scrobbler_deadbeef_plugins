@@ -180,45 +180,46 @@ int gravifonScrobblerStop()
 }
 
 bool initClient()
-{
-	{ ConfLock lock;
-		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
-		if (!enabled) {
-			return false;
-		}
+{ ConfLock lock;
+	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+	if (!enabled) {
+		return false;
+	}
 
-		// DeaDBeeF configuration records are returned in UTF-8.
-		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
-				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
+	// DeaDBeeF configuration records are returned in UTF-8.
+	const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
+			"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 
-		// TODO record scrobbles if there are non-ASCII characters in the username or password.
-		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
-		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
-		string usernameInAscii;
-		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
-			logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
-			return false;
-		}
-
-		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
-		string passwordInAscii;
-		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
-			logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
-			return false;
-		}
-
-		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
-		if (threshold < 0.d || threshold > 100.d) {
-			threshold = 0.d;
-		}
-		scrobbleThreshold.store(threshold / 100.d, memory_order_relaxed);
-
-		// TODO do not re-configure is settings are the same.
-		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
-				usernameInAscii.c_str(), passwordInAscii.c_str());
-
+	// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
+	const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+	string usernameInAscii;
+	if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
+		logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
+		gravifonClient.invalidateConfiguration();
+		// Scrobbles are still to be recorded though not submitted.
 		return true;
 	}
+
+	const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+	string passwordInAscii;
+	if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
+		logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
+		gravifonClient.invalidateConfiguration();
+		// Scrobbles are still to be recorded though not submitted.
+		return true;
+	}
+
+	double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
+	if (threshold < 0.d || threshold > 100.d) {
+		threshold = 0.d;
+	}
+	scrobbleThreshold.store(threshold / 100.d, memory_order_relaxed);
+
+	// TODO do not re-configure is settings are the same.
+	gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
+			usernameInAscii.c_str(), passwordInAscii.c_str());
+
+	return true;
 }
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)

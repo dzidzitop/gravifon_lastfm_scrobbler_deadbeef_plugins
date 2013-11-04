@@ -80,6 +80,7 @@ public:
 	GravifonClient()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_started = false;
+		m_configured = false;
 	}
 
 	~GravifonClient()
@@ -93,6 +94,11 @@ public:
 
 	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
 	void configure(const char *gravifonUrl, const char *username, const char *password);
+
+	void invalidateConfiguration()
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_configured = false;
+	}
 
 	void scrobble(const ScrobbleInfo &);
 
@@ -110,6 +116,7 @@ private:
 
 	mutable std::mutex m_mutex;
 	bool m_started;
+	bool m_configured;
 };
 
 #endif /* GRAVIFONCLIENT_HPP_ */

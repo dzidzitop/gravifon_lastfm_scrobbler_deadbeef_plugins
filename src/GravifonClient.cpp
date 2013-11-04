@@ -283,6 +283,7 @@ void GravifonClient::configure(const char * const gravifonUrl, const char * cons
 	}
 	m_username = username;
 	m_password = password;
+	m_configured = true;
 }
 
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
@@ -294,6 +295,11 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
 
+	if (!m_configured) {
+		logError("Gravifon client is not configured properly.");
+		return;
+	}
+
 	if (m_scrobblerUrl.empty()) {
 		/* There is no sense to try to send a request because the URL to Gravifon API
 		 * is undefined. The scrobble is added to the list of pending scrobbles
@@ -301,6 +307,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		 * to point to an instance of Gravifon.
 		 */
 		logError("URL to Gravifon API is undefined.");
+		return;
 	}
 
 	// TODO move this functionality to a different thread.
