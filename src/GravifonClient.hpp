@@ -92,7 +92,7 @@ public:
 		std::lock_guard<std::mutex> lock(m_mutex);
 	}
 
-	// username and password are to be in UTF-8; gravifonUrl is to be in the system encoding.
+	// username and password are to be in ISO-8859-1; gravifonUrl is to be in the system encoding.
 	void configure(const char *gravifonUrl, const char *username, const char *password);
 
 	void invalidateConfiguration()
