@@ -543,7 +543,6 @@ bool GravifonClient::storePendingScrobbles()
 		return false;
 	}
 
-	// TODO Create the parent directory if it does not exist.
 	/* The assumption that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
