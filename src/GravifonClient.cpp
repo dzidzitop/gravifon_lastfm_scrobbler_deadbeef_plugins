@@ -351,8 +351,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		return;
 	}
 
-	logDebug(string("[GravifonClient] Response status code: ") + to_string(response.statusCode) +
-			"; response body: " + response.body);
+	logDebug(string("[GravifonClient] Response status code: ") + to_string(response.statusCode));
 
 	const string &responseBody = response.body;
 
@@ -373,7 +372,11 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 		for (auto i = 0u, n = rs.size(); i < n; ++i) {
 			processStatus(rs[i],
 					// Successful status: if the track is scrobbled successfully then it is removed from the list.
-					[&responseBody, &it, this]() { it = m_pendingScrobbles.erase(it); },
+					[&responseBody, &it, this]()
+					{
+						logDebug(string("[GravifonClient] Successful response: ") + responseBody);
+						it = m_pendingScrobbles.erase(it);
+					},
 
 					/* Error status. If the error is unprocessable then the scrobble is removed from the list;
 					 * otherwise another attempt will be done to submit it.
