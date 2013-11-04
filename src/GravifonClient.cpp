@@ -270,19 +270,23 @@ namespace
 	}
 }
 
-void GravifonClient::configure(const char * const gravifonUrl, const char * const username,
-		const char * const password)
+void GravifonClient::configure(const char * const gravifonUrl, const string &username, const string &password)
 { lock_guard<mutex> lock(m_mutex);
 	assert(gravifonUrl != nullptr);
-	assert(username != nullptr);
-	assert(password != nullptr);
 
 	m_scrobblerUrl = gravifonUrl;
 	if (!m_scrobblerUrl.empty()) {
 		appendToPath(m_scrobblerUrl, "scrobbles");
 	}
-	m_username = username;
-	m_password = password;
+
+	// This part of the header in UTF-8 is equivalent to it in ISO-8859-1 so no conversion is needed.
+	m_authHeader = u8"Authorization: Basic "; // HTTP Basic authentication is used.
+
+	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
+	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
+	 */
+	m_authHeader += encodeBase64(username + u8":"[0] + password);
+
 	m_configured = true;
 }
 
@@ -326,13 +330,8 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 	body.pop_back(); // Removing the redundant comma.
 	body += u8"]";
 
-	string authHeader("Authorization: Basic "); // HTTP Basic authentication is used.
-	// TODO think of moving encodeBase64(string(m_username) + ':' + m_password) to the constructor to perform this once.
-	// Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
-	authHeader += encodeBase64(string(m_username) + ':' + m_password);
-
 	request.headers.reserve(4);
-	request.headers.push_back(authHeader.c_str());
+	request.headers.push_back(m_authHeader.c_str());
 	request.headers.push_back("Content-Type: application/json; charset=utf-8");
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");

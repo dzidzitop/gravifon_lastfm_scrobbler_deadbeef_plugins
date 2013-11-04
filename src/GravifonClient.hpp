@@ -93,7 +93,7 @@ public:
 	}
 
 	// username and password are to be in ISO-8859-1; gravifonUrl is to be in the system encoding.
-	void configure(const char *gravifonUrl, const char *username, const char *password);
+	void configure(const char *gravifonUrl, const std::string &username, const std::string &password);
 
 	void invalidateConfiguration()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
@@ -109,8 +109,8 @@ private:
 	bool storePendingScrobbles();
 
 	std::string m_scrobblerUrl;
-	std::string m_username;
-	std::string m_password;
+	// The authentication header encoded in ISO-8859-1.
+	std::string m_authHeader;
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
