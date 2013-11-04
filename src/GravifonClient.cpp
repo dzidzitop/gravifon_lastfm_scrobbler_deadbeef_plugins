@@ -107,7 +107,6 @@ namespace
 	// writes value to out in utf-8
 	inline void writeJsonLong(const long value, string &dest)
 	{
-		// TODO avoid copying that is performed by ostringstream::str().
 		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
 

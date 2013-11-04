@@ -33,7 +33,6 @@ namespace
 	// The character 'Line Feed' in UTF-8.
 	static const char UTF8_LF = 0x0a;
 
-	// TODO Ensure that this code is thread-safe.
 	static GravifonClient gravifonClient;
 
 	static DB_misc_t plugin = {};
