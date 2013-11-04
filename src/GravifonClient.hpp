@@ -109,7 +109,7 @@ private:
 	bool storePendingScrobbles();
 
 	std::string m_scrobblerUrl;
-	// The authentication header encoded in ISO-8859-1.
+	// The authentication header encoded in the basic charset.
 	std::string m_authHeader;
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;

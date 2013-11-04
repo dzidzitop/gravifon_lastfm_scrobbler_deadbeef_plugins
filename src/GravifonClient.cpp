@@ -279,8 +279,8 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 		appendToPath(m_scrobblerUrl, "scrobbles");
 	}
 
-	// This part of the header in UTF-8 is equivalent to it in ISO-8859-1 so no conversion is needed.
-	m_authHeader = u8"Authorization: Basic "; // HTTP Basic authentication is used.
+	// Curl expects the basic charset in headers.
+	m_authHeader = "Authorization: Basic "; // HTTP Basic authentication is used.
 
 	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
@@ -332,6 +332,7 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	request.headers.reserve(4);
 	request.headers.push_back(m_authHeader.c_str());
+	// Curl expects the basic charset in headers.
 	request.headers.push_back("Content-Type: application/json; charset=utf-8");
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
