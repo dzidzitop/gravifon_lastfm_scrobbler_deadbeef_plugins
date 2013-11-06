@@ -107,6 +107,7 @@ public:
 private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();
+	void doScrobbling();
 
 	std::string m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.

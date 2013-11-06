@@ -298,6 +298,12 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
 
+	// TODO move this process to a different thread. Do not forget to add "lock_guard<mutex> lock(m_mutex);" there.
+	doScrobbling();
+}
+
+void GravifonClient::doScrobbling()
+{
 	if (!m_configured) {
 		logError("Gravifon client is not configured properly.");
 		return;
