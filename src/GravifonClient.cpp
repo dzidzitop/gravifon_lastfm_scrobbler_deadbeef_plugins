@@ -476,6 +476,7 @@ bool GravifonClient::stop()
 
 		m_started = false;
 
+		// Waking up the scrobbing thread to let it finish quickly.
 		m_cv.notify_one();
 	}
 
