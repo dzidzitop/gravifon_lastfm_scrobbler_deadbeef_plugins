@@ -182,6 +182,7 @@ bool initClient()
 { ConfLock lock;
 	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 	if (!enabled) {
+		// TODO stop the scrobbling thread of GravifonClient if scrobbling is disabled.
 		return false;
 	}
 
