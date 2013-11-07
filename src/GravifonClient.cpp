@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <jsoncpp/json/reader.h>
 #include <sys/stat.h>
 #include "logger.hpp"
+#include <functional>
 
 using namespace std;
 using namespace afc;
@@ -298,11 +299,24 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
 
-	// TODO move this process to a different thread. Do not forget to add "lock_guard<mutex> lock(m_mutex);" there.
-	doScrobbling();
+	m_cv.notify_one();
 }
 
-void GravifonClient::doScrobbling()
+void GravifonClient::backgroundScrobbling()
+{ unique_lock<mutex> lock(m_mutex);
+	for (;;) {
+		while (m_pendingScrobbles.empty()) {
+			m_cv.wait(lock);
+			if (!m_started) { // if stopped
+				return;
+			}
+		}
+
+		doScrobbling();
+	}
+}
+
+inline void GravifonClient::doScrobbling()
 {
 	if (!m_configured) {
 		logError("Gravifon client is not configured properly.");
@@ -445,19 +459,32 @@ bool GravifonClient::start()
 	if (!loadPendingScrobbles()) {
 		return false;
 	}
+
+	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
+
 	m_started = true;
 	return true;
 }
 
 bool GravifonClient::stop()
-{ lock_guard<mutex> lock(m_mutex);
-	if (!m_started) {
-		// This GravifonClient is not started or is already stopped.
-		return false;
+{
+	{ lock_guard<mutex> lock(m_mutex);
+		if (!m_started) {
+			// This GravifonClient is not started or is already stopped.
+			return false;
+		}
+
+		m_started = false;
+
+		m_cv.notify_one();
 	}
 
-	m_started = false;
-	return storePendingScrobbles();
+	m_scrobblingThread.join();
+	logDebug("[GravifonClient] The scrobbling thread is stopped.");
+
+	{ lock_guard<mutex> lock(m_mutex);
+		return storePendingScrobbles();
+	}
 }
 
 // TODO Do not load all scrobbles to memory. Use mmap for this?

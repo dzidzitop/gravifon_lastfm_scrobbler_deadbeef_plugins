@@ -21,6 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <list>
 #include <ctime>
 #include <mutex>
+#include <thread>
+#include <condition_variable>
 
 // All strings are utf8-encoded.
 class Track
@@ -77,7 +79,7 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
-	GravifonClient()
+	GravifonClient() : m_mutex(), m_scrobblingThread(), m_cv()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_started = false;
 		m_configured = false;
@@ -107,6 +109,7 @@ public:
 private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();
+	void backgroundScrobbling();
 	void doScrobbling();
 
 	std::string m_scrobblerUrl;
@@ -116,6 +119,8 @@ private:
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
 	mutable std::mutex m_mutex;
+	mutable std::thread m_scrobblingThread;
+	mutable std::condition_variable m_cv;
 	bool m_started;
 	bool m_configured;
 };
