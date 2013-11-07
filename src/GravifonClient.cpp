@@ -361,6 +361,7 @@ inline void GravifonClient::doScrobbling()
 
 	HttpClient client;
 
+	// TODO unlock mutex while making this HTTP call to allow for better concurrency.
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
 	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L);
