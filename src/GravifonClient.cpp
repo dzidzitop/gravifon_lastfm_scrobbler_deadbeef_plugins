@@ -333,7 +333,6 @@ inline void GravifonClient::doScrobbling()
 		return;
 	}
 
-	// TODO move this functionality to a different thread.
 	HttpEntity request;
 	string &body = request.body;
 	body += u8"[";
