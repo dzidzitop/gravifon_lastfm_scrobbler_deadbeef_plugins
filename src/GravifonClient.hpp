@@ -106,6 +106,11 @@ public:
 
 	bool start();
 	bool stop();
+
+	bool started() const
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		return m_started;
+	}
 private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();

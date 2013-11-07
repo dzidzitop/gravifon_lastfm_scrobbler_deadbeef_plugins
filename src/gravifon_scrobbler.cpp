@@ -159,11 +159,12 @@ namespace
 int gravifonScrobblerStart()
 {
 	logDebug("[gravifon_scrobbler] Starting...");
-	// TODO move initialisation phase to here (now C++ unit initialisation is used).
-	// TODO Ensure this code is thread-safe.
-	if (!gravifonClient.start()) {
+
+	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+	if (enabled && !gravifonClient.start()) {
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -171,7 +172,8 @@ int gravifonScrobblerStop()
 {
 	logDebug("[gravifon_scrobbler] Stopping...");
 	int result = 0;
-	if (!gravifonClient.stop()) {
+	// TODO make this stop atomic.
+	if (gravifonClient.started() && !gravifonClient.stop()) {
 		result = 1;
 	}
 	// TODO Discard other resources properly.
@@ -181,9 +183,17 @@ int gravifonScrobblerStop()
 bool initClient()
 { ConfLock lock;
 	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+	const bool clientStarted = gravifonClient.started();
 	if (!enabled) {
-		// TODO stop the scrobbling thread of GravifonClient if scrobbling is disabled.
+		if (clientStarted) {
+			// TODO handle errors.
+			gravifonClient.stop();
+		}
 		return false;
+	} else if (!clientStarted) {
+		if (!gravifonClient.start()) {
+			return false;
+		}
 	}
 
 	// DeaDBeeF configuration records are returned in UTF-8.

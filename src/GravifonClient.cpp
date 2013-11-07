@@ -293,7 +293,7 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
-		// This GravifonClient is not started or is already stopped.
+		// This GravifonClient is not started or is already stopped or is disabled.
 		return;
 	}
 
@@ -305,8 +305,10 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 void GravifonClient::backgroundScrobbling()
 { unique_lock<mutex> lock(m_mutex);
 	for (;;) {
-		while (m_pendingScrobbles.empty()) {
+		// TODO do not scrobble repeatedly if there are errors returned by Gravifon so that the list of pending scrobbles is never empty.
+		while (m_pendingScrobbles.empty() || !m_configured) {
 			m_cv.wait(lock);
+
 			if (!m_started) { // if stopped
 				return;
 			}
@@ -462,25 +464,41 @@ bool GravifonClient::start()
 
 	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
 
+	logDebug("[GravifonClient] The scrobbling thread is started.");
+
 	m_started = true;
 	return true;
 }
 
+// TODO make stop consistent w.r.t. parallel invocations of start() and stop().
 bool GravifonClient::stop()
 {
+	thread threadToStop;
+
 	{ lock_guard<mutex> lock(m_mutex);
 		if (!m_started) {
 			// This GravifonClient is not started or is already stopped.
 			return false;
 		}
 
+		/* The scrobbling thread is disassociated with this GravifonClient so that
+		 * after this critical section is exited this GravifonClient could be used safely.
+		 */
+		threadToStop.swap(m_scrobblingThread);
+
 		m_started = false;
+
+		logDebug("[GravifonClient] The scrobbling thread is being stopped...");
 
 		// Waking up the scrobbing thread to let it finish quickly.
 		m_cv.notify_one();
 	}
 
-	m_scrobblingThread.join();
+	/* Waiting for the old scrobbling thread to finish. This is used to ensure that
+	 * there are no scrobbles that are being submitted so that the list of pending
+	 * scrobbles could be serialised safely.
+	 */
+	threadToStop.join();
 	logDebug("[GravifonClient] The scrobbling thread is stopped.");
 
 	{ lock_guard<mutex> lock(m_mutex);
