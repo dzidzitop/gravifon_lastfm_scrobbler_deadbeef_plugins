@@ -266,7 +266,7 @@ namespace
 
 	inline bool isRecoverableError(const unsigned long errorCode)
 	{
-		return errorCode < 10000 || errorCode == 10003 || errorCode > 10005;
+		return errorCode < 10000 || errorCode == 10003 || errorCode > 10006;
 	}
 }
 
