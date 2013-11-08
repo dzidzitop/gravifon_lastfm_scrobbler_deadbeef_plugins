@@ -304,25 +304,42 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
 
 void GravifonClient::backgroundScrobbling()
 { unique_lock<mutex> lock(m_mutex);
+	logDebug("[GravifonClient] The background scrobbling thread has started.");
+
+	bool lastAttemptFailed = false;
+	size_t prevScrobbleCount = m_pendingScrobbles.size();
+
 	for (;;) {
-		// TODO do not scrobble repeatedly if there are errors returned by Gravifon so that the list of pending scrobbles is never empty.
-		while (m_pendingScrobbles.empty() || !m_configured) {
+		/* An attempt to submit is performed iff this GravifonClient is configured properly AND:
+		 * - the last scrobbling call did not fail and the list of pending scrobbles is not empty
+		 *     (useful when there is already a long list of pending scrobbles)
+		 * OR
+		 * - the number of scrobbles has changed
+		 */
+		while (!(m_configured &&
+				(m_pendingScrobbles.size() != prevScrobbleCount ||
+						(!lastAttemptFailed && !m_pendingScrobbles.empty())))) {
 			m_cv.wait(lock);
 
-			if (!m_started) { // if stopped
+			if (!m_started) {
+				// Finishing the background scrobbling thread since this GravifonClient is stopped.
+				logDebug("[GravifonClient] The background scrobbling thread is going to be stopped...");
 				return;
 			}
 		}
 
-		doScrobbling();
+		lastAttemptFailed = doScrobbling() == 0;
+		prevScrobbleCount = m_pendingScrobbles.size();
 	}
 }
 
-inline void GravifonClient::doScrobbling()
+inline size_t GravifonClient::doScrobbling()
 {
+	assert(!m_pendingScrobbles.empty());
+
 	if (!m_configured) {
 		logError("Gravifon client is not configured properly.");
-		return;
+		return 0;
 	}
 
 	if (m_scrobblerUrl.empty()) {
@@ -332,7 +349,7 @@ inline void GravifonClient::doScrobbling()
 		 * to point to an instance of Gravifon.
 		 */
 		logError("URL to Gravifon API is undefined.");
-		return;
+		return 0;
 	}
 
 	HttpEntity request;
@@ -369,7 +386,7 @@ inline void GravifonClient::doScrobbling()
 	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L);
 	if (result != StatusCode::SUCCESS) {
 		reportHttpClientError(result);
-		return;
+		return 0;
 	}
 
 	logDebug(string("[GravifonClient] Response status code: ") + to_string(response.statusCode));
@@ -379,30 +396,33 @@ inline void GravifonClient::doScrobbling()
 	Value rs;
 	if (!Json::Reader().parse(responseBody, rs, false)) {
 		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
-		return;
+		return 0;
 	}
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
 			fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", response.body.c_str());
-			return;
+			return 0;
 		}
 
+		size_t completedCount = 0;
 		auto it = m_pendingScrobbles.begin();
 		for (auto i = 0u, n = rs.size(); i < n; ++i) {
 			processStatus(rs[i],
 					// Successful status: if the track is scrobbled successfully then it is removed from the list.
-					[&responseBody, &it, this]()
+					[&responseBody, &it, &completedCount, this]()
 					{
 						logDebug(string("[GravifonClient] Successful response: ") + responseBody);
 						it = m_pendingScrobbles.erase(it);
+						++completedCount;
 					},
 
 					/* Error status. If the error is unprocessable then the scrobble is removed from the list;
 					 * otherwise another attempt will be done to submit it.
 					 */
-					[&responseBody, &it, this](const unsigned long errorCode, const string &errorDescription)
+					[&responseBody, &it, &completedCount, this](
+							const unsigned long errorCode, const string &errorDescription)
 					{
 						string scrobbleAsStr;
 						scrobbleAsStr += *it;
@@ -416,6 +436,7 @@ inline void GravifonClient::doScrobbling()
 									"Error: '%s' (%lu). It is removed as non-processable.\n",
 									scrobbleAsStr.c_str(), errorDescription.c_str(), errorCode);
 							it = m_pendingScrobbles.erase(it);
+							++completedCount;
 						}
 					},
 
@@ -426,6 +447,8 @@ inline void GravifonClient::doScrobbling()
 						++it;
 					});
 		}
+
+		return completedCount;
 	} else {
 		// A global status entity is expected for a non-200 response.
 		processStatus(rs,
@@ -448,6 +471,8 @@ inline void GravifonClient::doScrobbling()
 				{
 					fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 				});
+
+		return 0;
 	}
 }
 
@@ -462,9 +487,9 @@ bool GravifonClient::start()
 		return false;
 	}
 
-	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
+	logDebug("[GravifonClient] Starting the background scrobbling thread...");
 
-	logDebug("[GravifonClient] The scrobbling thread is started.");
+	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
 
 	m_started = true;
 	return true;

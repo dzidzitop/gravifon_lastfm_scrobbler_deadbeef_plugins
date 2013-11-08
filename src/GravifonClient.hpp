@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <cstddef>
 
 // All strings are utf8-encoded.
 class Track
@@ -115,7 +116,8 @@ private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();
 	void backgroundScrobbling();
-	void doScrobbling();
+	// Returns the number of scrobbles completed (successful and non-processable).
+	size_t doScrobbling();
 
 	std::string m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
