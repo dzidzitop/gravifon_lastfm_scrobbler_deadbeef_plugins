@@ -80,7 +80,7 @@ class GravifonClient
 	GravifonClient &operator=(const GravifonClient &) = delete;
 	GravifonClient &operator=(GravifonClient &&) = delete;
 public:
-	GravifonClient() : m_mutex(), m_scrobblingThread(), m_cv()
+	GravifonClient() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_started = false;
 		m_configured = false;
@@ -128,6 +128,7 @@ private:
 	mutable std::mutex m_mutex;
 	mutable std::thread m_scrobblingThread;
 	mutable std::condition_variable m_cv;
+	mutable std::mutex m_startStopMutex;
 	bool m_started;
 	bool m_configured;
 };

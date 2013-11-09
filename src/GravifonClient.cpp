@@ -482,7 +482,8 @@ inline size_t GravifonClient::doScrobbling()
 }
 
 bool GravifonClient::start()
-{ lock_guard<mutex> lock(m_mutex);
+// m_startStopMutex must be locked first to co-operate with ::stop() properly.
+{ lock_guard<mutex> startStopLock(m_startStopMutex); lock_guard<mutex> lock(m_mutex);
 	if (m_started) {
 		// This GravifonClient is already started.
 		return false;
@@ -500,9 +501,9 @@ bool GravifonClient::start()
 	return true;
 }
 
-// TODO make stop consistent w.r.t. parallel invocations of start() and stop().
 bool GravifonClient::stop()
-{
+// m_startStopMutex must be locked first to co-operate with ::start() properly.
+{ lock_guard<mutex> startStopLock(m_startStopMutex);
 	thread threadToStop;
 
 	{ lock_guard<mutex> lock(m_mutex);
