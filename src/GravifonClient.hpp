@@ -128,6 +128,10 @@ private:
 	mutable std::mutex m_mutex;
 	mutable std::thread m_scrobblingThread;
 	mutable std::condition_variable m_cv;
+	/* Used to prevent parallel execution of the functions start() and stop().
+	 * This is needed for stop() to know that the scrobbling thread is stopped
+	 * at some time to store all pending scrobbles to the data file.
+	 */
 	mutable std::mutex m_startStopMutex;
 	bool m_started;
 	bool m_configured;
