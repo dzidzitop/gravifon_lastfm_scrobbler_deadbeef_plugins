@@ -533,8 +533,13 @@ bool GravifonClient::stop()
 	logDebug("[GravifonClient] The scrobbling thread is stopped.");
 
 	{ lock_guard<mutex> lock(m_mutex);
-		return storePendingScrobbles();
+		if (!storePendingScrobbles()) {
+			logError("[GravifonClient] Unable to store pending scrobbles. These scrobbles are lost.");
+		}
+		m_pendingScrobbles.clear();
 	}
+
+	return true;
 }
 
 // TODO Do not load all scrobbles to memory. Use mmap for this?
