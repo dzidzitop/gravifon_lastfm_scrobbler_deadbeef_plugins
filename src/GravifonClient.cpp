@@ -536,6 +536,11 @@ bool GravifonClient::stop()
 		if (!storePendingScrobbles()) {
 			logError("[GravifonClient] Unable to store pending scrobbles. These scrobbles are lost.");
 		}
+		/* TODO do not clear the list of pending scrobbles. Instead, report an error so that
+		 * the user has a chance to identify the issue and fix it and then store the scrobbles
+		 * successfully. This implementation should co-operate with possible ::start()
+		 * invocation after stop() returns.
+		 */
 		m_pendingScrobbles.clear();
 	}
 
