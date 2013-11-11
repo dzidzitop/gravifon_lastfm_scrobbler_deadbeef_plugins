@@ -26,6 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
 
-inline void logError(std::string msg) { std::fprintf(stderr, "%s\n", msg.c_str()); std::fflush(stderr); }
+inline void logError(const std::string &msg) { std::fprintf(stderr, "%s\n", msg.c_str()); std::fflush(stderr); }
 
 #endif /* LOGGER_HPP_ */
