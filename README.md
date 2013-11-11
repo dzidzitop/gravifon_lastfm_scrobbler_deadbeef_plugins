@@ -22,7 +22,7 @@ Here, `${basedir}` denotes the root directory of the gravifon scrobbler codebase
 System requirements
 -------------------
 
-* DeaDBeeF 0.5.6
+* DeaDBeeF 0.5.6+
 * GCC g++ 4.7+
 * libcurl 7.26.0+
 * libjsoncpp 0.5.0+
