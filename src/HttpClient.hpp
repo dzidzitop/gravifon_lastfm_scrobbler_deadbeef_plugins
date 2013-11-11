@@ -36,7 +36,7 @@ class HttpClient
 public:
 	enum class StatusCode
 	{
-		SUCCESS, UNKNOWN_ERROR, UNABLE_TO_CONNECT, OPERATION_TIMEOUT
+		SUCCESS, INIT_ERROR, UNKNOWN_ERROR, UNABLE_TO_CONNECT, OPERATION_TIMEOUT
 	};
 private:
 	HttpClient(const HttpClient &) = delete;
@@ -44,7 +44,7 @@ private:
 	HttpClient &operator=(const HttpClient &) = delete;
 	HttpClient &operator=(HttpClient &&) = delete;
 public:
-	HttpClient();
+	HttpClient() = default;
 	~HttpClient() = default;
 
 	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,

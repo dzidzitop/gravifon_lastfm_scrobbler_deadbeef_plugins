@@ -103,16 +103,13 @@ namespace
 	}
 }
 
-HttpClient::HttpClient()
-{
-	if (!::CurlInit::instance.initialised) {
-		// TODO handle error
-	}
-}
-
 HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
 		const long connectionTimeoutMillis, const long socketTimeoutMillis)
 {
+	if (!::CurlInit::instance.initialised) {
+		return StatusCode::INIT_ERROR;
+	}
+
 	CurlSession curl;
 
 	if (curl.handler == nullptr) {
