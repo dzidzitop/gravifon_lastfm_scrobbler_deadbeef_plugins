@@ -172,8 +172,7 @@ int gravifonScrobblerStop()
 {
 	logDebug("[gravifon_scrobbler] Stopping...");
 	int result = 0;
-	// TODO make this stop atomic.
-	if (gravifonClient.started() && !gravifonClient.stop()) {
+	if (!gravifonClient.stop()) {
 		result = 1;
 	}
 	// TODO Discard other resources properly.

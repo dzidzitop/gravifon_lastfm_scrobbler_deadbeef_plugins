@@ -514,7 +514,7 @@ bool GravifonClient::stop()
 	{ lock_guard<mutex> lock(m_mutex);
 		if (!m_started) {
 			// This GravifonClient is not started or is already stopped.
-			return false;
+			return true;
 		}
 
 		/* The scrobbling thread is disassociated with this GravifonClient so that
