@@ -169,14 +169,9 @@ int gravifonScrobblerStart()
 }
 
 int gravifonScrobblerStop()
-{ lock_guard<mutex> lock(pluginMutex);
+{
 	logDebug("[gravifon_scrobbler] Stopping...");
-	int result = 0;
-	if (!gravifonClient.stop()) {
-		result = 1;
-	}
-	// TODO Discard other resources properly.
-	return result;
+	return gravifonClient.stop() ? 0 : 1;
 }
 
 bool initClient()
