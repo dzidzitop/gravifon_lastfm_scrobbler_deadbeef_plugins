@@ -136,7 +136,7 @@ namespace
 		path += child;
 	}
 
-	inline long getDataFilePath(string &dest)
+	inline int getDataFilePath(string &dest)
 	{
 		const char * const dataDir = getenv("XDG_DATA_HOME");
 		if (dataDir != nullptr && dataDir[0] != '\0') {
