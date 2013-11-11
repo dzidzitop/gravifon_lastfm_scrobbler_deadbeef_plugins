@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include "logger.hpp"
 #include <afc/utils.h>
-#include <atomic>
 
 using namespace std;
 using namespace afc;
@@ -35,9 +34,10 @@ namespace
 
 	static GravifonClient gravifonClient;
 
+	// These variables must be accessed within the critical section against pluginMutex.
 	static DB_misc_t plugin = {};
 	static DB_functions_t *deadbeef;
-	static atomic<double> scrobbleThreshold(0.d);
+	static double scrobbleThreshold = 0.d;
 
 	static mutex pluginMutex;
 
@@ -157,7 +157,7 @@ namespace
 }
 
 int gravifonScrobblerStart()
-{
+{ lock_guard<mutex> lock(pluginMutex);
 	logDebug("[gravifon_scrobbler] Starting...");
 
 	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
@@ -169,7 +169,7 @@ int gravifonScrobblerStart()
 }
 
 int gravifonScrobblerStop()
-{
+{ lock_guard<mutex> lock(pluginMutex);
 	logDebug("[gravifon_scrobbler] Stopping...");
 	int result = 0;
 	if (!gravifonClient.stop()) {
@@ -222,7 +222,7 @@ bool initClient()
 	if (threshold < 0.d || threshold > 100.d) {
 		threshold = 0.d;
 	}
-	scrobbleThreshold.store(threshold / 100.d, memory_order_relaxed);
+	scrobbleThreshold = threshold / 100.d;
 
 	// TODO do not re-configure is settings are the same.
 	gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
@@ -253,7 +253,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 }
 
 extern "C" DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
-{
+{ lock_guard<mutex> lock(pluginMutex);
 	deadbeef = api;
 
 	plugin.plugin.api_vmajor = 1;
