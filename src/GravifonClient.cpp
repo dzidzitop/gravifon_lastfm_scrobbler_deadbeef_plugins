@@ -95,14 +95,19 @@ namespace
 		::tzset();
 		::localtime_r(&timestamp, &dateTime);
 
-		// TODO support multi-byte system charsets. 32 could be not enough for them.
-		const size_t outputSize = 32; // 25 are really used.
-		char buf[outputSize];
-		const size_t count = std::strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime);
-		if (count == 0) {
-			// TODO If count was reached before the entire string could be stored, ​0​ is returned and the contents are undefined.
+		/* Twenty five characters (including the terminating character) are really used
+		 * to store an ISO-8601-formatted date for a single-byte encoding. For multi-byte
+		 * encodings this is not the case, and a larger buffer could be needed.
+		 */
+		for (size_t outputSize = 25;; outputSize *= 2) {
+			char buf[outputSize];
+			if (strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime) != 0) {
+				// The date is formatted successfully.
+				dest.append(u8"\"").append(convertToUtf8(buf, systemCharset().c_str())).append(u8"\"");
+				return;
+			}
+			// The size of the destination buffer is too small. Repeating with a larger buffer.
 		}
-		dest.append(u8"\"").append(convertToUtf8(buf, systemCharset().c_str())).append(u8"\"");
 	}
 
 	// writes value to out in utf-8
