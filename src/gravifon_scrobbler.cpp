@@ -154,6 +154,58 @@ namespace
 			dest.push_back(c);
 		}
 	}
+
+	inline bool initClient()
+	{ ConfLock lock;
+		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+		const bool clientStarted = gravifonClient.started();
+		if (!enabled) {
+			if (clientStarted) {
+				// TODO handle errors.
+				gravifonClient.stop();
+			}
+			return false;
+		} else if (!clientStarted) {
+			if (!gravifonClient.start()) {
+				return false;
+			}
+		}
+
+		// DeaDBeeF configuration records are returned in UTF-8.
+		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
+				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
+
+		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
+		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+		string usernameInAscii;
+		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
+			gravifonClient.invalidateConfiguration();
+			// Scrobbles are still to be recorded though not submitted.
+			return true;
+		}
+
+		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+		string passwordInAscii;
+		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
+			gravifonClient.invalidateConfiguration();
+			// Scrobbles are still to be recorded though not submitted.
+			return true;
+		}
+
+		double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
+		if (threshold < 0.d || threshold > 100.d) {
+			threshold = 0.d;
+		}
+		scrobbleThreshold = threshold / 100.d;
+
+		// TODO do not re-configure is settings are the same.
+		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
+				usernameInAscii.c_str(), passwordInAscii.c_str());
+
+		return true;
+	}
 }
 
 int gravifonScrobblerStart()
@@ -172,58 +224,6 @@ int gravifonScrobblerStop()
 {
 	logDebug("[gravifon_scrobbler] Stopping...");
 	return gravifonClient.stop() ? 0 : 1;
-}
-
-bool initClient()
-{ ConfLock lock;
-	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
-	const bool clientStarted = gravifonClient.started();
-	if (!enabled) {
-		if (clientStarted) {
-			// TODO handle errors.
-			gravifonClient.stop();
-		}
-		return false;
-	} else if (!clientStarted) {
-		if (!gravifonClient.start()) {
-			return false;
-		}
-	}
-
-	// DeaDBeeF configuration records are returned in UTF-8.
-	const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
-			"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
-
-	// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
-	const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
-	string usernameInAscii;
-	if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
-		logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
-		gravifonClient.invalidateConfiguration();
-		// Scrobbles are still to be recorded though not submitted.
-		return true;
-	}
-
-	const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
-	string passwordInAscii;
-	if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
-		logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
-		gravifonClient.invalidateConfiguration();
-		// Scrobbles are still to be recorded though not submitted.
-		return true;
-	}
-
-	double threshold = deadbeef->conf_get_float("gravifonScrobbler.threshold", 0.f);
-	if (threshold < 0.d || threshold > 100.d) {
-		threshold = 0.d;
-	}
-	scrobbleThreshold = threshold / 100.d;
-
-	// TODO do not re-configure is settings are the same.
-	gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
-			usernameInAscii.c_str(), passwordInAscii.c_str());
-
-	return true;
 }
 
 int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
