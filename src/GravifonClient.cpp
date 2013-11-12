@@ -295,7 +295,8 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 	m_configured = true;
 }
 
-void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo)
+// TODO implement support of the argument safeScrobble.
+void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobble)
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
 		// This GravifonClient is not started or is already stopped or is disabled.

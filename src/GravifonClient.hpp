@@ -100,7 +100,20 @@ public:
 		m_configured = false;
 	}
 
-	void scrobble(const ScrobbleInfo &);
+	/*
+	 * Adds a given scrobble to the list of pending scrobbles. Optionally, it saves
+	 * the given scrobble to the data file to keep if available even if an emergency
+	 * happens. GravifonClient::stop() rewrites the data file, sweeping out all
+	 * scrobbles whose processing is completed.
+	 *
+	 * Nothing is done if this GravifonClient is not started.
+	 *
+	 * @param scrobbleInfo the track scrobble to process.
+	 * @param safeScrobble if true then the scrobble is stored to the data file
+	 *         immediately, to save this scrobble even in case of an emergency.
+	 *         It is false by default.
+	 */
+	void scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobble = false);
 
 	bool start();
 	bool stop();
