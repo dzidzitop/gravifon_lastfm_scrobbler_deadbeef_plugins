@@ -238,7 +238,8 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 			return 0;
 		}
 
-		unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(reinterpret_cast<ddb_event_trackchange_t *>(ctx));
+		ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
+		const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event);
 
 		if (scrobbleInfo != nullptr) {
 			gravifonClient.scrobble(*scrobbleInfo);
