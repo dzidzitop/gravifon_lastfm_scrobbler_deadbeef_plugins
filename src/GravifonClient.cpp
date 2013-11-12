@@ -199,9 +199,6 @@ namespace
 			return nullptr;
 		}
 
-		/* The assumption that all tracks are loaded into the list of pending scrobbles
-		 * so that the file could be overwritten with the remaining pending scrobbles.
-		 */
 		return fopen(dataFilePath.c_str(), mode);
 	}
 
