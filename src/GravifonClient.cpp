@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <sys/stat.h>
 #include "logger.hpp"
 #include <functional>
+#include <type_traits>
 
 using namespace std;
 using namespace afc;
@@ -154,6 +155,56 @@ namespace
 		return 0;
 	}
 
+	// The last path element is considered as a file and therefore is not created.
+	inline bool createParentDirs(const string &path)
+	{
+		if (path.empty()) {
+			return true;
+		}
+		for (size_t start = path[0] == '/' ? 1 : 0;;) {
+			const size_t end = path.find_first_of('/', start);
+			if (end == string::npos) {
+				return true;
+			}
+			if (mkdir(path.substr(0, end).c_str(), 0775) != 0 && errno != EEXIST) {
+				return false;
+			}
+			start = end + 1;
+		}
+	}
+
+	inline FILE *openDataFile(const char * const mode)
+	{
+		string dataFilePath;
+		if (getDataFilePath(dataFilePath) != 0) {
+			return nullptr;
+		}
+
+		/* - if the file or some parent directories do not exist then create missing parts.
+		 * - if he file exists but it is not a regular file or a symbolic link then return failure
+		 *   because such a file cannot be used to store pending scrobbles
+		 * - if the file exists and it a regular file or a symbolic link then proceed with storing
+		 *   pending scrobbles into it
+		 */
+		struct stat fileStatus;
+		if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
+			if (errno == ENOTDIR || errno == ENOENT) {
+				if (!createParentDirs(dataFilePath)) {
+					return nullptr;
+				}
+			} else {
+				return nullptr;
+			}
+		} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
+			return nullptr;
+		}
+
+		/* The assumption that all tracks are loaded into the list of pending scrobbles
+		 * so that the file could be overwritten with the remaining pending scrobbles.
+		 */
+		return fopen(dataFilePath.c_str(), mode);
+	}
+
 	inline bool isType(const Value &val, const ValueType type)
 	{
 		return val.type() == type;
@@ -206,24 +257,6 @@ namespace
 		return true;
 	}
 
-	// The last path element is considered as a file and therefore is not created.
-	inline bool createParentDirs(const string &path)
-	{
-		if (path.empty()) {
-			return true;
-		}
-		for (size_t start = path[0] == '/' ? 1 : 0;;) {
-			const size_t end = path.find_first_of('/', start);
-			if (end == string::npos) {
-				return true;
-			}
-			if (mkdir(path.substr(0, end).c_str(), 0775) != 0 && errno != EEXIST) {
-				return false;
-			}
-			start = end + 1;
-		}
-	}
-
 	inline void reportHttpClientError(const StatusCode result)
 	{
 		assert(result != StatusCode::SUCCESS);
@@ -272,6 +305,51 @@ namespace
 	inline bool isRecoverableError(const unsigned long errorCode)
 	{
 		return errorCode < 10000 || errorCode == 10003 || errorCode > 10006;
+	}
+
+	template<typename Iterator>
+	inline bool storeScrobbles(Iterator begin, const Iterator end, const char *storeMode)
+	{
+		static_assert(std::is_convertible<decltype(*begin), const ScrobbleInfo &>::value,
+				"An iterator over ScrobbleInfo objects is expected.");
+		assert(storeMode != nullptr);
+
+		FILE * const dataFile = openDataFile(storeMode);
+		if (dataFile == nullptr) {
+			return false;
+		}
+
+		bool result = true;
+
+		string buf;
+		for (auto it = begin; it != end; ++it) {
+			buf.resize(0);
+			buf += *it;
+			const size_t bufSize = buf.size();
+			if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
+				result = false;
+				goto finish;
+			}
+			/* ScrobbleInfo in the JSON form does not contain the character 'line feed' ('\n')
+			 * so that using the latter as a separator is safe.
+			 *
+			 * The file must end with the empty line.
+			 */
+			if (fwrite(u8"\n", sizeof(unsigned char), 1, dataFile) != 1) {
+				result = false;
+				goto finish;
+			}
+		}
+	finish:
+		/* An assumption works that this code is compiled with exceptions disabled.
+		 * If this is not the case then unique_ptr<FILE> with a custom deleter must
+		 * be used to avoid resource leaks.
+		 */
+		if (fclose(dataFile) != 0) {
+			result = false;
+		}
+
+		return result;
 	}
 }
 
@@ -554,7 +632,7 @@ bool GravifonClient::stop()
 }
 
 // TODO Do not load all scrobbles to memory. Use mmap for this?
-bool GravifonClient::loadPendingScrobbles()
+inline bool GravifonClient::loadPendingScrobbles()
 {
 	logDebug("[GravifonClient] Loading pending scrobbles...");
 	string dataFilePath;
@@ -615,68 +693,17 @@ finish:
 	return result;
 }
 
-bool GravifonClient::storePendingScrobbles()
+inline bool GravifonClient::storePendingScrobbles()
 {
 	logDebug("[GravifonClient] Storing pending scrobbles...");
-	string dataFilePath;
-	if (getDataFilePath(dataFilePath) != 0) {
-		return false;
-	}
 
-	/* - if the file or some parent directories do not exist then create missing parts.
-	 * - if he file exists but it is not a regular file or a symbolic link then return failure
-	 *   because such a file cannot be used to store pending scrobbles
-	 * - if the file exists and it a regular file or a symbolic link then proceed with storing
-	 *   pending scrobbles into it
-	 */
-	struct stat fileStatus;
-	if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
-		if (errno == ENOTDIR || errno == ENOENT) {
-			if (!createParentDirs(dataFilePath)) {
-				return false;
-			}
-		} else {
-			return false;
-		}
-	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
-		return false;
-	}
-
-	/* The assumption that all tracks are loaded into the list of pending scrobbles
+	/* The assumption is that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
-	FILE * const dataFile = fopen(dataFilePath.c_str(), "wb");
-	if (dataFile == nullptr) {
-		return false;
-	}
-
-	bool result = true;
-
-	string buf;
-	for (const ScrobbleInfo &scrobbleInfo : m_pendingScrobbles) {
-		buf.resize(0);
-		buf += scrobbleInfo;
-		const size_t bufSize = buf.size();
-		if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
-			result = false;
-			goto finish;
-		}
-		/* ScrobbleInfo in the JSON form does not contain the character 'line feed' ('\n')
-		 * so that using the latter as a separator is safe.
-		 *
-		 * The file must end with the empty line.
-		 */
-		if (fwrite(u8"\n", sizeof(unsigned char), 1, dataFile) != 1) {
-			result = false;
-			goto finish;
-		}
-	}
-finish:
-	if (fclose(dataFile) != 0) {
-		result = false;
-	}
+	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), "wb");
 
 	logDebug("[GravifonClient] Pending scrobbles stored: " + to_string(m_pendingScrobbles.size()));
+
 	return result;
 }
 
