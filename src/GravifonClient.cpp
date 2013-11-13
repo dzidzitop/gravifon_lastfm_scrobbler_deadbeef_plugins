@@ -510,9 +510,8 @@ inline size_t GravifonClient::doScrobbling()
 		for (auto i = 0u, n = rs.size(); i < n; ++i) {
 			processStatus(rs[i],
 					// Successful status: if the track is scrobbled successfully then it is removed from the list.
-					[&responseBody, &it, &completedCount, this]()
+					[&it, &completedCount, this]()
 					{
-						logDebug(string("[GravifonClient] Successful response: ") + responseBody);
 						it = m_pendingScrobbles.erase(it);
 						++completedCount;
 					},
@@ -545,6 +544,10 @@ inline size_t GravifonClient::doScrobbling()
 						fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 						++it;
 					});
+		}
+
+		if (completedCount == submittedCount) {
+			logDebug(string("[GravifonClient] Successful response: ") + responseBody);
 		}
 
 		return completedCount;
