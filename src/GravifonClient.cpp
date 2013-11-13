@@ -386,7 +386,6 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeS
 		/* Storing the scrobble that has just been added to the list.
 		 * The data file is appended, not re-written.
 		 */
-
 		auto end = m_pendingScrobbles.cend();
 		if (storeScrobbles(prev(end), end, "ab")) {
 			logDebug("[GravifonClient] The scrobble that has just been scrobbled "
