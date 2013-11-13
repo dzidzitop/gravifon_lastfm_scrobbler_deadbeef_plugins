@@ -53,9 +53,9 @@ namespace
 		~PlaylistLock() { deadbeef->pl_unlock(); }
 	};
 
-	inline long toLongMillis(const float seconds)
+	inline long toLongMillis(const double seconds)
 	{
-		return static_cast<long>(seconds * 1000);
+		return static_cast<long>(seconds * 1000.d);
 	}
 
 	template<typename AddTagOp>
@@ -86,7 +86,7 @@ namespace
 			const double trackPlayDuration = trackChangeEvent->playtime; // in seconds
 			const double trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
 
-			if (trackDuration <= 0.f || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
+			if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 				// The track was not played long enough to be scrobbled or its duration is zero or negative.
 				logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
 						to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
