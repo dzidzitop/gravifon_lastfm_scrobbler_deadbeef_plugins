@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "logger.hpp"
 #include <functional>
 #include <type_traits>
+#include <iterator>
 
 using namespace std;
 using namespace afc;
@@ -370,8 +371,7 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 	m_configured = true;
 }
 
-// TODO implement support of the argument safeScrobble.
-void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobble)
+void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling)
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
 		// This GravifonClient is not started or is already stopped or is disabled.
@@ -381,6 +381,20 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeS
 	m_pendingScrobbles.emplace_back(scrobbleInfo);
 
 	m_cv.notify_one();
+
+	if (safeScrobbling) {
+		/* Storing the scrobble that has just been added to the list.
+		 * The data file is appended, not re-written.
+		 */
+
+		auto end = m_pendingScrobbles.cend();
+		if (storeScrobbles(prev(end), end, "ab")) {
+			logDebug("[GravifonClient] The scrobble that has just been scrobbled "
+					"is stored (failure-safe scrobbling).");
+		} else {
+			logError("[GravifonClient] Unable to store the scrobble (failure-safe scrobbling).");
+		}
+	}
 }
 
 void GravifonClient::backgroundScrobbling()

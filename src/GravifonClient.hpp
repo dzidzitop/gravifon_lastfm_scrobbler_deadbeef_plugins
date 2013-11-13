@@ -113,7 +113,7 @@ public:
 	 *         immediately, to save this scrobble even in case of an emergency.
 	 *         It is false by default.
 	 */
-	void scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobble = false);
+	void scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling = false);
 
 	bool start();
 	bool stop();

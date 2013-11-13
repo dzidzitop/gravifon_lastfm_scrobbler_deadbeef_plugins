@@ -155,7 +155,7 @@ namespace
 		}
 	}
 
-	inline bool initClient()
+	inline bool initClient(bool &safeScrobbling)
 	{ ConfLock lock;
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		const bool clientStarted = gravifonClient.started();
@@ -170,6 +170,8 @@ namespace
 				return false;
 			}
 		}
+
+		safeScrobbling = deadbeef->conf_get_int("gravifonScrobbler.safeScrobbling", 0);
 
 		// DeaDBeeF configuration records are returned in UTF-8.
 		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
@@ -233,8 +235,10 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 	}
 
 	{ lock_guard<mutex> lock(pluginMutex);
+		bool safeScrobbling;
+
 		// TODO distinguish disabled scrobbling and gravifon client init errors
-		if (!initClient()) {
+		if (!initClient(safeScrobbling)) {
 			return 0;
 		}
 
@@ -242,7 +246,7 @@ int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint3
 		const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event);
 
 		if (scrobbleInfo != nullptr) {
-			gravifonClient.scrobble(*scrobbleInfo);
+			gravifonClient.scrobble(*scrobbleInfo, safeScrobbling);
 		}
 		return 0;
 	}
@@ -283,7 +287,8 @@ extern "C" DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 		R"(property "Username" entry gravifonScrobbler.username "";)"
 		R"(property "Password" password gravifonScrobbler.password "";)"
 		R"(property "URL to Gravifon API" entry gravifonScrobbler.gravifonUrl ")" u8"http://api.gravifon.org/v1" "\";"
-		R"_(property "Scrobble threshold (%)" entry gravifonScrobbler.threshold "0.0";)_";
+		R"_(property "Scrobble threshold (%)" entry gravifonScrobbler.threshold "0.0";)_"
+		R"(property "Failure-safe scrobbling" checkbox gravifonScrobbler.safeScrobbling 0;)";
 
 	plugin.plugin.message = gravifonScrobblerMessage;
 
