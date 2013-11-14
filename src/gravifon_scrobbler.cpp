@@ -43,14 +43,18 @@ namespace
 
 	struct ConfLock
 	{
-		ConfLock() { deadbeef->conf_lock(); }
-		~ConfLock() { deadbeef->conf_unlock(); }
+		ConfLock(DB_functions_t &deadbeef) : m_deadbeef(deadbeef) { m_deadbeef.conf_lock(); }
+		~ConfLock() { m_deadbeef.conf_unlock(); }
+	private:
+		DB_functions_t &m_deadbeef;
 	};
 
 	struct PlaylistLock
 	{
-		PlaylistLock() { deadbeef->pl_lock(); }
-		~PlaylistLock() { deadbeef->pl_unlock(); }
+		PlaylistLock(DB_functions_t &deadbeef) : m_deadbeef(deadbeef) { m_deadbeef.pl_lock(); }
+		~PlaylistLock() { m_deadbeef.pl_unlock(); }
+	private:
+		DB_functions_t &m_deadbeef;
 	};
 
 	inline long toLongMillis(const double seconds)
@@ -74,73 +78,71 @@ namespace
 	}
 
 	unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent)
-	{
-		{ PlaylistLock lock;
-			DB_playItem_t * const track = trackChangeEvent->from;
+	{ PlaylistLock lock(*deadbeef);
+		DB_playItem_t * const track = trackChangeEvent->from;
 
-			if (track == nullptr) {
-				// Nothing to scrobble.
-				return nullptr;
-			}
-
-			/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
-			 * Moreover, if the track is played from start to end without rewinding
-			 * then the play time could be different from the track duration.
-			 */
-			const double trackPlayDuration = double(trackChangeEvent->playtime); // in seconds
-			const double trackDuration = double(deadbeef->pl_get_item_duration(track)); // in seconds
-
-			if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
-				// The track was not played long enough to be scrobbled or its duration is zero or negative.
-				logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
-						to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
-				return nullptr;
-			}
-
-			// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
-			const char * const title = deadbeef->pl_find_meta(track, "title");
-			if (title == nullptr) {
-				// Track title is a required field.
-				return nullptr;
-			}
-
-			const char *albumArtist = deadbeef->pl_find_meta(track, "album artist");
-			if (albumArtist == nullptr) {
-				albumArtist = deadbeef->pl_find_meta(track, "albumartist");
-				if (albumArtist == nullptr) {
-					albumArtist = deadbeef->pl_find_meta(track, "band");
-				}
-			}
-
-			const char *artist = deadbeef->pl_find_meta(track, "artist");
-			if (artist == nullptr) {
-				artist = albumArtist;
-				if (artist == nullptr) {
-					// Track artist is a required field.
-					return nullptr;
-				}
-			}
-			const char * const album = deadbeef->pl_find_meta(track, "album");
-
-			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
-			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
-			scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
-			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
-			Track &trackInfo = scrobbleInfo->track;
-			trackInfo.setTitle(title);
-			if (album != nullptr) {
-				trackInfo.setAlbumTitle(album);
-			}
-			trackInfo.setDurationMillis(toLongMillis(trackDuration));
-
-			addMultiTag(artist, [&](string &&artistName) { trackInfo.addArtist(artistName); });
-
-			if (albumArtist != nullptr) {
-				addMultiTag(albumArtist, [&](string &&artistName) { trackInfo.addAlbumArtist(artistName); });
-			}
-
-			return scrobbleInfo;
+		if (track == nullptr) {
+			// Nothing to scrobble.
+			return nullptr;
 		}
+
+		/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
+		 * Moreover, if the track is played from start to end without rewinding
+		 * then the play time could be different from the track duration.
+		 */
+		const double trackPlayDuration = double(trackChangeEvent->playtime); // in seconds
+		const double trackDuration = double(deadbeef->pl_get_item_duration(track)); // in seconds
+
+		if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
+			// The track was not played long enough to be scrobbled or its duration is zero or negative.
+			logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
+					to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
+			return nullptr;
+		}
+
+		// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
+		const char * const title = deadbeef->pl_find_meta(track, "title");
+		if (title == nullptr) {
+			// Track title is a required field.
+			return nullptr;
+		}
+
+		const char *albumArtist = deadbeef->pl_find_meta(track, "album artist");
+		if (albumArtist == nullptr) {
+			albumArtist = deadbeef->pl_find_meta(track, "albumartist");
+			if (albumArtist == nullptr) {
+				albumArtist = deadbeef->pl_find_meta(track, "band");
+			}
+		}
+
+		const char *artist = deadbeef->pl_find_meta(track, "artist");
+		if (artist == nullptr) {
+			artist = albumArtist;
+			if (artist == nullptr) {
+				// Track artist is a required field.
+				return nullptr;
+			}
+		}
+		const char * const album = deadbeef->pl_find_meta(track, "album");
+
+		unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
+		scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
+		scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
+		scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
+		Track &trackInfo = scrobbleInfo->track;
+		trackInfo.setTitle(title);
+		if (album != nullptr) {
+			trackInfo.setAlbumTitle(album);
+		}
+		trackInfo.setDurationMillis(toLongMillis(trackDuration));
+
+		addMultiTag(artist, [&](string &&artistName) { trackInfo.addArtist(artistName); });
+
+		if (albumArtist != nullptr) {
+			addMultiTag(albumArtist, [&](string &&artistName) { trackInfo.addAlbumArtist(artistName); });
+		}
+
+		return scrobbleInfo;
 	}
 
 	inline bool utf8ToAscii(const char * const src, string &dest)
@@ -171,7 +173,7 @@ namespace
 	 *         false is returned otherwise.
 	 */
 	inline bool initClient(bool &safeScrobbling)
-	{ ConfLock lock;
+	{ ConfLock lock(*deadbeef);
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		const bool clientStarted = gravifonClient.started();
 		if (!enabled) {
