@@ -83,8 +83,12 @@ namespace
 				return nullptr;
 			}
 
-			const double trackPlayDuration = trackChangeEvent->playtime; // in seconds
-			const double trackDuration = deadbeef->pl_get_item_duration(track); // in seconds
+			/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
+			 * Moreover, if the track is played from start to end without rewinding
+			 * then the play time could be different from the track duration.
+			 */
+			const double trackPlayDuration = double(trackChangeEvent->playtime); // in seconds
+			const double trackDuration = double(deadbeef->pl_get_item_duration(track)); // in seconds
 
 			if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 				// The track was not played long enough to be scrobbled or its duration is zero or negative.
@@ -119,7 +123,6 @@ namespace
 			const char * const album = deadbeef->pl_find_meta(track, "album");
 
 			unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
-			// TODO use monotonic micro/nano clock to calculate exact duration. These measurements are inaccurate.
 			scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
 			scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 			scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
