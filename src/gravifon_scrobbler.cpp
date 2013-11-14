@@ -158,18 +158,32 @@ namespace
 		}
 	}
 
+	/**
+	 * Starts (if needed) the Gravifon client and configures it according to the
+	 * Gravifon scrobbler plugin settings. If the settings are updated then the
+	 * Gravifon client is re-configured. If scrobbling to Gravifon is disabled
+	 * then the Gravifon client is stopped (if needed).
+	 *
+	 * @param safeScrobbling assigned to true if failure-safe scrobbling is enabled;
+	 *         assigned to false otherwise.
+	 *
+	 * @return true if the Gravifon client is started and able to accept scrobbles;
+	 *         false is returned otherwise.
+	 */
 	inline bool initClient(bool &safeScrobbling)
 	{ ConfLock lock;
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		const bool clientStarted = gravifonClient.started();
 		if (!enabled) {
 			if (clientStarted) {
-				// TODO handle errors.
-				gravifonClient.stop();
+				if (!gravifonClient.stop()) {
+					logError("[gravifon_scrobbler] unable to stop Gravifon client.");
+				}
 			}
 			return false;
 		} else if (!clientStarted) {
 			if (!gravifonClient.start()) {
+				logError("[gravifon_scrobbler] unable to start Gravifon client.");
 				return false;
 			}
 		}
@@ -205,7 +219,7 @@ namespace
 		}
 		scrobbleThreshold = threshold / 100.d;
 
-		// TODO do not re-configure is settings are the same.
+		// TODO do not re-configure if settings are the same.
 		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
 				usernameInAscii.c_str(), passwordInAscii.c_str());
 
