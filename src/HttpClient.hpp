@@ -49,7 +49,7 @@ public:
 	~HttpClient() = default;
 
 	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
-			const long connectionTimeoutMillis, const long socketTimeoutMillis, std::atomic<bool> &abortFlag);
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

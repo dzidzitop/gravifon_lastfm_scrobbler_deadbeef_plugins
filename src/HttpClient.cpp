@@ -107,7 +107,7 @@ namespace
 	/**
 	 * Used as a CURLOPT_PROGRESSFUNCTION callback for CURL to signal CURL to terminate
 	 * the connection this callback is associated with if the abort flag (passed as clientp)
-	 * is raised. The abort flag is reset to false.
+	 * is raised. The abort flag is not modified.
 	 *
 	 * @param data a pointer to std::atomic<bool>.
 	 *
@@ -118,15 +118,14 @@ namespace
 	{
 		assert(data != nullptr);
 
-		atomic<bool> * const abortFlag = reinterpret_cast<atomic<bool> *>(data);
+		const atomic<bool> * const abortFlag = reinterpret_cast<const atomic<bool> *>(data);
 
-		const bool terminate = abortFlag->exchange(false, memory_order_relaxed);
-		return static_cast<int>(terminate);
+		return static_cast<int>(abortFlag->load(memory_order_relaxed));
 	}
 }
 
 HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
-		const long connectionTimeoutMillis, const long socketTimeoutMillis, std::atomic<bool> &abortFlag)
+		const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
 {
 	if (!::CurlInit::instance.initialised) {
 		return StatusCode::INIT_ERROR;
