@@ -97,9 +97,31 @@ namespace
 			return HttpClient::StatusCode::UNABLE_TO_CONNECT;
 		case CURLE_OPERATION_TIMEDOUT:
 			return HttpClient::StatusCode::OPERATION_TIMEOUT;
+		case CURLE_ABORTED_BY_CALLBACK:
+			return HttpClient::StatusCode::ABORTED_BY_CLIENT;
 		default:
 			return HttpClient::StatusCode::UNKNOWN_ERROR;
 		}
+	}
+
+	/**
+	 * Used as a CURLOPT_PROGRESSFUNCTION callback for CURL to signal CURL to terminate
+	 * the connection this callback is associated with if the abort flag (passed as clientp)
+	 * is raised. The abort flag is reset to false.
+	 *
+	 * @param data a pointer to std::atomic<bool>.
+	 *
+	 * @return a non-zero value to abort the CURL connection if this is requested;
+	 *         zero is returned otherwise.
+	 */
+	int terminateConnectionCallback(void *data, double, double, double, double)
+	{
+		assert(data != nullptr);
+
+		atomic<bool> * const abortFlag = reinterpret_cast<atomic<bool> *>(data);
+
+		const bool terminate = abortFlag->exchange(false, memory_order_relaxed);
+		return static_cast<int>(terminate);
 	}
 }
 
@@ -131,6 +153,12 @@ HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &req
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
+
+	/* TODO this is a suboptimal implementation of interruptible I/O.
+	   Implement it using non-blocking socket I/O. */
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, terminateConnectionCallback);
+	curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &abortFlag);
 
 	// Setting timeouts.
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
