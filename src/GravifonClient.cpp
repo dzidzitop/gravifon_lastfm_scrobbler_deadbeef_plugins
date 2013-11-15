@@ -403,7 +403,7 @@ void GravifonClient::backgroundScrobbling()
 	bool lastAttemptFailed = false;
 	size_t prevScrobbleCount = m_pendingScrobbles.size();
 
-	for (;;) {
+	while (!m_finishScrobblingFlag.load(memory_order_relaxed)) {
 		/* An attempt to submit is performed iff this GravifonClient is configured properly AND:
 		 * - the last scrobbling call did not fail and the list of pending scrobbles is not empty
 		 *     (useful when there is already a long list of pending scrobbles)
