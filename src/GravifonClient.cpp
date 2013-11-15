@@ -483,6 +483,9 @@ inline size_t GravifonClient::doScrobbling()
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
 	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L, m_finishScrobblingFlag);
+	if (result == StatusCode::ABORTED_BY_CLIENT) {
+		return 0;
+	}
 	if (result != StatusCode::SUCCESS) {
 		reportHttpClientError(result);
 		return 0;
