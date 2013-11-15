@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <string>
 #include <vector>
+#include <atomic>
 
 struct HttpEntity
 {
@@ -48,7 +49,7 @@ public:
 	~HttpClient() = default;
 
 	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
-			const long connectionTimeoutMillis, const long socketTimeoutMillis);
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, std::atomic<bool> &abortFlag);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

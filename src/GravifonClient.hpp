@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <atomic>
 #include <cstddef>
 
 // All strings are utf8-encoded.
@@ -143,6 +144,8 @@ private:
 	 * at some time to store all pending scrobbles to the data file.
 	 */
 	mutable std::mutex m_startStopMutex;
+	// Indicates if an existing active connection to Gravifon should be terminated.
+	mutable std::atomic<bool> m_abortConnFlag;
 	bool m_started;
 	bool m_configured;
 };

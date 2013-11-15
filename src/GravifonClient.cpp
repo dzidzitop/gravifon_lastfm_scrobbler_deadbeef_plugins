@@ -482,7 +482,7 @@ inline size_t GravifonClient::doScrobbling()
 	// TODO unlock mutex while making this HTTP call to allow for better concurrency.
 	// TODO Check whether or not these timeouts are enough.
 	// TODO Think of making these timeouts configurable.
-	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L);
+	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L, m_abortConnFlag);
 	if (result != StatusCode::SUCCESS) {
 		reportHttpClientError(result);
 		return 0;
@@ -590,6 +590,8 @@ bool GravifonClient::start()
 		return false;
 	}
 
+	m_abortConnFlag.store(false, memory_order_relaxed);
+
 	logDebug("[GravifonClient] Starting the background scrobbling thread...");
 
 	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
@@ -613,6 +615,9 @@ bool GravifonClient::stop()
 		 * after this critical section is exited this GravifonClient could be used safely.
 		 */
 		threadToStop.swap(m_scrobblingThread);
+
+		// Setting a flag that an existing connection to Gravifon (if any) should be terminated.
+		m_abortConnFlag.store(true, memory_order_relaxed);
 
 		m_started = false;
 

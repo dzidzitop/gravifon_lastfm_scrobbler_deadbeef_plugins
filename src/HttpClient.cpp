@@ -103,8 +103,9 @@ namespace
 	}
 }
 
+// TODO implement support of abortFlag.
 HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
-		const long connectionTimeoutMillis, const long socketTimeoutMillis)
+		const long connectionTimeoutMillis, const long socketTimeoutMillis, std::atomic<bool> &abortFlag)
 {
 	if (!::CurlInit::instance.initialised) {
 		return StatusCode::INIT_ERROR;
