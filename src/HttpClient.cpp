@@ -125,7 +125,6 @@ namespace
 	}
 }
 
-// TODO implement support of abortFlag.
 HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
 		const long connectionTimeoutMillis, const long socketTimeoutMillis, std::atomic<bool> &abortFlag)
 {
