@@ -144,8 +144,10 @@ private:
 	 * at some time to store all pending scrobbles to the data file.
 	 */
 	mutable std::mutex m_startStopMutex;
-	// Indicates if an existing active connection to Gravifon should be terminated.
-	mutable std::atomic<bool> m_abortConnFlag;
+	/* Indicates if the background scrobbling thread should finish its work
+	 * including aborting an active connection to Gravifon if it is established.
+	 */
+	mutable std::atomic<bool> m_finishScrobblingFlag;
 	bool m_started;
 	bool m_configured;
 };
