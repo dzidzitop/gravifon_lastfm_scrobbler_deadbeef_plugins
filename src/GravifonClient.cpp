@@ -349,6 +349,14 @@ namespace
 
 		return result;
 	}
+
+	struct UnlockGuard
+	{
+		UnlockGuard(mutex &mutex) : m_mutex(mutex) { m_mutex.unlock(); };
+		~UnlockGuard() { m_mutex.lock(); }
+	private:
+		mutex &m_mutex;
+	};
 }
 
 void GravifonClient::configure(const char * const gravifonUrl, const string &username, const string &password)
@@ -466,6 +474,10 @@ inline size_t GravifonClient::doScrobbling()
 	body.pop_back(); // Removing the redundant comma.
 	body += u8"]";
 
+#ifndef NDEBUG
+	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
+#endif
+
 	request.headers.reserve(4);
 	request.headers.push_back(m_authHeader.c_str());
 	// Curl expects the basic charset in headers.
@@ -473,16 +485,34 @@ inline size_t GravifonClient::doScrobbling()
 	request.headers.push_back("Accept: application/json");
 	request.headers.push_back("Accept-Charset: utf-8");
 
-	logDebug(string("[GravifonClient] Request body: ") + request.body);
+	// Making a copy of shared data to pass outside the critical section.
+	const string scrobblerUrlCopy = m_scrobblerUrl;
 
+	StatusCode result;
 	HttpResponseEntity response;
 
-	HttpClient client;
+	/* Each HTTP call is performed outside the critical section so that other threads can:
+	 * - add scrobbles without waiting for this call to finish
+	 * - stop this GravifonClient by invoking GravifonClient::stop(). In this case
+	 * this HTTP call is aborted and the scrobbles involved are left in the list of pending
+	 * scrobbles so that they can be stored to the data file and be completed later.
+	 *
+	 * It is safe to unlock the mutex because:
+	 * - no shared data is accessed outside the critical section
+	 * - other threads cannot delete scrobbles in the meantime (becase the scrobbling thread
+	 * assumes that the scrobbles being submitted are the first {submittedCount} elements in
+	 * the list of pending scrobbles.
+	 *
+	 * In addition, it is safe to use m_finishScrobblingFlag outside the critical section
+	 * because it is atomic.
+	 */
+	{ UnlockGuard unlockGuard(m_mutex);
+		logDebug(string("[GravifonClient] Request body: ") + request.body);
 
-	// TODO unlock mutex while making this HTTP call to allow for better concurrency.
-	// TODO Check whether or not these timeouts are enough.
-	// TODO Think of making these timeouts configurable.
-	const StatusCode result = client.send(m_scrobblerUrl, request, response, 3000L, 5000L, m_finishScrobblingFlag);
+		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
+		result = HttpClient().send(scrobblerUrlCopy, request, response, 0L, 0L, m_finishScrobblingFlag);
+	}
+
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
 		return 0;
 	}
@@ -500,6 +530,12 @@ inline size_t GravifonClient::doScrobbling()
 		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 		return 0;
 	}
+
+	/* Ensure that no scrobbles are deleted by other threads. Only the scrobbling thread
+	 * and ::stop() can do this, and ::stop() must wait for the scrobbling thread to finish
+	 * in order to do this.
+	 */
+	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
