@@ -358,7 +358,7 @@ namespace
 		UnlockGuard(const UnlockGuard &) = delete;
 		UnlockGuard(UnlockGuard &&) = delete;
 		UnlockGuard &operator=(const UnlockGuard &) = delete;
-		UnlockGuard &operator=(const UnlockGuard &&) = delete;
+		UnlockGuard &operator=(UnlockGuard &&) = delete;
 
 		mutex &m_mutex;
 	};
