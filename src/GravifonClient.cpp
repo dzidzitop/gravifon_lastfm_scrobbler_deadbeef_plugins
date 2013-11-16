@@ -474,10 +474,6 @@ inline size_t GravifonClient::doScrobbling()
 	body.pop_back(); // Removing the redundant comma.
 	body += u8"]";
 
-#ifndef NDEBUG
-	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
-#endif
-
 	request.headers.reserve(4);
 	request.headers.push_back(m_authHeader.c_str());
 	// Curl expects the basic charset in headers.
@@ -487,6 +483,10 @@ inline size_t GravifonClient::doScrobbling()
 
 	// Making a copy of shared data to pass outside the critical section.
 	const string scrobblerUrlCopy = m_scrobblerUrl;
+
+#ifndef NDEBUG
+	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
+#endif
 
 	StatusCode result;
 	HttpResponseEntity response;
@@ -513,6 +513,12 @@ inline size_t GravifonClient::doScrobbling()
 		result = HttpClient().send(scrobblerUrlCopy, request, response, 0L, 0L, m_finishScrobblingFlag);
 	}
 
+	/* Ensure that no scrobbles are deleted by other threads during the HTTP call.
+	 * Only the scrobbling thread and ::stop() can do this, and ::stop() must wait for
+	 * the scrobbling thread to finish in order to do this.
+	 */
+	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
+
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
 		return 0;
 	}
@@ -530,12 +536,6 @@ inline size_t GravifonClient::doScrobbling()
 		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
 		return 0;
 	}
-
-	/* Ensure that no scrobbles are deleted by other threads. Only the scrobbling thread
-	 * and ::stop() can do this, and ::stop() must wait for the scrobbling thread to finish
-	 * in order to do this.
-	 */
-	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
