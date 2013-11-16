@@ -520,6 +520,7 @@ inline size_t GravifonClient::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
+		logDebug("[GravifonClient] An HTTP call is aborted.");
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
