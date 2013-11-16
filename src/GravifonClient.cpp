@@ -355,6 +355,11 @@ namespace
 		UnlockGuard(mutex &mutex) : m_mutex(mutex) { m_mutex.unlock(); };
 		~UnlockGuard() { m_mutex.lock(); }
 	private:
+		UnlockGuard(const UnlockGuard &) = delete;
+		UnlockGuard(UnlockGuard &&) = delete;
+		UnlockGuard &operator=(const UnlockGuard &) = delete;
+		UnlockGuard &operator=(const UnlockGuard &&) = delete;
+
 		mutex &m_mutex;
 	};
 }
