@@ -22,9 +22,6 @@ struct DateTime
 {
 	DateTime() : gmtOffset(0), year(0), month(0), day(0), hour(0), minute(0), second(0), millisecond(0), isDst(-1) {}
 
-	/* Unfortunately, this code is not portable. It compiles in Debian Wheezy with GCC 4.7.
-	 * In addition, this code cannot tolerate the system time zone changed in the middle of processing.
-	 */
 	DateTime(const std::tm &dateTime) { *this = dateTime; }
 
 	DateTime &operator=(const std::time_t timestamp)
@@ -42,7 +39,7 @@ struct DateTime
 
 	DateTime &operator=(const std::tm &dateTime)
 	{
-		gmtOffset = dateTime.tm_gmtoff;
+		gmtOffset = dateTime.tm_gmtoff; // Note: tm_gmtoff is not a part of the standard C++11.
 		year = dateTime.tm_year;
 		month = dateTime.tm_mon + 1;
 		day = dateTime.tm_mday;
@@ -57,7 +54,7 @@ struct DateTime
 	explicit operator std::tm() const
 	{
 		std::tm result;
-		result.tm_gmtoff = gmtOffset;
+		result.tm_gmtoff = gmtOffset; // Note: tm_gmtoff is not a part of the standard C++11.
 		result.tm_year = year;
 		result.tm_mon = month - 1;
 		result.tm_mday = day;
