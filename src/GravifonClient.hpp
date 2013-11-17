@@ -35,6 +35,8 @@ public:
 	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); m_albumArtistSet = true; }
 	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
+
+	void appendTo(std::string &str) const;
 private:
 	std::string m_title;
 	std::vector<std::string> m_artists;
@@ -47,8 +49,6 @@ private:
 	bool m_albumArtistSet = false;
 	bool m_albumSet = false;
 	bool m_durationSet = false;
-
-	friend std::string &operator+=(std::string &str, const Track &track);
 };
 
 struct ScrobbleInfo
@@ -71,7 +71,7 @@ struct ScrobbleInfo
 	// Track to scrobble.
 	Track track;
 
-	friend std::string &operator+=(std::string &str, const ScrobbleInfo &scrobbleInfo);
+	void appendTo(std::string &str) const;
 };
 
 class GravifonClient

@@ -316,7 +316,7 @@ namespace
 		string buf;
 		for (auto it = begin; it != end; ++it) {
 			buf.resize(0);
-			buf += *it;
+			it->appendTo(buf);
 			const size_t bufSize = buf.size();
 			if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
 				result = false;
@@ -467,7 +467,7 @@ inline size_t GravifonClient::doScrobbling()
 	unsigned submittedCount = 0;
 	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
 			submittedCount < 20 && it != end; ++submittedCount, ++it) {
-		body += *it;
+		it->appendTo(body);
 		body += u8",";
 	}
 	body.pop_back(); // Removing the redundant comma.
@@ -562,7 +562,7 @@ inline size_t GravifonClient::doScrobbling()
 							const unsigned long errorCode, const string &errorDescription)
 					{
 						string scrobbleAsStr;
-						scrobbleAsStr += *it;
+						it->appendTo(scrobbleAsStr);
 						if (isRecoverableError(errorCode)) {
 							fprintf(stderr, "[GravifonClient] Scrobble '%s' is not processed. "
 									"Error: '%s' (%lu). It will be re-submitted later.\n",
@@ -824,40 +824,39 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	return true;
 }
 
-string &operator+=(string &str, const ScrobbleInfo &scrobbleInfo)
+void ScrobbleInfo::appendTo(string &str) const
 {
 	str.append(u8R"({"scrobble_start_datetime":)");
-	writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, str);
+	writeJsonTimestamp(scrobbleStartTimestamp, str);
 	str.append(u8R"(,"scrobble_end_datetime":)");
-	writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, str);
+	writeJsonTimestamp(scrobbleEndTimestamp, str);
 	str.append(u8R"(,"scrobble_duration":{"amount":)");
-	writeJsonLong(scrobbleInfo.scrobbleDuration, str);
+	writeJsonLong(scrobbleDuration, str);
 	str.append(u8R"(,"unit":"ms"},"track":)");
-	str += scrobbleInfo.track;
+	track.appendTo(str);
 	str.append(u8"}");
-	return str;
 }
 
-string &operator+=(string &str, const Track &track)
+void Track::appendTo(string &str) const
 {
 	str.append(u8R"({"title":")");
-	writeJsonString(track.m_title, str);
+	writeJsonString(m_title, str);
 	// A single artist is currently supported.
 	str.append(u8R"(","artists":[)");
-	for (const string &artist : track.m_artists) {
+	for (const string &artist : m_artists) {
 		str.append(u8R"({"name":")");
 		writeJsonString(artist, str);
 		str.append(u8"\"},");
 	}
 	str.pop_back(); // removing the last redundant comma.
 	str.append(u8"],");
-	if (track.m_albumSet) {
+	if (m_albumSet) {
 		str.append(u8R"("album":{"title":")");
-		writeJsonString(track.m_album, str);
+		writeJsonString(m_album, str);
 		str.append(u8"\"");
-		if (track.m_albumArtistSet) {
+		if (m_albumArtistSet) {
 			str.append(u8R"(,"artists":[)");
-			for (const string &artist : track.m_albumArtists) {
+			for (const string &artist : m_albumArtists) {
 				str.append(u8R"({"name":")");
 				writeJsonString(artist, str);
 				str.append(u8"\"},");
@@ -867,7 +866,6 @@ string &operator+=(string &str, const Track &track)
 		str.append(u8R"(},)");
 	}
 	str.append(u8R"("length":{"amount":)");
-	writeJsonLong(track.m_duration, str);
+	writeJsonLong(m_duration, str);
 	str.append(u8R"(,"unit":"ms"}})");
-	return str;
 }
