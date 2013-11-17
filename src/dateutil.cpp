@@ -14,38 +14,28 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "dateutil.hpp"
-#include <time.h>
 #include <afc/utils.h>
 
 using namespace std;
 using namespace afc;
 
-bool parseISODateTime(const string &str, time_t &dest)
+bool parseISODateTime(const string &str, DateTime &dest)
 {
-	// Initialises the system time zone data.
-	tzset();
-
 	tm dateTime;
 	// The input string is converted to the system default encoding to be interpreted correctly.
 	const char * const parseResult =
 			strptime(convertFromUtf8(str, systemCharset().c_str()).c_str(), "%FT%T%z", &dateTime);
+	/* strptime() does not assign the field tm_isdst. If it appears to be negative
+	 * then strftime with %z discards the time zone as non-determined. To avoid
+	 * this effect, assigning it explicitly.
+	 */
+	dateTime.tm_isdst = 0;
 
 	if (parseResult == nullptr || *parseResult != 0) {
 		return false;
 	}
 
-	/* 1. Flush time zone offset into seconds to make a UTC time.
-	 * 2. Make a local value out the tm structure with the UTC time. It is shifted towards future by
-	 *    amount of negated ::timezone.
-	 * 3. Make a time_t value out of the tm structure with the local time.
-	 *
-	 * Unfortunately, this code is not portable. It compiles in Debian Wheezy with GCC 4.7.
-	 * In addition, this code cannot tolerate the system time zone changed in the middle of processing.
-	 */
-	dateTime.tm_sec -= dateTime.tm_gmtoff;
-	dateTime.tm_sec -= timezone;
-	dateTime.tm_gmtoff = -timezone;
+	dest = dateTime;
 
-	dest = mktime(&dateTime);
 	return true;
 }

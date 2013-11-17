@@ -18,7 +18,71 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <ctime>
 #include <string>
 
+struct DateTime
+{
+	DateTime() : gmtOffset(0), year(0), month(0), day(0), hour(0), minute(0), second(0), millisecond(0), isDst(-1) {}
+
+	/* Unfortunately, this code is not portable. It compiles in Debian Wheezy with GCC 4.7.
+	 * In addition, this code cannot tolerate the system time zone changed in the middle of processing.
+	 */
+	DateTime(const std::tm &dateTime) { *this = dateTime; }
+
+	DateTime &operator=(const std::time_t timestamp)
+	{
+		std::tm dateTime;
+
+		/* Initialises the system time zone data. According to POSIX.1-2004, localtime() is required
+		 * to behave as though tzset(3) was called, while localtime_r() does not have this requirement.
+		 */
+		::tzset();
+		::localtime_r(&timestamp, &dateTime);
+
+		return *this = dateTime;
+	}
+
+	DateTime &operator=(const std::tm &dateTime)
+	{
+		gmtOffset = dateTime.tm_gmtoff;
+		year = dateTime.tm_year;
+		month = dateTime.tm_mon + 1;
+		day = dateTime.tm_mday;
+		hour = dateTime.tm_hour;
+		minute = dateTime.tm_min;
+		second = dateTime.tm_sec;
+		millisecond = 0;
+		isDst = dateTime.tm_isdst;
+		return *this;
+	}
+
+	explicit operator std::tm() const
+	{
+		std::tm result;
+		result.tm_gmtoff = gmtOffset;
+		result.tm_year = year;
+		result.tm_mon = month - 1;
+		result.tm_mday = day;
+		result.tm_hour = hour;
+		result.tm_min = minute;
+		result.tm_sec = second;
+		result.tm_isdst = isDst;
+		return result;
+	}
+
+	// In seconds.
+	long gmtOffset;
+
+	long year;
+	unsigned month;
+	unsigned day;
+	unsigned hour;
+	unsigned minute;
+	unsigned second;
+	unsigned millisecond;
+	int isDst;
+};
+
 // a utf-8 string is expected
-bool parseISODateTime(const std::string &str, std::time_t &dest);
+bool parseISODateTime(const std::string &str, DateTime &dest);
 
 #endif /* DATEUTIL_HPP_ */
+

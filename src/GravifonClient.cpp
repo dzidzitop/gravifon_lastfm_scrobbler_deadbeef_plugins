@@ -85,17 +85,12 @@ namespace
 		}
 	}
 
-	inline void writeJsonTimestamp(const std::time_t timestamp, string &dest)
+	inline void writeJsonTimestamp(const DateTime &timestamp, string &dest)
 	{
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
 		 * Milliseconds are not supported.
 		 */
-		std::tm dateTime;
-		/* Initialises the system time zone data. According to POSIX.1-2004, localtime() is required
-		 * to behave as though tzset(3) was called, while localtime_r() does not have this requirement.
-		 */
-		::tzset();
-		::localtime_r(&timestamp, &dateTime);
+		std::tm dateTime = static_cast<std::tm>(timestamp);
 
 		/* Twenty five characters (including the terminating character) are really used
 		 * to store an ISO-8601-formatted date for a single-byte encoding. For multi-byte
@@ -208,7 +203,7 @@ namespace
 		return val.type() == type;
 	}
 
-	inline bool parseDateTime(const Value &dateTimeObject, time_t &dest)
+	inline bool parseDateTime(const Value &dateTimeObject, DateTime &dest)
 	{
 		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asString(), dest);
 	}

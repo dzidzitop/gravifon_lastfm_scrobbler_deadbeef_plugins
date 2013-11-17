@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <condition_variable>
 #include <atomic>
 #include <cstddef>
+#include "dateutil.hpp"
 
 // All strings are utf8-encoded.
 class Track
@@ -63,9 +64,9 @@ struct ScrobbleInfo
 	static bool parse(const std::string &str, ScrobbleInfo &dest);
 
 	// Date and time when scrobble event was initiated.
-	std::time_t scrobbleStartTimestamp;
+	DateTime scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.
-	std::time_t scrobbleEndTimestamp;
+	DateTime scrobbleEndTimestamp;
 	// Scrobble length in milliseconds.
 	long scrobbleDuration;
 	// Track to scrobble.
