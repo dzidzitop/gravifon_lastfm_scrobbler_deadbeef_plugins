@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cassert>
 #include <afc/base64.hpp>
 #include <afc/utils.h>
-#include "dateutil.hpp"
 #include "HttpClient.hpp"
 #include <time.h>
 #include <cstdlib>
