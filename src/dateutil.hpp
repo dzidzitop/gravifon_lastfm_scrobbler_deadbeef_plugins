@@ -82,4 +82,3 @@ struct DateTime
 bool parseISODateTime(const std::string &str, DateTime &dest);
 
 #endif /* DATEUTIL_HPP_ */
-
