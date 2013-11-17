@@ -775,7 +775,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	Value object;
 	if (!jsonReader.parse(str, object, false)) {
 		logError(string("[GravifonClient] Unable to parse the scrobble JSON object: ") +
-				jsonReader.getFormattedErrorMessages());
+				jsonReader.getFormatedErrorMessages());
 		return false;
 	}
 	if (!isType(object, objectValue)) {
