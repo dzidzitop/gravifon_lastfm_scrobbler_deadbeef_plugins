@@ -8,7 +8,7 @@ Configuration
 
 <table border="1">
 <thead>
-	<tr><th>Setting</th><th>Description</th><th>Default value</th></tr>
+	<tr><th>Setting name</th><th>Description</th><th>Default value</th></tr>
 <thead>
 <tbody>
 	<tr><td>Enable scrobbler</td>
