@@ -44,7 +44,7 @@ Configuration
 			reset to <code>0.0</code>.
 			<br/>
 			Note that DeaDBeeF calculates track and play durations inaccurately so it is
-			dangerous to set it to values that are close to 100. This could lead to some
+			dangerous to set it to values that are close to 100%. This could lead to some
 			tracks not scrobbled even if they are played long enough.</td>
 		<td><code>0.0</code></td></tr>
 	<tr><td>Failure-safe scrobbling</td>
