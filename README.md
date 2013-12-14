@@ -80,6 +80,23 @@ Configuration
 </tbody>
 </table>
 
+Troubleshooting
+---------------
+
+In certain conditions it is possible to see that the plugin does not work as expected (e.g. scrobbles are not submitted
+or plugin fails to initialise). In this case it is useful to look at the plugin error output. Since DeaDBeeF
+(as of v.0.6.0) does not provide logging/error reporting facilities, the plugin diagnostic messages are written
+to the error stream (stderr). In order to see them the following is possible:
+
+- the DeaDBeeF instance could be run from a terminal. In this case the terminal will show the player output
+- the DeaDBeeF instance's output streams could be redirected to a file (using the `>` or `>>` commands)
+- the file `$HOME/.xsession-errors` could be scanned for the diagnostic messages. Both the output and error streams
+are redirected to this file by the X Window System.
+
+By default only error messages are written by the plugin. If more detailed information is needed then the plugin
+could be compiled in the debug mode. For this, the source code of the plugin should be compiled without the setting
+`-DNDEBUG`. This enabled the debug output which is written to the output stream (stdout).
+
 Build instruction (Unix-like systems)
 -------------------------------------
 
