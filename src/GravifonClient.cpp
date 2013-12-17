@@ -718,6 +718,13 @@ bool GravifonClient::stop()
 		 */
 		m_pendingScrobbles.clear();
 
+		/* Clearing configuration so that this GravifonClient is to be re-configured
+		 * if it is re-used later.
+		 */
+		m_scrobblerUrl.clear();
+		m_authHeader.clear();
+		m_configured = false;
+
 		m_started = false;
 	}
 
