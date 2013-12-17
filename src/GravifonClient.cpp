@@ -28,12 +28,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <functional>
 #include <type_traits>
 #include <iterator>
+#include <algorithm>
 
 using namespace std;
 using namespace afc;
 using Json::Value;
 using Json::ValueType;
 using StatusCode = HttpClient::StatusCode;
+
+const size_t GravifonClient::MAX_SCROBBLES_TO_WAIT = 32;
 
 namespace
 {
@@ -362,6 +365,7 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 { lock_guard<mutex> lock(m_mutex);
 	assert(gravifonUrl != nullptr);
 
+	// TODO Reset m_scrobblesToWait if any of the parameters has changed.
 	m_scrobblerUrl = gravifonUrl;
 	if (!m_scrobblerUrl.empty()) {
 		appendToPath(m_scrobblerUrl, "scrobbles");
@@ -409,6 +413,7 @@ void GravifonClient::backgroundScrobbling()
 
 	bool lastAttemptFailed = false;
 	size_t prevScrobbleCount = m_pendingScrobbles.size();
+	size_t idleLoopCount = 0;
 
 	while (!m_finishScrobblingFlag.load(memory_order_relaxed)) {
 		/* An attempt to submit is performed iff this GravifonClient is configured properly AND:
@@ -429,8 +434,38 @@ void GravifonClient::backgroundScrobbling()
 			}
 		}
 
-		lastAttemptFailed = doScrobbling() == 0;
+		/* The scrobble count must be updated before checking whether to idle or not
+		 * because in case of idling the next iteration must see the correct number of
+		 * pending scrobbles to decide whether to wait for another scrobble or not.
+		 */
 		prevScrobbleCount = m_pendingScrobbles.size();
+
+		if (++idleLoopCount < m_scrobblesToWait) {
+			logDebug(string("Idling is to last for ") + to_string(m_scrobblesToWait) +
+					" tracks scrobbled. Scrobbles passed: " + to_string(idleLoopCount));
+			/* Some idling is forced due to some last scrobble requests failed.
+			 * No scrobble request is submitted.
+			 */
+			assert(lastAttemptFailed == true);
+			continue;
+		}
+		idleLoopCount = 0;
+
+		const size_t scrobbledCount = doScrobbling();
+		lastAttemptFailed = scrobbledCount == 0;
+
+		if (lastAttemptFailed) {
+			/* If this attempt has failed then increasing the timeout by two times
+			 * up to max allowed limit.
+			 */
+			m_scrobblesToWait = min(m_scrobblesToWait * 2, MAX_SCROBBLES_TO_WAIT);
+
+			logDebug(string("Idling is to last now for ") + to_string(m_scrobblesToWait) +
+					" tracks scrobbled.");
+		} else {
+			// If the attempt is (partially) successful then the timeout is reset.
+			m_scrobblesToWait = 1;
+		}
 	}
 }
 
@@ -634,6 +669,8 @@ bool GravifonClient::start()
 	logDebug("[GravifonClient] Starting the background scrobbling thread...");
 
 	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
+
+	m_scrobblesToWait = 1;
 
 	m_started = true;
 	return true;

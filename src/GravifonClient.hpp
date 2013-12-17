@@ -130,12 +130,15 @@ private:
 	// Returns the number of scrobbles completed (successful and non-processable).
 	size_t doScrobbling();
 
+	const static size_t MAX_SCROBBLES_TO_WAIT;
+
 	std::string m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
 	std::string m_authHeader;
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
+	mutable size_t m_scrobblesToWait;
 	mutable std::mutex m_mutex;
 	mutable std::thread m_scrobblingThread;
 	mutable std::condition_variable m_cv;
