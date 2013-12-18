@@ -434,13 +434,14 @@ void GravifonClient::backgroundScrobbling()
 			}
 		}
 
-		{	// It is possible that idling mode is to be enabled in this iteration.
+		if (lastAttemptFailed) {
+			// It is possible that idling mode is to be enabled in this iteration.
 
 			// Updating the number of tracks scrobbled while idling.
 			const size_t size = m_pendingScrobbles.size();
 			idleScrobbleCount += size - prevScrobbleCount;
 
-			/* The scrobble count must be updated before even when idling because in this case
+			/* The scrobble count must be updated even when idling because in this case
 			 * the next iteration must see the correct number of pending scrobbles to decide
 			 * whether to wait for another scrobble or not.
 			 */
@@ -475,15 +476,9 @@ void GravifonClient::backgroundScrobbling()
 		} else {
 			// If the attempt is (partially) successful then the timeout is reset.
 			m_scrobblesToWait = 1;
-
-			/* Updating the number of pending scrobbles by reducing it
-			 * by the number of processed scrobbles.
-			 *
-			 * It is assumed that prevScrobbleCount was updated while checking for
-			 * whether the scrobbler is to work in the idling mode.
-			 */
-			prevScrobbleCount -= scrobbledCount;
 		}
+
+		prevScrobbleCount = m_pendingScrobbles.size();
 	}
 }
 
