@@ -43,6 +43,8 @@ Configuration
 			the track duration for this track to be scrobbled. An invalid value set is
 			reset to <code>0.0</code>.
 			<br/>
+			The input value is not locale-aware. Only period (.) is allowed as a decimal mark.
+			<br/>
 			Note that DeaDBeeF calculates track and play durations inaccurately so it is
 			dangerous to set it to values that are close to 100%. This could lead to some
 			tracks not scrobbled even if they are played long enough.</td>
