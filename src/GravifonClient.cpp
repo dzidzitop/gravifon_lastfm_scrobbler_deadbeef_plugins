@@ -413,7 +413,7 @@ void GravifonClient::backgroundScrobbling()
 
 	bool lastAttemptFailed = false;
 	size_t prevScrobbleCount = m_pendingScrobbles.size();
-	size_t idleLoopCount = 0;
+	size_t idleScrobbleCount = 0;
 
 	while (!m_finishScrobblingFlag.load(memory_order_relaxed)) {
 		/* An attempt to submit is performed iff this GravifonClient is configured properly AND:
@@ -434,42 +434,56 @@ void GravifonClient::backgroundScrobbling()
 			}
 		}
 
-		prevScrobbleCount = m_pendingScrobbles.size();
+		{	// It is possible that idling mode is to be enabled in this iteration.
 
-		if (++idleLoopCount < m_scrobblesToWait) {
-			// Idling due to failed previous attempt to scrobble tracks.
-			logDebug(string("Idling is to last for ") + to_string(m_scrobblesToWait) +
-					" tracks scrobbled. Scrobbles passed: " + to_string(idleLoopCount));
-			/* Some idling is forced due to some last scrobble requests failed.
-			 * No scrobble request is submitted.
+			// Updating the number of tracks scrobbled while idling.
+			const size_t size = m_pendingScrobbles.size();
+			idleScrobbleCount += size - prevScrobbleCount;
+
+			/* The scrobble count must be updated before even when idling because in this case
+			 * the next iteration must see the correct number of pending scrobbles to decide
+			 * whether to wait for another scrobble or not.
 			 */
-			assert(lastAttemptFailed == true);
-		} else {
-			// Scrobbling tracks.
-			idleLoopCount = 0;
+			prevScrobbleCount = size;
 
-			const size_t scrobbledCount = doScrobbling();
-			lastAttemptFailed = scrobbledCount == 0;
+			if (idleScrobbleCount < m_scrobblesToWait) {
+				// Idling due to failed previous attempt to scrobble tracks.
+				logDebug(string("Idling is to last for ") + to_string(m_scrobblesToWait) +
+						" tracks scrobbled. Scrobbles passed: " + to_string(idleScrobbleCount));
 
-			if (lastAttemptFailed) {
-				/* If this attempt has failed then increasing the timeout by two times
-				 * up to max allowed limit.
+				/* Idling is forced due to some last scrobble requests failed.
+				 * No scrobble request is submitted.
 				 */
-				m_scrobblesToWait = min(m_scrobblesToWait * 2, MAX_SCROBBLES_TO_WAIT);
-
-				logDebug(string("Idling is to last now for ") + to_string(m_scrobblesToWait) +
-						" tracks scrobbled.");
-			} else {
-				// If the attempt is (partially) successful then the timeout is reset.
-				m_scrobblesToWait = 1;
+				continue;
 			}
 		}
 
-		/* The scrobble count must be updated before even when idling because in this case
-		 * the next iteration must see the correct number of pending scrobbles to decide
-		 * whether to wait for another scrobble or not.
-		 */
-		prevScrobbleCount = m_pendingScrobbles.size();
+		idleScrobbleCount = 0;
+
+		// Scrobbling tracks.
+		const size_t scrobbledCount = doScrobbling();
+		lastAttemptFailed = scrobbledCount == 0;
+
+		if (lastAttemptFailed) {
+			/* If this attempt has failed then increasing the timeout by two times
+			 * up to max allowed limit.
+			 */
+			m_scrobblesToWait = min(m_scrobblesToWait * 2, MAX_SCROBBLES_TO_WAIT);
+
+			logDebug(string("Idling is to last now for ") + to_string(m_scrobblesToWait) +
+					" tracks scrobbled.");
+		} else {
+			// If the attempt is (partially) successful then the timeout is reset.
+			m_scrobblesToWait = 1;
+
+			/* Updating the number of pending scrobbles by reducing it
+			 * by the number of processed scrobbles.
+			 *
+			 * It is assumed that prevScrobbleCount was updated while checking for
+			 * whether the scrobbler is to work in the idling mode.
+			 */
+			prevScrobbleCount -= scrobbledCount;
+		}
 	}
 }
 
