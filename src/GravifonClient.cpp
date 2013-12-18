@@ -459,6 +459,7 @@ void GravifonClient::backgroundScrobbling()
 			}
 		}
 
+		// Idling has finished so resetting the counter of tracks scrobbled while idling.
 		idleScrobbleCount = 0;
 
 		// Scrobbling tracks.
