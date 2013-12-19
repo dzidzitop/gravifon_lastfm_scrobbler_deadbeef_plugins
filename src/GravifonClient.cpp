@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <type_traits>
 #include <iterator>
 #include <algorithm>
+#include <utility>
 
 using namespace std;
 using namespace afc;
@@ -36,6 +37,7 @@ using Json::Value;
 using Json::ValueType;
 using StatusCode = HttpClient::StatusCode;
 
+const size_t GravifonClient::MIN_SCROBBLES_TO_WAIT = 1;
 const size_t GravifonClient::MAX_SCROBBLES_TO_WAIT = 32;
 
 namespace
@@ -365,19 +367,26 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 { lock_guard<mutex> lock(m_mutex);
 	assert(gravifonUrl != nullptr);
 
-	// TODO Reset m_scrobblesToWait if any of the parameters has changed.
-	m_scrobblerUrl = gravifonUrl;
-	if (!m_scrobblerUrl.empty()) {
-		appendToPath(m_scrobblerUrl, "scrobbles");
+
+	string tmpUrl(gravifonUrl);
+	if (!tmpUrl.empty()) {
+		appendToPath(tmpUrl, "scrobbles");
 	}
 
 	// Curl expects the basic charset in headers.
-	m_authHeader = "Authorization: Basic "; // HTTP Basic authentication is used.
+	string tmpAuthHeader("Authorization: Basic "); // HTTP Basic authentication is used.
 
 	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
 	 */
-	m_authHeader += encodeBase64(username + u8":"[0] + password);
+	tmpAuthHeader += encodeBase64(username + u8":"[0] + password);
+
+	// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
+	if (m_scrobblerUrl != tmpUrl || m_authHeader != tmpAuthHeader) {
+		m_scrobblerUrl = move(tmpUrl);
+		m_authHeader = move(tmpAuthHeader);
+		m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
+	}
 
 	m_configured = true;
 }
@@ -476,7 +485,7 @@ void GravifonClient::backgroundScrobbling()
 					" tracks scrobbled.");
 		} else {
 			// If the attempt is (partially) successful then the timeout is reset.
-			m_scrobblesToWait = 1;
+			m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
 		}
 
 		prevScrobbleCount = m_pendingScrobbles.size();
@@ -684,7 +693,7 @@ bool GravifonClient::start()
 
 	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
 
-	m_scrobblesToWait = 1;
+	m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
 
 	m_started = true;
 	return true;

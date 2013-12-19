@@ -85,6 +85,10 @@ public:
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_started = false;
 		m_configured = false;
+
+		/* This instance is partially initialised here. It will be initialised completely
+		 * when ::start() is invoked successfully.
+		 */
 	}
 
 	~GravifonClient()
@@ -130,6 +134,7 @@ private:
 	// Returns the number of scrobbles completed (successful and non-processable).
 	size_t doScrobbling();
 
+	const static size_t MIN_SCROBBLES_TO_WAIT;
 	const static size_t MAX_SCROBBLES_TO_WAIT;
 
 	std::string m_scrobblerUrl;
