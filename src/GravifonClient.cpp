@@ -381,8 +381,8 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 	 */
 	tmpAuthHeader += encodeBase64(username + u8":"[0] + password);
 
-	// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
 	if (m_scrobblerUrl != tmpUrl || m_authHeader != tmpAuthHeader) {
+		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
 		m_scrobblerUrl = move(tmpUrl);
 		m_authHeader = move(tmpAuthHeader);
 		m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
