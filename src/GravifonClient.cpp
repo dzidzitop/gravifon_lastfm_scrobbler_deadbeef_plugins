@@ -367,7 +367,6 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 { lock_guard<mutex> lock(m_mutex);
 	assert(gravifonUrl != nullptr);
 
-
 	string tmpUrl(gravifonUrl);
 	if (!tmpUrl.empty()) {
 		appendToPath(tmpUrl, "scrobbles");
