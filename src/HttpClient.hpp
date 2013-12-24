@@ -22,8 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 struct HttpEntity
 {
-	// HttpEntity does not own anything.
 	std::string body;
+	// HttpEntity does not own headers.
 	std::vector<const char *> headers;
 };
 
