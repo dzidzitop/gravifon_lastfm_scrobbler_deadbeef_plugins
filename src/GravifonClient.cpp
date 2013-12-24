@@ -753,7 +753,6 @@ bool GravifonClient::stop()
 	return true;
 }
 
-// TODO Do not load all scrobbles to memory. Use mmap for this?
 inline bool GravifonClient::loadPendingScrobbles()
 {
 	logDebug("[GravifonClient] Loading pending scrobbles...");
