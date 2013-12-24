@@ -57,7 +57,7 @@ namespace
 		DB_functions_t &m_deadbeef;
 	};
 
-	inline long toLongMillis(const double seconds)
+	constexpr inline long toLongMillis(const double seconds)
 	{
 		return static_cast<long>(seconds * 1000.d);
 	}
