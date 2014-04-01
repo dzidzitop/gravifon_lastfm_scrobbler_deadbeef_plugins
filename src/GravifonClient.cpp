@@ -321,7 +321,7 @@ namespace
 		string buf;
 		for (auto it = begin; it != end; ++it) {
 			buf.resize(0);
-			it->appendTo(buf);
+			it->appendAsJsonTo(buf);
 			const size_t bufSize = buf.size();
 			if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
 				result = false;
@@ -524,7 +524,7 @@ inline size_t GravifonClient::doScrobbling()
 	unsigned submittedCount = 0;
 	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
 			submittedCount < 20 && it != end; ++submittedCount, ++it) {
-		it->appendTo(body);
+		it->appendAsJsonTo(body);
 		body += u8",";
 	}
 	body.pop_back(); // Removing the redundant comma.
@@ -619,7 +619,7 @@ inline size_t GravifonClient::doScrobbling()
 							const unsigned long errorCode, const string &errorDescription)
 					{
 						string scrobbleAsStr;
-						it->appendTo(scrobbleAsStr);
+						it->appendAsJsonTo(scrobbleAsStr);
 						if (isRecoverableError(errorCode)) {
 							fprintf(stderr, "[GravifonClient] Scrobble '%s' is not processed. "
 									"Error: '%s' (%lu). It will be re-submitted later.\n",
@@ -889,7 +889,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	return true;
 }
 
-void ScrobbleInfo::appendTo(string &str) const
+void ScrobbleInfo::appendAsJsonTo(string &str) const
 {
 	str.append(u8R"({"scrobble_start_datetime":)");
 	writeJsonTimestamp(scrobbleStartTimestamp, str);
@@ -898,11 +898,11 @@ void ScrobbleInfo::appendTo(string &str) const
 	str.append(u8R"(,"scrobble_duration":{"amount":)");
 	writeJsonLong(scrobbleDuration, str);
 	str.append(u8R"(,"unit":"ms"},"track":)");
-	track.appendTo(str);
+	track.appendAsJsonTo(str);
 	str.append(u8"}");
 }
 
-void Track::appendTo(string &str) const
+void Track::appendAsJsonTo(string &str) const
 {
 	str.append(u8R"({"title":")");
 	writeJsonString(m_title, str);

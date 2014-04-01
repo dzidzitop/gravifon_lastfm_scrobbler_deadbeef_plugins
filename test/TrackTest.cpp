@@ -32,7 +32,7 @@ void TrackTest::testSerialiseTrack_WithAllFields()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"}]},)"
@@ -49,7 +49,7 @@ void TrackTest::testSerialiseTrack_WithAllFields_StringsContainNonASCIICharacter
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8"{\"title\":\"Dzie\u0144\",\"artists\":[{\"name\":\"No\u010d\"}],"
 			u8"\"album\":{\"title\":\"Vie\u010dar\",\"artists\":[{\"name\":\"Nadvia\u010dorak\"}]},"
@@ -66,7 +66,7 @@ void TrackTest::testSerialiseTrack_TrackNameWithEscapeCharacters()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":")" u8"A\\\"'\\\\\\b\\f\\n\\r\\tbc" "\","
 			u8R"("artists":[{"name":"Test artist"}],"album":{"title":"Test album"},)"
@@ -82,7 +82,7 @@ void TrackTest::testSerialiseTrack_AlbumNameWithEscapeCharacters()
 	track.setDurationMillis(1234);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
 			u8R"("artists":[{"name":"Test artist"}],"album":{"title":")" u8"\\\"'\\\\\\b\\f\\n\\r\\t++" R"("},)"
@@ -98,7 +98,7 @@ void TrackTest::testSerialiseTrack_ArtistNameWithEscapeCharacters()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
 			u8R"("artists":[{"name":")" u8"_\\\"'\\\\\\b\\f\\n\\r\\t_" R"("}],"album":{"title":"Test album"},)"
@@ -115,7 +115,7 @@ void TrackTest::testSerialiseTrack_AlbumArtistNameWithEscapeCharacters()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track",)"
 			u8R"("artists":[{"name":"Queen"}],"album":{"title":"Test album",)"
@@ -131,7 +131,7 @@ void TrackTest::testSerialiseTrack_WithNoAlbum()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"Test track","artists":[{"name":"Test artist"}],)"
 			u8R"("length":{"amount":210000,"unit":"ms"}})"), result);
@@ -146,7 +146,7 @@ void TrackTest::testSerialiseTrack_WithNoAlbumArtists()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera"},)"
@@ -163,7 +163,7 @@ void TrackTest::testSerialiseTrack_MultipleArtists()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"},{"name":"Scorpions"}],)"
 			u8R"("album":{"title":"A Night at the Opera"},)"
@@ -181,7 +181,7 @@ void TrackTest::testSerialiseTrack_MultipleAlbumArtists()
 	track.setDurationMillis(210000);
 
 	string result;
-	track.appendTo(result);
+	track.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"},{"name":"ABBA"}]},)"

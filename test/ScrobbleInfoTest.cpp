@@ -74,7 +74,7 @@ void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 	track.setDurationMillis(12);
 
 	string result;
-	scrobbleInfo.appendTo(result);
+	scrobbleInfo.appendAsJsonTo(result);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-02T01:42:33+0230",)"
 			u8R"("scrobble_end_datetime":"2001-02-03T14:40:04+0230",)"
@@ -99,7 +99,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
-	result.appendTo(serialisedScrobble);
+	result.appendAsJsonTo(serialisedScrobble);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T13:40:04+0130",)"
@@ -124,7 +124,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists
 	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
-	result.appendTo(serialisedScrobble);
+	result.appendAsJsonTo(serialisedScrobble);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0100",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -149,7 +149,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumAr
 	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
-	result.appendTo(serialisedScrobble);
+	result.appendAsJsonTo(serialisedScrobble);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -173,7 +173,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
-	result.appendTo(serialisedScrobble);
+	result.appendAsJsonTo(serialisedScrobble);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T13:12:33+0300",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -197,7 +197,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 	CPPUNIT_ASSERT(status);
 
 	string serialisedScrobble;
-	result.appendTo(serialisedScrobble);
+	result.appendAsJsonTo(serialisedScrobble);
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"

@@ -36,7 +36,8 @@ public:
 	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 
-	void appendTo(std::string &str) const;
+	// Appends this ScrobbleInfo in the JSON format to a given string.
+	void appendAsJsonTo(std::string &str) const;
 private:
 	std::string m_title;
 	std::vector<std::string> m_artists;
@@ -71,7 +72,8 @@ struct ScrobbleInfo
 	// Track to scrobble.
 	Track track;
 
-	void appendTo(std::string &str) const;
+	// Appends this ScrobbleInfo in the JSON format to a given string.
+	void appendAsJsonTo(std::string &str) const;
 };
 
 class GravifonClient
