@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-#include "GravifonClient.hpp"
+#include "Scrobbler.hpp"
 #include <cassert>
 #include <afc/base64.hpp>
 #include <afc/utils.h>
@@ -37,8 +37,8 @@ using Json::Value;
 using Json::ValueType;
 using StatusCode = HttpClient::StatusCode;
 
-const size_t GravifonClient::MIN_SCROBBLES_TO_WAIT = 1;
-const size_t GravifonClient::MAX_SCROBBLES_TO_WAIT = 32;
+const size_t Scrobbler::MIN_SCROBBLES_TO_WAIT = 1;
+const size_t Scrobbler::MAX_SCROBBLES_TO_WAIT = 32;
 
 namespace
 {
@@ -268,7 +268,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		fprintf(stderr, "[GravifonClient] Unable to send the scrobble message: %s\n", message);
+		fprintf(stderr, "[Scrobbler] Unable to send the scrobble message: %s\n", message);
 	}
 
 	template<typename SuccessOp, typename FailureOp, typename InvalidOp>
@@ -363,11 +363,11 @@ namespace
 	};
 }
 
-void GravifonClient::configure(const char * const gravifonUrl, const string &username, const string &password)
+void Scrobbler::configure(const char * const serverUrl, const string &username, const string &password)
 { lock_guard<mutex> lock(m_mutex);
-	assert(gravifonUrl != nullptr);
+	assert(serverUrl != nullptr);
 
-	string tmpUrl(gravifonUrl);
+	string tmpUrl(serverUrl);
 	if (!tmpUrl.empty()) {
 		appendToPath(tmpUrl, "scrobbles");
 	}
@@ -390,10 +390,10 @@ void GravifonClient::configure(const char * const gravifonUrl, const string &use
 	m_configured = true;
 }
 
-void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling)
+void Scrobbler::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling)
 { lock_guard<mutex> lock(m_mutex);
 	if (!m_started) {
-		// This GravifonClient is not started or is already stopped or is disabled.
+		// This Scrobbler is not started or is already stopped or is disabled.
 		return;
 	}
 
@@ -407,24 +407,24 @@ void GravifonClient::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeS
 		 */
 		auto end = m_pendingScrobbles.cend();
 		if (storeScrobbles(prev(end), end, "ab")) {
-			logDebug("[GravifonClient] The scrobble that has just been scrobbled "
+			logDebug("[Scrobbler] The scrobble that has just been scrobbled "
 					"is stored (failure-safe scrobbling).");
 		} else {
-			logError("[GravifonClient] Unable to store the scrobble (failure-safe scrobbling).");
+			logError("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling).");
 		}
 	}
 }
 
-void GravifonClient::backgroundScrobbling()
+void Scrobbler::backgroundScrobbling()
 { unique_lock<mutex> lock(m_mutex);
-	logDebug("[GravifonClient] The background scrobbling thread has started.");
+	logDebug("[Scrobbler] The background scrobbling thread has started.");
 
 	bool lastAttemptFailed = false;
 	size_t prevScrobbleCount = m_pendingScrobbles.size();
 	size_t idleScrobbleCount = 0;
 
 	while (!m_finishScrobblingFlag.load(memory_order_relaxed)) {
-		/* An attempt to submit is performed iff this GravifonClient is configured properly AND:
+		/* An attempt to submit is performed iff this Scrobbler is configured properly AND:
 		 * - the last scrobbling call did not fail and the list of pending scrobbles is not empty
 		 *     (useful when there is already a long list of pending scrobbles)
 		 * OR
@@ -436,8 +436,8 @@ void GravifonClient::backgroundScrobbling()
 			m_cv.wait(lock);
 
 			if (m_finishScrobblingFlag.load(memory_order_relaxed)) {
-				// Finishing the background scrobbling thread since this GravifonClient is stopped.
-				logDebug("[GravifonClient] The background scrobbling thread is going to be stopped...");
+				// Finishing the background scrobbling thread since this Scrobbler is stopped.
+				logDebug("[Scrobbler] The background scrobbling thread is going to be stopped...");
 				return;
 			}
 		}
@@ -491,7 +491,7 @@ void GravifonClient::backgroundScrobbling()
 	}
 }
 
-inline size_t GravifonClient::doScrobbling()
+inline size_t Scrobbler::doScrobbling()
 {
 	assert(!m_pendingScrobbles.empty());
 	/* Ensures that this function is executed within the critical section against m_mutex.
@@ -501,17 +501,17 @@ inline size_t GravifonClient::doScrobbling()
 	assert(!m_mutex.try_lock());
 
 	if (!m_configured) {
-		logError("Gravifon client is not configured properly.");
+		logError("Scrobbler is not configured properly.");
 		return 0;
 	}
 
 	if (m_scrobblerUrl.empty()) {
-		/* There is no sense to try to send a request because the URL to Gravifon API
-		 * is undefined. The scrobble is added to the list of pending scrobbles
-		 * (see above) to be submitted * (among other scrobbles) when the URL is configured
-		 * to point to an instance of Gravifon.
+		/* There is no sense to try to send a request because the URL to the scrobbling
+		 * service (e.g. Gravifon API) is undefined. The scrobble is added to the list of
+		 * pending scrobbles (see above) to be submitted (among other scrobbles) when
+		 * the URL is configured to point to a scrobbling server.
 		 */
-		logError("URL to Gravifon API is undefined.");
+		logError("URL to the scrobbling server is undefined.");
 		return 0;
 	}
 
@@ -549,9 +549,9 @@ inline size_t GravifonClient::doScrobbling()
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
-	 * - stop this GravifonClient by invoking GravifonClient::stop(). In this case
-	 * this HTTP call is aborted and the scrobbles involved are left in the list of pending
-	 * scrobbles so that they can be stored to the data file and be completed later.
+	 * - stop this Scrobbler by invoking Scrobbler::stop(). In this case this HTTP call
+	 * is aborted and the scrobbles involved are left in the list of pending scrobbles
+	 * so that they can be stored to the data file and be completed later.
 	 *
 	 * It is safe to unlock the mutex because:
 	 * - no shared data is accessed outside the critical section
@@ -563,7 +563,7 @@ inline size_t GravifonClient::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug(string("[GravifonClient] Request body: ") + request.body);
+		logDebug(string("[Scrobbler] Request body: ") + request.body);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().send(scrobblerUrlCopy, request, response, 0L, 0L, m_finishScrobblingFlag);
@@ -576,7 +576,7 @@ inline size_t GravifonClient::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebug("[GravifonClient] An HTTP call is aborted.");
+		logDebug("[Scrobbler] An HTTP call is aborted.");
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
@@ -584,20 +584,20 @@ inline size_t GravifonClient::doScrobbling()
 		return 0;
 	}
 
-	logDebug(string("[GravifonClient] Response status code: ") + to_string(response.statusCode));
+	logDebug(string("[Scrobbler] Response status code: ") + to_string(response.statusCode));
 
 	const string &responseBody = response.body;
 
 	Value rs;
 	if (!Json::Reader().parse(responseBody, rs, false)) {
-		fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
+		fprintf(stderr, "[Scrobbler] Invalid response: '%s'.\n", responseBody.c_str());
 		return 0;
 	}
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
-			fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", response.body.c_str());
+			fprintf(stderr, "[Scrobbler] Invalid response: '%s'.\n", response.body.c_str());
 			return 0;
 		}
 
@@ -621,12 +621,12 @@ inline size_t GravifonClient::doScrobbling()
 						string scrobbleAsStr;
 						it->appendAsJsonTo(scrobbleAsStr);
 						if (isRecoverableError(errorCode)) {
-							fprintf(stderr, "[GravifonClient] Scrobble '%s' is not processed. "
+							fprintf(stderr, "[Scrobbler] Scrobble '%s' is not processed. "
 									"Error: '%s' (%lu). It will be re-submitted later.\n",
 									scrobbleAsStr.c_str(), errorDescription.c_str(), errorCode);
 							++it;
 						} else {
-							fprintf(stderr, "[GravifonClient] Scrobble '%s' cannot be processed. "
+							fprintf(stderr, "[Scrobbler] Scrobble '%s' cannot be processed. "
 									"Error: '%s' (%lu). It is removed as non-processable.\n",
 									scrobbleAsStr.c_str(), errorDescription.c_str(), errorCode);
 							it = m_pendingScrobbles.erase(it);
@@ -637,13 +637,13 @@ inline size_t GravifonClient::doScrobbling()
 					// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
 					[&responseBody, &it]()
 					{
-						fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
+						fprintf(stderr, "[Scrobbler] Invalid response: '%s'.\n", responseBody.c_str());
 						++it;
 					});
 		}
 
 		if (completedCount == submittedCount) {
-			logDebug(string("[GravifonClient] Successful response: ") + responseBody);
+			logDebug(string("[Scrobbler] Successful response: ") + responseBody);
 		}
 
 		return completedCount;
@@ -653,32 +653,32 @@ inline size_t GravifonClient::doScrobbling()
 				// Success status. It is not expected. Report an error and finish processing.
 				[&responseBody]()
 				{
-					fprintf(stderr, "[GravifonClient] Unexpected 'ok' global status response: '%s'.\n",
+					fprintf(stderr, "[Scrobbler] Unexpected 'ok' global status response: '%s'.\n",
 							responseBody.c_str());
 				},
 
 				// Error status: report an error and finish processing.
 				[&responseBody](const unsigned long errorCode, const string &errorDescription)
 				{
-					fprintf(stderr, "[GravifonClient] Error global status response: '%s'. Error: '%s' (%lu).\n",
+					fprintf(stderr, "[Scrobbler] Error global status response: '%s'. Error: '%s' (%lu).\n",
 							responseBody.c_str(), errorDescription.c_str(), errorCode);
 				},
 
 				// Invalid status: report an error and finish processing.
 				[&responseBody]()
 				{
-					fprintf(stderr, "[GravifonClient] Invalid response: '%s'.\n", responseBody.c_str());
+					fprintf(stderr, "[Scrobbler] Invalid response: '%s'.\n", responseBody.c_str());
 				});
 
 		return 0;
 	}
 }
 
-bool GravifonClient::start()
+bool Scrobbler::start()
 // m_startStopMutex must be locked first to co-operate with ::stop() properly.
 { lock_guard<mutex> startStopLock(m_startStopMutex); lock_guard<mutex> lock(m_mutex);
 	if (m_started) {
-		// This GravifonClient is already started.
+		// This Scrobbler is already started.
 		return false;
 	}
 
@@ -688,9 +688,9 @@ bool GravifonClient::start()
 
 	m_finishScrobblingFlag.store(false, memory_order_relaxed);
 
-	logDebug("[GravifonClient] Starting the background scrobbling thread...");
+	logDebug("[Scrobbler] Starting the background scrobbling thread...");
 
-	m_scrobblingThread = thread(&GravifonClient::backgroundScrobbling, ref(*this));
+	m_scrobblingThread = thread(&Scrobbler::backgroundScrobbling, ref(*this));
 
 	m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
 
@@ -698,25 +698,25 @@ bool GravifonClient::start()
 	return true;
 }
 
-bool GravifonClient::stop()
+bool Scrobbler::stop()
 // m_startStopMutex must be locked first to co-operate with ::start() properly.
 { lock_guard<mutex> startStopLock(m_startStopMutex);
 	thread threadToStop;
 
 	{ lock_guard<mutex> lock(m_mutex);
 		if (!m_started) {
-			// This GravifonClient is not started or is already stopped.
+			// This Scrobbler is not started or is already stopped.
 			return true;
 		}
 
-		/* The scrobbling thread is disassociated with this GravifonClient so that
-		 * after this critical section is exited this GravifonClient could be used safely.
+		/* The scrobbling thread is disassociated with this Scrobbler so that
+		 * after this critical section is exited this Scrobbler could be used safely.
 		 */
 		threadToStop.swap(m_scrobblingThread);
 
 		m_finishScrobblingFlag.store(true, memory_order_relaxed);
 
-		logDebug("[GravifonClient] The scrobbling thread is being stopped...");
+		logDebug("[Scrobbler] The scrobbling thread is being stopped...");
 
 		// Waking up the scrobbing thread to let it finish quickly.
 		m_cv.notify_one();
@@ -727,11 +727,11 @@ bool GravifonClient::stop()
 	 * scrobbles could be serialised safely.
 	 */
 	threadToStop.join();
-	logDebug("[GravifonClient] The scrobbling thread is stopped.");
+	logDebug("[Scrobbler] The scrobbling thread is stopped.");
 
 	{ lock_guard<mutex> lock(m_mutex);
 		if (!storePendingScrobbles()) {
-			logError("[GravifonClient] Unable to store pending scrobbles. These scrobbles are lost.");
+			logError("[Scrobbler] Unable to store pending scrobbles. These scrobbles are lost.");
 		}
 		/* TODO do not clear the list of pending scrobbles. Instead, report an error so that
 		 * the user has a chance to identify the issue and fix it and then store the scrobbles
@@ -740,7 +740,7 @@ bool GravifonClient::stop()
 		 */
 		m_pendingScrobbles.clear();
 
-		/* Clearing configuration so that this GravifonClient is to be re-configured
+		/* Clearing configuration so that this Scrobbler is to be re-configured
 		 * if it is re-used later.
 		 */
 		m_scrobblerUrl.clear();
@@ -753,9 +753,9 @@ bool GravifonClient::stop()
 	return true;
 }
 
-inline bool GravifonClient::loadPendingScrobbles()
+inline bool Scrobbler::loadPendingScrobbles()
 {
-	logDebug("[GravifonClient] Loading pending scrobbles...");
+	logDebug("[Scrobbler] Loading pending scrobbles...");
 	string dataFilePath;
 	if (getDataFilePath(dataFilePath) != 0) {
 		return false;
@@ -810,20 +810,20 @@ finish:
 		result = false;
 	}
 
-	logDebug("[GravifonClient] Pending scrobbles loaded: " + to_string(m_pendingScrobbles.size()));
+	logDebug("[Scrobbler] Pending scrobbles loaded: " + to_string(m_pendingScrobbles.size()));
 	return result;
 }
 
-inline bool GravifonClient::storePendingScrobbles()
+inline bool Scrobbler::storePendingScrobbles()
 {
-	logDebug("[GravifonClient] Storing pending scrobbles...");
+	logDebug("[Scrobbler] Storing pending scrobbles...");
 
 	/* The assumption is that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
 	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), "wb");
 
-	logDebug("[GravifonClient] Pending scrobbles stored: " + to_string(m_pendingScrobbles.size()));
+	logDebug("[Scrobbler] Pending scrobbles stored: " + to_string(m_pendingScrobbles.size()));
 
 	return result;
 }
@@ -833,7 +833,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	Json::Reader jsonReader;
 	Value object;
 	if (!jsonReader.parse(str, object, false)) {
-		logError(string("[GravifonClient] Unable to parse the scrobble JSON object: ") +
+		logError(string("[Scrobbler] Unable to parse the scrobble JSON object: ") +
 				jsonReader.getFormatedErrorMessages());
 		return false;
 	}

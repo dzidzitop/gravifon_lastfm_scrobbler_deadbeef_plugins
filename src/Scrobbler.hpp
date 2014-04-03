@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,8 +13,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-#ifndef GRAVIFONCLIENT_HPP_
-#define GRAVIFONCLIENT_HPP_
+#ifndef SCROBBLER_HPP_
+#define SCROBBLER_HPP_
 
 #include <string>
 #include <vector>
@@ -76,14 +76,14 @@ struct ScrobbleInfo
 	void appendAsJsonTo(std::string &str) const;
 };
 
-class GravifonClient
+class Scrobbler
 {
-	GravifonClient(const GravifonClient &) = delete;
-	GravifonClient(GravifonClient &&) = delete;
-	GravifonClient &operator=(const GravifonClient &) = delete;
-	GravifonClient &operator=(GravifonClient &&) = delete;
+	Scrobbler(const Scrobbler &) = delete;
+	Scrobbler(Scrobbler &&) = delete;
+	Scrobbler &operator=(const Scrobbler &) = delete;
+	Scrobbler &operator=(Scrobbler &&) = delete;
 public:
-	GravifonClient() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex()
+	Scrobbler() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_started = false;
 		m_configured = false;
@@ -93,9 +93,9 @@ public:
 		 */
 	}
 
-	~GravifonClient()
+	~Scrobbler()
 	{
-		// Synchronising memory before destructing the member fields of this GravifonClient.
+		// Synchronising memory before destructing the member fields of this Scrobbler.
 		std::lock_guard<std::mutex> lock(m_mutex);
 	}
 
@@ -110,10 +110,10 @@ public:
 	/*
 	 * Adds a given scrobble to the list of pending scrobbles. Optionally, it saves
 	 * the given scrobble to the data file to keep if available even if an emergency
-	 * happens. GravifonClient::stop() rewrites the data file, sweeping out all
+	 * happens. Scrobbler::stop() rewrites the data file, sweeping out all
 	 * scrobbles whose processing is completed.
 	 *
-	 * Nothing is done if this GravifonClient is not started.
+	 * Nothing is done if this Scrobbler is not started.
 	 *
 	 * @param scrobbleInfo the track scrobble to process.
 	 * @param safeScrobble if true then the scrobble is stored to the data file
@@ -155,11 +155,12 @@ private:
 	 */
 	mutable std::mutex m_startStopMutex;
 	/* Indicates if the background scrobbling thread should finish its work
-	 * including aborting an active connection to Gravifon if it is established.
+	 * including aborting an active connection to the scrobbling service
+	 * (e.g. Gravifon) if it is established.
 	 */
 	mutable std::atomic<bool> m_finishScrobblingFlag;
 	bool m_started;
 	bool m_configured;
 };
 
-#endif /* GRAVIFONCLIENT_HPP_ */
+#endif /* SCROBBLER_HPP_ */
