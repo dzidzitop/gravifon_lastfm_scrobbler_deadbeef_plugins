@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <deadbeef.h>
 #include <cstdint>
 #include <memory>
-#include "Scrobbler.hpp"
+#include "GravifonScrobbler.hpp"
 #include <chrono>
 #include <mutex>
 #include <cstring>
@@ -32,7 +32,7 @@ namespace
 	// The character 'Line Feed' in UTF-8.
 	static const char UTF8_LF = 0x0a;
 
-	static Scrobbler gravifonClient;
+	static GravifonScrobbler gravifonClient;
 
 	// These variables must be accessed within the critical section against pluginMutex.
 	static DB_misc_t plugin = {};
