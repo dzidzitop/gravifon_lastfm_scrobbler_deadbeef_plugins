@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class GravifonScrobbler : public Scrobbler
 {
 public:
-	inline GravifonScrobbler() : m_scrobblerUrl(), m_authHeader()
-	{ std::lock_guard<std::mutex> lock(m_mutex);
+	GravifonScrobbler() : Scrobbler(), m_scrobblerUrl(), m_authHeader()
+	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		/* This instance is partially initialised here. It will be initialised completely
 		 * when ::start() is invoked successfully.
 		 */
