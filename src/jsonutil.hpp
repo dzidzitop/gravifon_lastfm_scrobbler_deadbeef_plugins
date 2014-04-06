@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,28 +13,21 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-#ifndef GRAVIFONSCROBBLER_HPP_
-#define GRAVIFONSCROBBLER_HPP_
+#ifndef JSONUTIL_HPP_
+#define JSONUTIL_HPP_
 
-#include "Scrobbler.hpp"
-#include <cstddef>
-#include <string>
+#include <jsoncpp/json/value.h>
 
-class GravifonScrobbler : public Scrobbler
+static const Json::ValueType nullValue = Json::ValueType::nullValue;
+static const Json::ValueType objectValue = Json::ValueType::objectValue;
+static const Json::ValueType arrayValue = Json::ValueType::arrayValue;
+static const Json::ValueType stringValue = Json::ValueType::stringValue;
+static const Json::ValueType intValue = Json::ValueType::intValue;
+static const Json::ValueType booleanValue = Json::ValueType::booleanValue;
+
+inline bool isType(const Json::Value &val, const Json::ValueType type)
 {
-public:
-	virtual ~GravifonScrobbler() {}
+	return val.type() == type;
+}
 
-	// username and password are to be in ISO-8859-1; serverUrl is to be in the system encoding.
-	void configure(const char *serverUrl, const std::string &username, const std::string &password);
-protected:
-	virtual size_t doScrobbling() override;
-
-	virtual void stopExtra() override;
-private:
-	std::string m_scrobblerUrl;
-	// The authentication header encoded in the basic charset.
-	std::string m_authHeader;
-};
-
-#endif /* GRAVIFONSCROBBLER_HPP_ */
+#endif /* JSONUTIL_HPP_ */

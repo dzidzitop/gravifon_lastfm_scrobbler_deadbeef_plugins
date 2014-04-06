@@ -76,6 +76,7 @@ struct ScrobbleInfo
 	void appendAsJsonTo(std::string &str) const;
 };
 
+// TODO make logging tag configurable.
 class Scrobbler
 {
 	Scrobbler(const Scrobbler &) = delete;
@@ -93,14 +94,11 @@ public:
 		 */
 	}
 
-	~Scrobbler()
+	virtual ~Scrobbler()
 	{
 		// Synchronising memory before destructing the member fields of this Scrobbler.
 		std::lock_guard<std::mutex> lock(m_mutex);
 	}
-
-	// username and password are to be in ISO-8859-1; serverUrl is to be in the system encoding.
-	void configure(const char *serverUrl, const std::string &username, const std::string &password);
 
 	void invalidateConfiguration()
 	{ std::lock_guard<std::mutex> lock(m_mutex);
@@ -133,22 +131,31 @@ private:
 	bool loadPendingScrobbles();
 	bool storePendingScrobbles();
 	void backgroundScrobbling();
+protected:
 	// Returns the number of scrobbles completed (successful and non-processable).
-	size_t doScrobbling();
+	virtual size_t doScrobbling() = 0;
+	/**
+	 * Routine to be executed while Scrobbler is about to finish stopping itself.
+	 * In particular, the scrobbling is already disabled but the pending scrobbles
+	 * are still available and not stored to the persistent storage.
+	 *
+	 * It is executed within locks on m_startStopMutex and m_mutex.
+	 *
+	 * @return true if this routine succeeds; false otherwise.
+	 */
+	virtual void stopExtra() { /* Nothing to do by default. */ }
 
 	const static size_t MIN_SCROBBLES_TO_WAIT;
 	const static size_t MAX_SCROBBLES_TO_WAIT;
-
-	std::string m_scrobblerUrl;
-	// The authentication header encoded in the basic charset.
-	std::string m_authHeader;
 
 	std::list<ScrobbleInfo> m_pendingScrobbles;
 
 	mutable size_t m_scrobblesToWait;
 	mutable std::mutex m_mutex;
+private:
 	mutable std::thread m_scrobblingThread;
 	mutable std::condition_variable m_cv;
+protected:
 	/* Used to prevent parallel execution of the functions start() and stop().
 	 * This is needed for stop() to know that the scrobbling thread is stopped
 	 * at some time to store all pending scrobbles to the data file.
