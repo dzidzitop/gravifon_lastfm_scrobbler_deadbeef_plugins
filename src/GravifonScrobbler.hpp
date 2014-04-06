@@ -19,11 +19,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
 #include <cstddef>
 #include <string>
+#include <mutex>
 
 class GravifonScrobbler : public Scrobbler
 {
 public:
-	virtual ~GravifonScrobbler() {}
+	inline GravifonScrobbler() : m_scrobblerUrl(), m_authHeader()
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		/* This instance is partially initialised here. It will be initialised completely
+		 * when ::start() is invoked successfully.
+		 */
+	}
+
+	virtual ~GravifonScrobbler()
+	{
+		// Synchronising memory before destructing the member fields of this GravifonScrobbler.
+		std::lock_guard<std::mutex> lock(m_mutex);
+	}
 
 	// username and password are to be in ISO-8859-1; serverUrl is to be in the system encoding.
 	void configure(const char *serverUrl, const std::string &username, const std::string &password);

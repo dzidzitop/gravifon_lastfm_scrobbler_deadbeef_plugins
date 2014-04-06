@@ -85,7 +85,7 @@ class Scrobbler
 	Scrobbler &operator=(Scrobbler &&) = delete;
 public:
 	Scrobbler() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex()
-	{ std::lock_guard<std::mutex> lock(m_mutex);
+	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		m_started = false;
 		m_configured = false;
 
