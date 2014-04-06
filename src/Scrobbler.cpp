@@ -424,6 +424,9 @@ bool Scrobbler::stop()
 	logDebug("[Scrobbler] The scrobbling thread is stopped.");
 
 	{ lock_guard<mutex> lock(m_mutex);
+		/* Invocation of stopExtra() must go after thread join and
+		 * before storing the pending scrobbles as per documentation.
+		 */
 		stopExtra();
 
 		if (!storePendingScrobbles()) {
