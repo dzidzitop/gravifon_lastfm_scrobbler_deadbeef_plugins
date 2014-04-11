@@ -127,33 +127,45 @@ namespace
 		}
 	}
 
-	inline FILE *openDataFile(const string &path, const char * const mode)
+	// Used by openDataFile().
+	static const int O_ERROR = 0;
+	static const int O_OPENED = 1;
+	static const int O_NOTEXIST = 2;
+
+	inline int openDataFile(const string &path, const char * const mode, const bool storeMode, FILE *&dest)
 	{
 		if (path.empty()) {
-			return nullptr;
+			return O_ERROR;
 		}
 
-		/* - if the file or some parent directories do not exist then create missing parts.
+		/* - if the file or some parent directories do not exist then create missing parts if
+		 *   the store mode is enabled.
 		 * - if the file exists but it is not a regular file or a symbolic link then return failure
-		 *   because such a file cannot be used to store pending scrobbles
-		 * - if the file exists and it a regular file or a symbolic link then proceed with storing
-		 *   pending scrobbles into it
+		 *   because such a file cannot be used to load/store pending scrobbles
+		 * - if the file exists and it a regular file or a symbolic link then proceed with
+		 *   loading/storing pending scrobbles from/into it
 		 */
 		const char * const cPath = path.c_str();
 		struct stat fileStatus;
 		if (stat(cPath, &fileStatus) != 0) {
 			if (errno == ENOTDIR || errno == ENOENT) {
+				if (!storeMode) {
+					return O_NOTEXIST;
+				}
 				if (!createParentDirs(path)) {
-					return nullptr;
+					return O_ERROR;
 				}
 			} else {
-				return nullptr;
+				return O_ERROR;
 			}
 		} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
-			return nullptr;
+			return O_ERROR;
 		}
 
-		return fopen(cPath, mode);
+		// If we are here then the file either exists or the store mode is enabled.
+		dest = fopen(cPath, mode);
+		// If the file is not opened here then reporting an error for both cases.
+		return dest != nullptr ? O_OPENED : O_ERROR;
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, DateTime &dest)
@@ -212,10 +224,12 @@ namespace
 				"An iterator over ScrobbleInfo objects is expected.");
 		assert(storeMode != nullptr);
 
-		FILE * const dataFile = openDataFile(dataFilePath, storeMode);
-		if (dataFile == nullptr) {
+		FILE *dataFile; // initialised by openDataFile();
+		if (openDataFile(dataFilePath, storeMode, true, dataFile) != O_OPENED) {
 			return false;
 		}
+
+		assert(dataFile != nullptr);
 
 		bool result = true;
 
@@ -439,28 +453,17 @@ inline bool Scrobbler::loadPendingScrobbles()
 {
 	logDebug("[Scrobbler] Loading pending scrobbles...");
 
-	const string &dataFilePath = getDataFilePath();
-	if (dataFilePath.empty()) {
+	FILE *dataFile; // initialised by openDataFile();
+	const int openResult = openDataFile(getDataFilePath(), "rb", false, dataFile);
+	if (openResult == O_ERROR) {
 		return false;
+	} else if (openResult == O_NOTEXIST) {
+		// There are no pending scrobbles.
+		return true;
 	}
 
-	/* - if the file does not exist then return success (i.e. there are no pending scrobbles)
-	 * - if he file exists but it is not a regular file or a symbolic link then return failure
-	 *   because such a file cannot be used to store pending scrobbles
-	 * - if the file exists and it a regular file or a symbolic link then proceed with loading
-	 *   pending scrobbles stored in it
-	 */
-	struct stat fileStatus;
-	if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
-		return errno == ENOTDIR || errno == ENOENT;
-	} else if (!(S_ISREG(fileStatus.st_mode) || S_ISLNK(fileStatus.st_mode))) {
-		return false;
-	}
-
-	FILE * const dataFile = fopen(dataFilePath.c_str(), "rb");
-	if (dataFile == nullptr) {
-		return false;
-	}
+	assert(openResult == O_OPENED);
+	assert(dataFile != nullptr);
 
 	bool result = true;
 	string buf;
