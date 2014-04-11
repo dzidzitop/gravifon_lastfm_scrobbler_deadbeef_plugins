@@ -128,7 +128,7 @@ namespace
 	}
 
 	// Used by openDataFile().
-	enum OpenResult {O_ERROR, O_OPENED, O_NOTEXIST = 2};
+	enum OpenResult {O_ERROR, O_OPENED, O_NOTEXIST};
 
 	inline OpenResult openDataFile(const string &path, const char * const mode, const bool storeMode, FILE *&dest)
 	{
