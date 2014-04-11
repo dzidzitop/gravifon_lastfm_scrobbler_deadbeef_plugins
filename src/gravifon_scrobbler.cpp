@@ -283,7 +283,7 @@ extern "C" DB_plugin_t *gravifon_scrobbler_load(DB_functions_t * const api)
 	plugin.plugin.name = u8"gravifon scrobbler";
 	plugin.plugin.descr = u8"An audio track scrobbler to Gravifon.";
 	plugin.plugin.copyright =
-		u8"Copyright (C) 2013 Dźmitry Laŭčuk\n"
+		u8"Copyright (C) 2013-2014 Dźmitry Laŭčuk\n"
 		"\n"
 		"This program is free software: you can redistribute it and/or modify\n"
 		"it under the terms of the GNU General Public License as published by\n"
