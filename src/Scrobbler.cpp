@@ -109,24 +109,6 @@ namespace
 		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
 
-	inline int getDataFilePath(string &dest)
-	{
-		const char * const dataDir = getenv("XDG_DATA_HOME");
-		if (dataDir != nullptr && dataDir[0] != '\0') {
-			dest = dataDir;
-		} else {
-			// Trying to assign the default data dir ($HOME/.local/share/).
-			const char * const homeDir = getenv("HOME");
-			if (homeDir == nullptr || homeDir == '\0') {
-				return 1;
-			}
-			dest = homeDir;
-			appendToPath(dest, ".local/share");
-		}
-		appendToPath(dest, "deadbeef/gravifon_scrobbler_data");
-		return 0;
-	}
-
 	// The last path element is considered as a file and therefore is not created.
 	inline bool createParentDirs(const string &path)
 	{
@@ -145,23 +127,23 @@ namespace
 		}
 	}
 
-	inline FILE *openDataFile(const char * const mode)
+	inline FILE *openDataFile(const string &path, const char * const mode)
 	{
-		string dataFilePath;
-		if (getDataFilePath(dataFilePath) != 0) {
+		if (path.empty()) {
 			return nullptr;
 		}
 
 		/* - if the file or some parent directories do not exist then create missing parts.
-		 * - if he file exists but it is not a regular file or a symbolic link then return failure
+		 * - if the file exists but it is not a regular file or a symbolic link then return failure
 		 *   because such a file cannot be used to store pending scrobbles
 		 * - if the file exists and it a regular file or a symbolic link then proceed with storing
 		 *   pending scrobbles into it
 		 */
+		const char * const cPath = path.c_str();
 		struct stat fileStatus;
-		if (stat(dataFilePath.c_str(), &fileStatus) != 0) {
+		if (stat(cPath, &fileStatus) != 0) {
 			if (errno == ENOTDIR || errno == ENOENT) {
-				if (!createParentDirs(dataFilePath)) {
+				if (!createParentDirs(path)) {
 					return nullptr;
 				}
 			} else {
@@ -171,7 +153,7 @@ namespace
 			return nullptr;
 		}
 
-		return fopen(dataFilePath.c_str(), mode);
+		return fopen(cPath, mode);
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, DateTime &dest)
@@ -221,14 +203,16 @@ namespace
 		return true;
 	}
 
+	// storeMode is the file access specifier valid for std::fopen().
 	template<typename Iterator>
-	inline bool storeScrobbles(Iterator begin, const Iterator end, const char *storeMode)
+	inline bool storeScrobbles(Iterator begin, const Iterator end, const string &dataFilePath,
+			const char * const storeMode)
 	{
 		static_assert(std::is_convertible<decltype(*begin), const ScrobbleInfo &>::value,
 				"An iterator over ScrobbleInfo objects is expected.");
 		assert(storeMode != nullptr);
 
-		FILE * const dataFile = openDataFile(storeMode);
+		FILE * const dataFile = openDataFile(dataFilePath, storeMode);
 		if (dataFile == nullptr) {
 			return false;
 		}
@@ -283,7 +267,7 @@ void Scrobbler::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobb
 		 * The data file is appended, not re-written.
 		 */
 		auto end = m_pendingScrobbles.cend();
-		if (storeScrobbles(prev(end), end, "ab")) {
+		if (storeScrobbles(prev(end), end, getDataFilePath(), "ab")) {
 			logDebug("[Scrobbler] The scrobble that has just been scrobbled "
 					"is stored (failure-safe scrobbling).");
 		} else {
@@ -454,8 +438,9 @@ bool Scrobbler::stop()
 inline bool Scrobbler::loadPendingScrobbles()
 {
 	logDebug("[Scrobbler] Loading pending scrobbles...");
-	string dataFilePath;
-	if (getDataFilePath(dataFilePath) != 0) {
+
+	const string &dataFilePath = getDataFilePath();
+	if (dataFilePath.empty()) {
 		return false;
 	}
 
@@ -519,7 +504,7 @@ inline bool Scrobbler::storePendingScrobbles()
 	/* The assumption is that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
-	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), "wb");
+	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), getDataFilePath(), "wb");
 
 	logDebug("[Scrobbler] Pending scrobbles stored: " + to_string(m_pendingScrobbles.size()));
 

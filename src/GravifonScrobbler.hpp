@@ -20,15 +20,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <string>
 #include <mutex>
+#include "pathutil.hpp"
 
 class GravifonScrobbler : public Scrobbler
 {
 public:
-	GravifonScrobbler() : Scrobbler(), m_scrobblerUrl(), m_authHeader()
+	GravifonScrobbler() : Scrobbler(), m_scrobblerUrl(), m_authHeader(), m_dataFilePath()
 	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		/* This instance is partially initialised here. It will be initialised completely
 		 * when ::start() is invoked successfully.
 		 */
+		// TODO make it configurable.
+		::getDataFilePath(m_dataFilePath);
 	}
 
 	virtual ~GravifonScrobbler()
@@ -42,11 +45,15 @@ public:
 protected:
 	virtual size_t doScrobbling() override;
 
+	virtual const std::string &getDataFilePath() const override { return m_dataFilePath; }
+
 	virtual void stopExtra() override;
 private:
 	std::string m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
 	std::string m_authHeader;
+
+	std::string m_dataFilePath;
 };
 
 #endif /* GRAVIFONSCROBBLER_HPP_ */

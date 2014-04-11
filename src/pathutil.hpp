@@ -38,4 +38,22 @@ inline void appendToPath(std::string &path, const char *child)
 	path += child;
 }
 
+inline int getDataFilePath(std::string &dest)
+{
+	const char * const dataDir = getenv("XDG_DATA_HOME");
+	if (dataDir != nullptr && dataDir[0] != '\0') {
+		dest = dataDir;
+	} else {
+		// Trying to assign the default data dir ($HOME/.local/share/).
+		const char * const homeDir = getenv("HOME");
+		if (homeDir == nullptr || homeDir == '\0') {
+			return 1;
+		}
+		dest = homeDir;
+		appendToPath(dest, ".local/share");
+	}
+	appendToPath(dest, "deadbeef/gravifon_scrobbler_data");
+	return 0;
+}
+
 #endif /* PATHUTIL_HPP_ */

@@ -84,7 +84,7 @@ class Scrobbler
 	Scrobbler &operator=(const Scrobbler &) = delete;
 	Scrobbler &operator=(Scrobbler &&) = delete;
 public:
-	Scrobbler() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex()
+	Scrobbler() : m_mutex(), m_scrobblingThread(), m_cv(), m_startStopMutex(), m_finishScrobblingFlag(false)
 	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		m_started = false;
 		m_configured = false;
@@ -134,6 +134,13 @@ private:
 protected:
 	// Returns the number of scrobbles completed (successful and non-processable).
 	virtual size_t doScrobbling() = 0;
+
+	/**
+	 * Returns the path to the file where to store pending scrobbles to.
+	 * It should be a non-empty string.
+	 */
+	virtual const std::string &getDataFilePath() const = 0;
+
 	/**
 	 * Routine to be executed while Scrobbler is about to finish stopping itself.
 	 * In particular, the scrobbling is already disabled but the pending scrobbles
