@@ -128,11 +128,9 @@ namespace
 	}
 
 	// Used by openDataFile().
-	static const int O_ERROR = 0;
-	static const int O_OPENED = 1;
-	static const int O_NOTEXIST = 2;
+	enum OpenResult {O_ERROR, O_OPENED, O_NOTEXIST = 2};
 
-	inline int openDataFile(const string &path, const char * const mode, const bool storeMode, FILE *&dest)
+	inline OpenResult openDataFile(const string &path, const char * const mode, const bool storeMode, FILE *&dest)
 	{
 		if (path.empty()) {
 			return O_ERROR;
@@ -454,7 +452,7 @@ inline bool Scrobbler::loadPendingScrobbles()
 	logDebug("[Scrobbler] Loading pending scrobbles...");
 
 	FILE *dataFile; // initialised by openDataFile();
-	const int openResult = openDataFile(getDataFilePath(), "rb", false, dataFile);
+	const OpenResult openResult = openDataFile(getDataFilePath(), "rb", false, dataFile);
 	if (openResult == O_ERROR) {
 		return false;
 	} else if (openResult == O_NOTEXIST) {
