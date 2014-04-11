@@ -1,0 +1,4 @@
+{
+	global: gravifon_scrobbler_load;
+	local: *;
+};
