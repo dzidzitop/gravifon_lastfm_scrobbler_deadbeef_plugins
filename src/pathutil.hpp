@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define PATHUTIL_HPP_
 
 #include <string>
+#include <cassert>
 
 // Removes trailing slash if it is not the only character in the path.
 inline void appendToPath(std::string &path, const char *child)
@@ -38,8 +39,10 @@ inline void appendToPath(std::string &path, const char *child)
 	path += child;
 }
 
-inline int getDataFilePath(std::string &dest)
+inline int getDataFilePath(const char * const shortFilePath, std::string &dest)
 {
+	assert(shortFilePath != nullptr);
+
 	const char * const dataDir = getenv("XDG_DATA_HOME");
 	if (dataDir != nullptr && dataDir[0] != '\0') {
 		dest = dataDir;
@@ -52,7 +55,7 @@ inline int getDataFilePath(std::string &dest)
 		dest = homeDir;
 		appendToPath(dest, ".local/share");
 	}
-	appendToPath(dest, "deadbeef/gravifon_scrobbler_data");
+	appendToPath(dest, shortFilePath);
 	return 0;
 }
 

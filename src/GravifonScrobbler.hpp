@@ -31,7 +31,7 @@ public:
 		 * when ::start() is invoked successfully.
 		 */
 		// TODO make it configurable.
-		::getDataFilePath(m_dataFilePath);
+		::getDataFilePath("deadbeef/gravifon_scrobbler_data", m_dataFilePath);
 	}
 
 	virtual ~GravifonScrobbler()
