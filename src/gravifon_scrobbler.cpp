@@ -227,47 +227,47 @@ namespace
 
 		return true;
 	}
-}
 
-int gravifonScrobblerStart()
-{ lock_guard<mutex> lock(pluginMutex);
-	logDebug("[gravifon_scrobbler] Starting...");
+	int gravifonScrobblerStart()
+	{ lock_guard<mutex> lock(pluginMutex);
+		logDebug("[gravifon_scrobbler] Starting...");
 
-	const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
-	if (enabled && !gravifonClient.start()) {
-		return 1;
-	}
+		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
+		if (enabled && !gravifonClient.start()) {
+			return 1;
+		}
 
-	return 0;
-}
-
-int gravifonScrobblerStop()
-{
-	logDebug("[gravifon_scrobbler] Stopping...");
-	return gravifonClient.stop() ? 0 : 1;
-}
-
-int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
-{
-	if (id != DB_EV_SONGCHANGED) {
 		return 0;
 	}
 
-	{ lock_guard<mutex> lock(pluginMutex);
-		bool safeScrobbling;
+	int gravifonScrobblerStop()
+	{
+		logDebug("[gravifon_scrobbler] Stopping...");
+		return gravifonClient.stop() ? 0 : 1;
+	}
 
-		// TODO distinguish disabled scrobbling and gravifon client init errors
-		if (!initClient(safeScrobbling)) {
+	int gravifonScrobblerMessage(const uint32_t id, const uintptr_t ctx, const uint32_t p1, const uint32_t p2)
+	{
+		if (id != DB_EV_SONGCHANGED) {
 			return 0;
 		}
 
-		ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
-		const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event);
+		{ lock_guard<mutex> lock(pluginMutex);
+			bool safeScrobbling;
 
-		if (scrobbleInfo != nullptr) {
-			gravifonClient.scrobble(*scrobbleInfo, safeScrobbling);
+			// TODO distinguish disabled scrobbling and gravifon client init errors
+			if (!initClient(safeScrobbling)) {
+				return 0;
+			}
+
+			ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
+			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event);
+
+			if (scrobbleInfo != nullptr) {
+				gravifonClient.scrobble(*scrobbleInfo, safeScrobbling);
+			}
+			return 0;
 		}
-		return 0;
 	}
 }
 
