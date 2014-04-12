@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <mutex>
 #include "pathutil.hpp"
+#include <utility>
 
 class GravifonScrobbler : public Scrobbler
 {
@@ -30,8 +31,6 @@ public:
 		/* This instance is partially initialised here. It will be initialised completely
 		 * when ::start() is invoked successfully.
 		 */
-		// TODO make it configurable.
-		::getDataFilePath("deadbeef/gravifon_scrobbler_data", m_dataFilePath);
 	}
 
 	virtual ~GravifonScrobbler()
@@ -42,6 +41,16 @@ public:
 
 	// username and password are to be in ISO-8859-1; serverUrl is to be in the system encoding.
 	void configure(const char *serverUrl, const std::string &username, const std::string &password);
+
+	void setDataFilePath(const std::string &dataFilePath)
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_dataFilePath = dataFilePath;
+	}
+
+	void setDataFilePath(std::string &&dataFilePath)
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_dataFilePath = std::move(dataFilePath);
+	}
 protected:
 	virtual size_t doScrobbling() override;
 

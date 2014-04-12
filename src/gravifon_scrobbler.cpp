@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include "logger.hpp"
 #include <afc/utils.h>
+#include <utility>
 
 using namespace std;
 using namespace afc;
@@ -231,6 +232,17 @@ namespace
 	int gravifonScrobblerStart()
 	{ lock_guard<mutex> lock(pluginMutex);
 		logDebug("[gravifon_scrobbler] Starting...");
+
+		// TODO think of making it configurable.
+		string dataFilePath;
+		if (::getDataFilePath("deadbeef/gravifon_scrobbler_data", dataFilePath) != 0) {
+			return 1;
+		}
+
+		/* must be invoked before gravifonClient.start() to let pending scrobbles
+		 * be loaded from the data file.
+		 */
+		gravifonClient.setDataFilePath(move(dataFilePath));
 
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		if (enabled && !gravifonClient.start()) {
