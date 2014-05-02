@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "logger.hpp"
 #include <afc/utils.h>
 #include <utility>
+#include "pathutil.hpp"
 
 using namespace std;
 using namespace afc;

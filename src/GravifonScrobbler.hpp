@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <string>
 #include <mutex>
-#include "pathutil.hpp"
 #include <utility>
 
 class GravifonScrobbler : public Scrobbler
