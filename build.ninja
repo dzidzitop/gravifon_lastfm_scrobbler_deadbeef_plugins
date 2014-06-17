@@ -23,6 +23,7 @@ rule bin
 build $buildDir/dateutil.o: cxx $srcDir/dateutil.cpp
 build $buildDir/GravifonScrobbler.o: cxx $srcDir/GravifonScrobbler.cpp
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
+build $buildDir/LastfmScrobbler.o: cxx $srcDir/LastfmScrobbler.cpp
 build $buildDir/Scrobbler.o: cxx $srcDir/Scrobbler.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
 
@@ -39,12 +40,13 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/gravifon_scrobbler.o
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
-build $buildDir/gravifon_scrobbler_test: bin $
+build $buildDir/unit_tests: bin $
     $buildDir/dateutil.o $
     $buildDir/GravifonScrobbler.o $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/HttpClient.o $
     $buildDir/DateUtilTest.o $
+    $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/Scrobbler.o $
     $buildDir/TrackTest.o $
@@ -53,7 +55,7 @@ build $buildDir/gravifon_scrobbler_test: bin $
 
 build sharedLib: phony $buildDir/gravifon_scrobbler.so
 
-build testBin: phony $buildDir/gravifon_scrobbler_test
+build testBin: phony $buildDir/unit_tests
 
 build all: phony sharedLib testBin
 
