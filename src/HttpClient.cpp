@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ namespace
 		return dataSize;
 	}
 
-	HttpClient::StatusCode toStatusCode(CURLcode curlErrorCode)
+	inline HttpClient::StatusCode toStatusCode(const CURLcode curlErrorCode)
 	{
 		switch (curlErrorCode) {
 		case CURLE_COULDNT_CONNECT:
@@ -166,7 +166,7 @@ HttpClient::StatusCode HttpClient::send(const HttpMethod method, const string &u
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, connectionTimeoutMillis);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, socketTimeoutMillis);
 
-	CURLcode status = curl_easy_perform(curl);
+	const CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
 		return toStatusCode(status);
 	}
