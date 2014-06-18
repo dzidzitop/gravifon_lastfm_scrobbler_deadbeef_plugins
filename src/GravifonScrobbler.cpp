@@ -13,7 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 #include "GravifonScrobbler.hpp"
 #include <cassert>
 #include <afc/base64.hpp>
@@ -204,7 +203,8 @@ size_t GravifonScrobbler::doScrobbling()
 		logDebug(string("[GravifonScrobbler] Request body: ") + request.body);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().post(scrobblerUrlCopy, request, response, 0L, 0L, m_finishScrobblingFlag);
+		result = HttpClient().post(scrobblerUrlCopy, request, response,
+				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 
 	/* Ensure that no scrobbles are deleted by other threads during the HTTP call.
