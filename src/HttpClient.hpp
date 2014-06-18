@@ -48,8 +48,23 @@ public:
 	HttpClient() = default;
 	~HttpClient() = default;
 
-	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
-			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag);
+	StatusCode get(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
+	{
+		return send(HttpMethod::GET, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
+	}
+
+	StatusCode post(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
+	{
+		return send(HttpMethod::POST, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
+	}
+private:
+	enum class HttpMethod { GET, POST };
+
+	StatusCode send(const HttpMethod method, const std::string &url, const HttpEntity &request,
+			HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
+			const std::atomic<bool> &abortFlag);
 };
 
 #endif /* HTTPCLIENT_HPP_ */
