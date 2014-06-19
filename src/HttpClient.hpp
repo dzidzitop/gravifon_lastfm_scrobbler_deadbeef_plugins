@@ -62,7 +62,7 @@ public:
 		return send(HttpMethod::POST, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
 	}
 private:
-	enum class HttpMethod { GET, POST };
+	enum class HttpMethod {GET, POST};
 
 	StatusCode send(const HttpMethod method, const std::string &url, const HttpEntity &request,
 			HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
