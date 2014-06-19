@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <algorithm>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
+#include <afc/ensure_ascii.hpp>
+
 
 using namespace std;
 using namespace afc;
@@ -41,15 +43,6 @@ const size_t Scrobbler::MAX_SCROBBLES_TO_WAIT = 32;
 
 namespace
 {
-	static_assert('\'' == u8"'"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('"' == u8"\""[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\\' == u8"\\"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\b' == u8"\b"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\f' == u8"\f"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\n' == u8"\n"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\r' == u8"\r"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\t' == u8"\t"[0], "An ASCII-incompatible basic charset is used.");
-
 	inline void writeJsonString(const string &src, string &dest)
 	{
 		for (const char c : src) {
