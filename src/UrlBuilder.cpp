@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
 #include <afc/ensure_ascii.hpp>
 #include <afc/utils.h>
+#include <cstddef>
 
 using namespace std;
 using namespace afc;
@@ -28,13 +29,15 @@ namespace
 	}
 }
 
-void UrlBuilder::appendUrlEncoded(const string &str, string &dest)
+void UrlBuilder::appendUrlEncoded(const char * const str)
 {
-	for (const char c : str) {
+	char c;
+	size_t i = 0;
+	while ((c = str[i++]) != '\0') {
 		if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
 				c == '-' || c == '_' || c == '.' || c == '~') {
 			// An unreserved character. No escaping is needed.
-			dest += c;
+			m_buf += c;
 		} else {
 			/* ASCII representation is escaped. Converting the character to ASCII.
 			 *
@@ -51,7 +54,7 @@ void UrlBuilder::appendUrlEncoded(const string &str, string &dest)
 			// 0xff is applied just in case non-octet bytes are used.
 			encoded[1] = toHex((ac & 0xff) >> 4);
 			encoded[2] = toHex(ac & 0xf);
-			dest.append(encoded, 3);
+			m_buf.append(encoded, 3);
 		}
 	}
 }

@@ -26,12 +26,13 @@ private:
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
 	UrlBuilder &operator=(UrlBuilder &&) = delete;
 public:
+	UrlBuilder(const char * const urlBase) : m_buf(urlBase), m_hasParams(false) {}
 	UrlBuilder(const std::string &urlBase) : m_buf(urlBase), m_hasParams(false) {}
 	UrlBuilder(std::string &&urlBase) : m_buf(urlBase), m_hasParams(false) {}
 
 	~UrlBuilder() = default;
 
-	inline UrlBuilder &param(const std::string &name, const std::string &value)
+	inline UrlBuilder &param(const char * const name, const char * const value)
 	{
 		if (m_hasParams) {
 			m_buf += '&';
@@ -39,15 +40,15 @@ public:
 			m_buf += '?';
 			m_hasParams = true;
 		}
-		appendUrlEncoded(name, m_buf);
+		appendUrlEncoded(name);
 		m_buf += '=';
-		appendUrlEncoded(value, m_buf);
+		appendUrlEncoded(value);
 		return *this;
 	}
 
 	const std::string &toString() const { return m_buf; }
 private:
-	void appendUrlEncoded(const std::string &str, std::string &dest);
+	void appendUrlEncoded(const char *str);
 
 	std::string m_buf;
 	bool m_hasParams;
