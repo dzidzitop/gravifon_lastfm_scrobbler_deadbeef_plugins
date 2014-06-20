@@ -39,6 +39,9 @@ void UrlBuilder::appendUrlEncoded(const char * const str)
 			// An unreserved character. No escaping is needed.
 			m_buf += c;
 		} else {
+			/* A non-unreserved character. Escaping it to percent-encoded representation.
+			   The reserved characters are escaped, too, for simplicity. */
+
 			/* ASCII representation is escaped. Converting the character to ASCII.
 			 *
 			 * Casting to unsigned since bitwise operators are defined well for them
@@ -46,15 +49,10 @@ void UrlBuilder::appendUrlEncoded(const char * const str)
 			 */
 			const unsigned char ac = toAscii(c);
 
-			/* A non-unreserved character. Escaping it to percent-encoded representation.
-			 * The reserved characters are escaped, too, for simplicity.
-			 */
-			char encoded[3];
-			encoded[0] = '%';
 			// 0xff is applied just in case non-octet bytes are used.
-			encoded[1] = toHex((ac & 0xff) >> 4);
-			encoded[2] = toHex(ac & 0xf);
-			m_buf.append(encoded, 3);
+			const char high = toHex((ac & 0xff) >> 4);
+			const char low = toHex(ac & 0xf);
+			m_buf.append({'%', high, low}); // The percent-encoded ASCII character.
 		}
 	}
 }
