@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define URLBUILDER_HPP_
 
 #include <string>
+#include <afc/ensure_ascii.hpp>
 
 class UrlBuilder
 {

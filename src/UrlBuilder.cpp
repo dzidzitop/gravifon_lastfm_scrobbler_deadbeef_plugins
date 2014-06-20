@@ -14,20 +14,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
-#include <afc/ensure_ascii.hpp>
 #include <afc/utils.h>
 #include <cstddef>
 
-using namespace std;
 using namespace afc;
-
-namespace
-{
-	constexpr inline char toAscii(const char value)
-	{
-		return value; // ASCII-compatible basic encodings are supported for now only.
-	}
-}
 
 void UrlBuilder::appendUrlEncoded(const char * const str)
 {
@@ -40,19 +30,17 @@ void UrlBuilder::appendUrlEncoded(const char * const str)
 			m_buf += c;
 		} else {
 			/* A non-unreserved character. Escaping it to percent-encoded representation.
-			   The reserved characters are escaped, too, for simplicity. */
+			 * The reserved characters are escaped, too, for simplicity. */
 
-			/* ASCII representation is escaped. Converting the character to ASCII.
-			 *
-			 * Casting to unsigned since bitwise operators are defined well for them
+			/* Casting to unsigned since bitwise operators are defined well for them
 			 * in terms of values.
 			 */
-			const unsigned char ac = toAscii(c);
+			const unsigned char ac = c;
 
 			// 0xff is applied just in case non-octet bytes are used.
 			const char high = toHex((ac & 0xff) >> 4);
 			const char low = toHex(ac & 0xf);
-			m_buf.append({'%', high, low}); // The percent-encoded ASCII character.
+			m_buf.append({'%', high, low});
 		}
 	}
 }
