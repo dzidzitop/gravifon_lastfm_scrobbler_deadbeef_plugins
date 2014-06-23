@@ -15,19 +15,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
 #include <afc/utils.h>
-#include <cstddef>
 
 using namespace afc;
 
-void UrlBuilder::appendUrlEncoded(const char * const str)
+namespace
 {
-	char c;
-	size_t i = 0;
-	while ((c = str[i++]) != '\0') {
+	inline void appendUrlEncoded(const char c, std::string &dest)
+	{
 		if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
 				c == '-' || c == '_' || c == '.' || c == '~') {
 			// An unreserved character. No escaping is needed.
-			m_buf += c;
+			dest += c;
 		} else {
 			/* A non-unreserved character. Escaping it to percent-encoded representation.
 			 * The reserved characters are escaped, too, for simplicity. */
@@ -40,7 +38,23 @@ void UrlBuilder::appendUrlEncoded(const char * const str)
 			// 0xff is applied just in case non-octet bytes are used.
 			const char high = toHex((ac & 0xff) >> 4);
 			const char low = toHex(ac & 0xf);
-			m_buf.append({'%', high, low});
+			dest.append({'%', high, low});
 		}
+	}
+}
+
+void UrlBuilder::appendUrlEncoded(const char * const str)
+{
+	char c;
+	size_t i = 0;
+	while ((c = str[i++]) != '\0') {
+		::appendUrlEncoded(c, m_buf);
+	}
+}
+
+void UrlBuilder::appendUrlEncoded(const char * const str, const size_t n)
+{
+	for (size_t i = 0; i < n; ++i) {
+		::appendUrlEncoded(str[i], m_buf);
 	}
 }

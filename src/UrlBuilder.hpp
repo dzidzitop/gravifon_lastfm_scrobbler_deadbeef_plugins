@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <string>
 #include <afc/ensure_ascii.hpp>
+#include <cstddef>
 
 class UrlBuilder
 {
@@ -47,9 +48,25 @@ public:
 		return *this;
 	}
 
+	inline UrlBuilder &param(const char * const name, const size_t nameSize,
+			const char * const value, const size_t valueSize)
+	{
+		if (m_hasParams) {
+			m_buf += '&';
+		} else {
+			m_buf += '?';
+			m_hasParams = true;
+		}
+		appendUrlEncoded(name, nameSize);
+		m_buf += '=';
+		appendUrlEncoded(value, valueSize);
+		return *this;
+	}
+
 	const std::string &toString() const { return m_buf; }
 private:
 	void appendUrlEncoded(const char *str);
+	void appendUrlEncoded(const char *str, const size_t n);
 
 	std::string m_buf;
 	bool m_hasParams;
