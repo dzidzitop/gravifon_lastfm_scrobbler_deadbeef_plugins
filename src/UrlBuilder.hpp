@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
+#include <afc/StringRef.hpp>
 
 class UrlBuilder
 {
@@ -36,6 +37,22 @@ public:
 
 	inline UrlBuilder &param(const char * const name, const char * const value)
 	{
+		return paramName(name).paramValue(value);
+	}
+
+	inline UrlBuilder &param(const char * const name, const size_t nameSize,
+			const char * const value, const size_t valueSize)
+	{
+		return paramName(name, nameSize).paramValue(value, valueSize);
+	}
+
+	inline UrlBuilder &param(afc::ConstStringRef name, afc::ConstStringRef value)
+	{
+		return paramName(name).paramValue(value);
+	}
+
+	inline UrlBuilder &paramName(const char * const name)
+	{
 		if (m_hasParams) {
 			m_buf += '&';
 		} else {
@@ -43,13 +60,10 @@ public:
 			m_hasParams = true;
 		}
 		appendUrlEncoded(name);
-		m_buf += '=';
-		appendUrlEncoded(value);
 		return *this;
 	}
 
-	inline UrlBuilder &param(const char * const name, const size_t nameSize,
-			const char * const value, const size_t valueSize)
+	inline UrlBuilder &paramName(const char * const name, const size_t nameSize)
 	{
 		if (m_hasParams) {
 			m_buf += '&';
@@ -58,10 +72,26 @@ public:
 			m_hasParams = true;
 		}
 		appendUrlEncoded(name, nameSize);
+		return *this;
+	}
+
+	inline UrlBuilder &paramName(afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
+
+	inline UrlBuilder &paramValue(const char * const value)
+	{
+		m_buf += '=';
+		appendUrlEncoded(value);
+		return *this;
+	}
+
+	inline UrlBuilder &paramValue(const char * const value, const size_t valueSize)
+	{
 		m_buf += '=';
 		appendUrlEncoded(value, valueSize);
 		return *this;
 	}
+
+	inline UrlBuilder &paramValue(afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
 
 	const std::string &toString() const { return m_buf; }
 private:
