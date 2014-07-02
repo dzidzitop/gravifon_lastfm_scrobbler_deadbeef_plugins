@@ -40,8 +40,8 @@ public:
 		return paramName(name).paramValue(value);
 	}
 
-	inline UrlBuilder &param(const char * const name, const size_t nameSize,
-			const char * const value, const size_t valueSize)
+	inline UrlBuilder &param(const char * const name, const std::size_t nameSize,
+			const char * const value, const std::size_t valueSize)
 	{
 		return paramName(name, nameSize).paramValue(value, valueSize);
 	}
@@ -63,7 +63,7 @@ public:
 		return *this;
 	}
 
-	inline UrlBuilder &paramName(const char * const name, const size_t nameSize)
+	inline UrlBuilder &paramName(const char * const name, const std::size_t nameSize)
 	{
 		if (m_hasParams) {
 			m_buf += '&';
@@ -86,7 +86,7 @@ public:
 		return *this;
 	}
 
-	inline UrlBuilder &paramValue(const char * const value, const size_t valueSize)
+	inline UrlBuilder &paramValue(const char * const value, const std::size_t valueSize)
 	{
 		m_buf += '=';
 		appendUrlEncoded(value, valueSize);
@@ -99,8 +99,26 @@ public:
 
 	const std::string &toString() const { return m_buf; }
 private:
-	void appendUrlEncoded(const char *str);
-	void appendUrlEncoded(const char *str, const size_t n);
+	inline void appendUrlEncoded(const char *str)
+	{
+		char c;
+		std::size_t i = 0;
+		while ((c = str[i++]) != '\0') {
+			appendUrlEncoded(c, m_buf);
+		}
+	}
+
+	inline void appendUrlEncoded(const char *str, const std::size_t n)
+	{
+		// Each character escaped takes up to three characters.
+		m_buf.reserve(m_buf.size() + n * 3);
+
+		for (size_t i = 0; i < n; ++i) {
+			appendUrlEncoded(str[i], m_buf);
+		}
+	}
+
+	static void appendUrlEncoded(char c, std::string &dest);
 
 	std::string m_buf;
 	bool m_hasParams;
