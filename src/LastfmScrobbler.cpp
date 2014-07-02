@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "logger.hpp"
 #include "dateutil.hpp"
 #include <afc/md5.hpp>
-#include <afc/string_util.hpp>
+#include <afc/Tokeniser.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <utility>
 #include <afc/utils.h>
