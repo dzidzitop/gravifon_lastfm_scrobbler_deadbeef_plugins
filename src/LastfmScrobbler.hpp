@@ -25,7 +25,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class LastfmScrobbler : public Scrobbler
 {
 public:
-	LastfmScrobbler() : Scrobbler(), m_scrobblerUrl(), m_dataFilePath()
+	LastfmScrobbler() : Scrobbler(), m_scrobblerUrl(), m_username(), m_password(), m_dataFilePath(),
+			m_sessionId(), m_submissionUrl(), m_authenticated(false)
 	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		/* This instance is partially initialised here. It will be initialised completely
 		 * when ::start() is invoked successfully.
@@ -51,15 +52,25 @@ public:
 		m_dataFilePath = std::move(dataFilePath);
 	}
 protected:
-	virtual size_t doScrobbling() override;
+	virtual std::size_t doScrobbling() override;
 
 	virtual const std::string &getDataFilePath() const override { return m_dataFilePath; }
 
 	virtual void stopExtra() override;
 private:
+	// Must be invoked within the critical section upon Scrobbler::m_mutex.
+	inline bool ensureAuthenticated();
+
 	std::string m_scrobblerUrl;
+	std::string m_username;
+	std::string m_password;
 
 	std::string m_dataFilePath;
+
+	std::string m_sessionId;
+	std::string m_submissionUrl;
+
+	bool m_authenticated;
 };
 
 #endif /* LASTFMSCROBBLER_HPP_ */

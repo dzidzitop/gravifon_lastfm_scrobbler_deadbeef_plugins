@@ -48,7 +48,8 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
-    $buildDir/Scrobbler.o
+    $buildDir/Scrobbler.o $
+    $buildDir/UrlBuilder.o
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/unit_tests: bin $
