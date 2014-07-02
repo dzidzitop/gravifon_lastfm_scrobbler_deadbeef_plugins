@@ -226,7 +226,7 @@ namespace
 
 		string buf;
 		for (auto it = begin; it != end; ++it) {
-			buf.resize(0);
+			buf.clear();
 			it->appendAsJsonTo(buf);
 			const size_t bufSize = buf.size();
 			if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
