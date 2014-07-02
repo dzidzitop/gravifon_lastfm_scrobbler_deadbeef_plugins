@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
+#include <afc/utils.h>
 
 using namespace std;
 using namespace afc;
@@ -73,26 +74,13 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		fprintf(stderr, "[GravifonScrobbler] Unable to send the scrobble message: %s\n", message);
+		std::fprintf(stderr, "[GravifonScrobbler] Unable to send the scrobble message: %s\n", message);
 	}
 
 	inline bool isRecoverableError(const unsigned long errorCode)
 	{
 		return errorCode < 10000 || errorCode == 10003 || errorCode > 10006;
 	}
-
-	struct UnlockGuard
-	{
-		UnlockGuard(mutex &mutex) : m_mutex(mutex) { m_mutex.unlock(); };
-		~UnlockGuard() { m_mutex.lock(); }
-	private:
-		UnlockGuard(const UnlockGuard &) = delete;
-		UnlockGuard(UnlockGuard &&) = delete;
-		UnlockGuard &operator=(const UnlockGuard &) = delete;
-		UnlockGuard &operator=(UnlockGuard &&) = delete;
-
-		mutex &m_mutex;
-	};
 }
 
 void GravifonScrobbler::stopExtra()
@@ -188,7 +176,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 *
 	 * It is safe to unlock the mutex because:
 	 * - no shared data is accessed outside the critical section
-	 * - other threads cannot delete scrobbles in the meantime (becase the scrobbling thread
+	 * - other threads cannot delete scrobbles in the meantime (because the scrobbling thread
 	 * assumes that the scrobbles being submitted are the first {submittedCount} elements in
 	 * the list of pending scrobbles.
 	 *
