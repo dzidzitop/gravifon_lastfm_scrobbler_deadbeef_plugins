@@ -77,6 +77,8 @@ public:
 
 	inline UrlBuilder &paramName(afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
 
+	inline UrlBuilder &paramName(const std::string &name) { return paramName(name.c_str(), name.size()); }
+
 	inline UrlBuilder &paramValue(const char * const value)
 	{
 		m_buf += '=';
@@ -92,6 +94,8 @@ public:
 	}
 
 	inline UrlBuilder &paramValue(afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
+
+	inline UrlBuilder &paramValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
 
 	const std::string &toString() const { return m_buf; }
 private:
