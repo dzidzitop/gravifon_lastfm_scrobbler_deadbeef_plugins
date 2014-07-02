@@ -140,10 +140,10 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 
 	// TODO set real client ID and version.
 	UrlBuilder url(m_scrobblerUrl);
-	url.param("hs", "true"_s).
-			param("p", "1.2.1"_s).
-			param("c", "tst"_s).
-			param("v", "1.0"_s).
+	url.param("hs"_s, "true"_s).
+			param("p"_s, "1.2.1"_s).
+			param("c"_s, "tst"_s).
+			param("v"_s, "1.0"_s).
 			paramName("u").paramValue(m_username);
 
 	const string timestamp(to_string(currentUTCTimeSeconds()));
