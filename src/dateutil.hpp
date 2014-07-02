@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,6 +17,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define DATEUTIL_HPP_
 #include <ctime>
 #include <string>
+
+/* getCurrentUTCTimeSeconds() relies upon posix-compatible format of std::time_t.
+ * Each POSIX implementation must have unistd.h available.
+ */
+#include <unistd.h>
 
 struct DateTime
 {
@@ -80,5 +85,13 @@ struct DateTime
 
 // a utf-8 string is expected
 bool parseISODateTime(const std::string &str, DateTime &dest);
+
+inline long long currentUTCTimeSeconds()
+{
+	/* This implementation works only for POSIX-compatible systems that store time in
+	 * std::time_t as the number of seconds since epoch.
+	 */
+	return static_cast<long long>(std::time(nullptr));
+}
 
 #endif /* DATEUTIL_HPP_ */
