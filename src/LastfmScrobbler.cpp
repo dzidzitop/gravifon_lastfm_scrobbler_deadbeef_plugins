@@ -188,10 +188,10 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	/* Adding tags one by one. DeaDBeeF returns them as
 	 * '\n'-separated values within a single string.
 	 */
-	char *start, *end;
+	string::iterator start, end;
 	Tokeniser<char> t(response.body, '\n');
 	t.next(start, end);
-	if (end - start == 2 && start[0] == 'O' && start[1] == 'K') {
+	if (end - start == 2 && *start == 'O' && *(start + 1) == 'K') {
 		if (!t.hasNext()) { // Session ID.
 			logError(string("[LastfmScrobbler] Invalid response body: ") + response.body);
 			return false;
@@ -214,7 +214,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	} else {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
 		logError(string("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason code: ") +
-				string(start, end - start));
+				string(start, end));
 		return false;
 	}
 }
