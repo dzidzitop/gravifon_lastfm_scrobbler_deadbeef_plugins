@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <atomic>
 #include <cstddef>
 #include "dateutil.hpp"
+#include <cassert>
 
 // All strings are utf8-encoded.
 class Track
@@ -151,6 +152,12 @@ protected:
 	 * @return true if this routine succeeds; false otherwise.
 	 */
 	virtual void stopExtra() { /* Nothing to do by default. */ }
+
+	/* Ensures that this function is executed within the critical section against m_mutex.
+	 * Even though mutex::try_lock() has side effects it is fine to acquire the lock m_mutex
+	 * since the application is terminated immediately in this case.
+	 */
+	inline void assertLocked() { assert(!m_mutex.try_lock()); }
 
 	const static size_t MIN_SCROBBLES_TO_WAIT;
 	const static size_t MAX_SCROBBLES_TO_WAIT;

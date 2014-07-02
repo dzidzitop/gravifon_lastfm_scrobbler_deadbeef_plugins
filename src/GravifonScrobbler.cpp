@@ -130,12 +130,8 @@ void GravifonScrobbler::configure(const char * const serverUrl, const string &us
 
 size_t GravifonScrobbler::doScrobbling()
 {
+	assertLocked();
 	assert(!m_pendingScrobbles.empty());
-	/* Ensures that this function is executed within the critical section against m_mutex.
-	 * Even though mutex::try_lock() has side effects it is fine to acquire the lock m_mutex
-	 * since the application is terminated immediately in this case.
-	 */
-	assert(!m_mutex.try_lock());
 
 	if (!m_configured) {
 		logError("Scrobbler is not configured properly.");
