@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <chrono>
 #include <cstring>
+#include <string>
 #include "Scrobbler.hpp"
 #include "logger.hpp"
 
@@ -84,8 +85,8 @@ std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const tr
 
 	if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 		// The track was not played long enough to be scrobbled or its duration is zero or negative.
-		logDebug(string("The track is played not long enough to be scrobbled (play duration: ") +
-				to_string(trackPlayDuration) + "s; track duration: " + to_string(trackDuration) + "s).");
+		logDebug(std::string("The track is played not long enough to be scrobbled (play duration: ") +
+				std::to_string(trackPlayDuration) + "s; track duration: " + std::to_string(trackDuration) + "s).");
 		return nullptr;
 	}
 
