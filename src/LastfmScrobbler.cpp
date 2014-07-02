@@ -105,7 +105,9 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	ensureAuthenticated();
+	if (ensureAuthenticated()) {
+		return 0;
+	}
 
 	// TODO implement scrobbling.
 	return 0;
