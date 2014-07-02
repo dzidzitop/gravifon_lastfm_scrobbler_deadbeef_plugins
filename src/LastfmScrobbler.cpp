@@ -34,6 +34,21 @@ using StatusCode = HttpClient::StatusCode;
 
 namespace
 {
+	inline void buildAuthToken(const string &password, const string &timestamp, string &dest)
+	{
+		/* Auth token is generated as md5(md5(password) + timestamp),
+		 * where md5 is a lowercase hex-encoded ASCII MD5 hash and + is concatenation.
+		 */
+		const size_t md5LengthOctets = 32; // Each octet is represented as two characters.
+		string tmp;
+		tmp.reserve(md5LengthOctets + timestamp.size());
+		dest.reserve(dest.size() + md5LengthOctets);
+		// TODO check that this reinterpret_cast conforms to the C++11 standard.
+		md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
+		tmp += timestamp;
+		md5String(reinterpret_cast<const unsigned char *>(tmp.c_str()), tmp.size(), dest);
+	}
+
 	inline void reportHttpClientError(const StatusCode result)
 	{
 		assert(result != StatusCode::SUCCESS);
@@ -132,16 +147,9 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 			paramName("u").paramValue(m_username);
 
 	const string timestamp(to_string(currentUTCTimeSeconds()));
+	string authToken;
 
-	// Calculating the authentication token.
-	const size_t md5LengthOctets = 32; // Each octet is represented as two characters.
-	string authToken, tmp;
-	authToken.reserve(md5LengthOctets);
-	tmp.reserve(md5LengthOctets + timestamp.size());
-	// TODO check that this reinterpret_cast conforms to the C++11 standard.
-	md5String(reinterpret_cast<const unsigned char *>(m_password.c_str()), m_password.size(), tmp);
-	tmp += timestamp;
-	md5String(reinterpret_cast<const unsigned char *>(tmp.c_str()), tmp.size(), authToken);
+	buildAuthToken(m_password, timestamp, authToken);
 
 	url.paramName("t").paramValue(timestamp);
 	url.paramName("a").paramValue(authToken);
