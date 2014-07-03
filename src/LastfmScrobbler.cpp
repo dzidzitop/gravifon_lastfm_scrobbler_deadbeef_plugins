@@ -175,7 +175,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		logDebug(string("[LastfmScrobbler] Authentication URL: ") + url.toString());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().get(url.toString(), HttpEntity(), response,
+		result = HttpClient().get(url.toString().c_str(), HttpEntity(), response,
 				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 

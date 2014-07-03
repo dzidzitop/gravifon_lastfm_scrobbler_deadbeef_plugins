@@ -187,7 +187,7 @@ size_t GravifonScrobbler::doScrobbling()
 		logDebug(string("[GravifonScrobbler] Request body: ") + request.body);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().post(scrobblerUrlCopy, request, response,
+		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,
 				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 

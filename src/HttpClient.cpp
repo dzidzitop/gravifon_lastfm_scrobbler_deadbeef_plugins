@@ -124,7 +124,7 @@ namespace
 	}
 }
 
-HttpClient::StatusCode HttpClient::send(const HttpMethod method, const string &url, const HttpEntity &request,
+HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * const url, const HttpEntity &request,
 		HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
 		const std::atomic<bool> &abortFlag)
 {
@@ -146,7 +146,7 @@ HttpClient::StatusCode HttpClient::send(const HttpMethod method, const string &u
 	}
 
 	// TODO add response headers
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curl, CURLOPT_URL, url);
 	if (method == HttpMethod::POST) {
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
