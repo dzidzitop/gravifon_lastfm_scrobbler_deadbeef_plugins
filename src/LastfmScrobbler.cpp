@@ -140,19 +140,22 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 
 	// TODO set real client ID and version.
 	UrlBuilder url(m_scrobblerUrl);
-	url.param("hs"_s, "true"_s).
-			param("p"_s, "1.2.1"_s).
-			param("c"_s, "tst"_s).
-			param("v"_s, "1.0"_s).
-			paramName("u").paramValue(m_username);
+	url.rawParam("hs"_s, "true"_s).
+			rawParam("p"_s, "1.2.1"_s).
+			rawParam("c"_s, "tst"_s).
+			rawParam("v"_s, "1.0"_s).
+			rawParamName("u"_s).paramValue(m_username);
 
 	const string timestamp(to_string(currentUTCTimeSeconds()));
 	string authToken;
 
 	buildAuthToken(m_password, timestamp, authToken);
 
-	url.paramName("t").paramValue(timestamp);
-	url.paramName("a").paramValue(authToken);
+	/* Neither timestamp nor authToken need to be URL-encoded since they are
+	 * decimal and hex numbers, respectively.
+	 */
+	url.rawParamName("t"_s).rawParamValue(timestamp);
+	url.rawParamName("a"_s).rawParamValue(authToken);
 
 	StatusCode result;
 	HttpResponseEntity response;
