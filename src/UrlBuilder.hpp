@@ -43,12 +43,19 @@ public:
 	inline UrlBuilder &param(const char * const name, const std::size_t nameSize,
 			const char * const value, const std::size_t valueSize)
 	{
-		return paramName(name, nameSize).paramValue(value, valueSize);
+		// The maximal length of the escaped parameter with '?'/'&' and '='.
+		m_buf.reserve(2 + (3 * nameSize + valueSize));
+
+		appendParamPrefix();
+		appendUrlEncoded(name, nameSize);
+		m_buf += '=';
+		appendUrlEncoded(value, valueSize);
+		return *this;
 	}
 
 	inline UrlBuilder &param(const afc::ConstStringRef name, const afc::ConstStringRef value)
 	{
-		return paramName(name).paramValue(value);
+		return param(name.value(), name.size(), value.value(), value.size());
 	}
 
 	inline UrlBuilder &paramName(const char * const name)
@@ -60,12 +67,15 @@ public:
 
 	inline UrlBuilder &paramName(const char * const name, const std::size_t nameSize)
 	{
+		// The maximal length of the escaped parameter name with '?'/'&'.
+		m_buf.reserve(1 + 3 * nameSize);
+
 		appendParamPrefix();
 		appendUrlEncoded(name, nameSize);
 		return *this;
 	}
 
-	inline UrlBuilder &paramName(afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
+	inline UrlBuilder &paramName(const afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
 
 	inline UrlBuilder &paramName(const std::string &name) { return paramName(name.c_str(), name.size()); }
 
@@ -78,6 +88,9 @@ public:
 
 	inline UrlBuilder &paramValue(const char * const value, const std::size_t valueSize)
 	{
+		// The maximal length of the escaped parameter value with '='.
+		m_buf.reserve(1 + 3 * valueSize);
+
 		m_buf += '=';
 		appendUrlEncoded(value, valueSize);
 		return *this;
@@ -97,13 +110,20 @@ public:
 	inline UrlBuilder &rawParam(const char * const name, const std::size_t nameSize,
 			const char * const value, const std::size_t valueSize)
 	{
-		return rawParamName(name, nameSize).rawParamValue(value, valueSize);
+		// The maximal length of the raw parameter with '?'/'&' and '='.
+		m_buf.reserve(2 + nameSize + valueSize);
+
+		appendParamPrefix();
+		m_buf.append(name, nameSize);
+		m_buf += '=';
+		m_buf.append(value, valueSize);
+		return *this;
 	}
 
 	// Neither name nor value are URL-encoded.
 	inline UrlBuilder &rawParam(const afc::ConstStringRef name, const afc::ConstStringRef value)
 	{
-		return rawParamName(name).rawParamValue(value);
+		return rawParam(name.value(), name.size(), value.value(), value.size());
 	}
 
 	// Name is not URL-encoded.
@@ -117,35 +137,44 @@ public:
 	// Name is not URL-encoded.
 	inline UrlBuilder &rawParamName(const char * const name, const std::size_t nameSize)
 	{
+		// The maximal length of the raw parameter name with '?'/'&'.
+		m_buf.reserve(1 + nameSize);
+
 		appendParamPrefix();
 		m_buf.append(name, nameSize);
 		return *this;
 	}
 
 	// Name is not URL-encoded.
-	inline UrlBuilder &rawParamName(afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
+	inline UrlBuilder &rawParamName(const afc::ConstStringRef name) { return rawParamName(name.value(), name.size()); }
 
 	// Name is not URL-encoded.
-	inline UrlBuilder &rawParamName(const std::string &name) { return paramName(name.c_str(), name.size()); }
+	inline UrlBuilder &rawParamName(const std::string &name) { return rawParamName(name.c_str(), name.size()); }
 
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const char * const value)
 	{
 		m_buf += '=';
-		appendUrlEncoded(value);
+		m_buf.append(value);
 		return *this;
 	}
 
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const char * const value, const std::size_t valueSize)
 	{
+		// The maximal length of the raw parameter value with '='.
+		m_buf.reserve(1 + valueSize);
+
 		m_buf += '=';
-		appendUrlEncoded(value, valueSize);
+		m_buf.append(value, valueSize);
 		return *this;
 	}
 
 	// Value is not URL-encoded.
-	inline UrlBuilder &rawParamValue(const afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
+	inline UrlBuilder &rawParamValue(const afc::ConstStringRef value)
+	{
+		return rawParamValue(value.value(), value.size());
+	}
 
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
@@ -173,10 +202,7 @@ private:
 
 	inline void appendUrlEncoded(const char *str, const std::size_t n)
 	{
-		// Each character escaped takes up to three characters.
-		m_buf.reserve(m_buf.size() + n * 3);
-
-		for (size_t i = 0; i < n; ++i) {
+		for (std::size_t i = 0; i < n; ++i) {
 			appendUrlEncoded(str[i], m_buf);
 		}
 	}
