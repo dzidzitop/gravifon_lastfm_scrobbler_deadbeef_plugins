@@ -46,31 +46,21 @@ public:
 		return paramName(name, nameSize).paramValue(value, valueSize);
 	}
 
-	inline UrlBuilder &param(afc::ConstStringRef name, afc::ConstStringRef value)
+	inline UrlBuilder &param(const afc::ConstStringRef name, const afc::ConstStringRef value)
 	{
 		return paramName(name).paramValue(value);
 	}
 
 	inline UrlBuilder &paramName(const char * const name)
 	{
-		if (m_hasParams) {
-			m_buf += '&';
-		} else {
-			m_buf += '?';
-			m_hasParams = true;
-		}
+		appendParamPrefix();
 		appendUrlEncoded(name);
 		return *this;
 	}
 
 	inline UrlBuilder &paramName(const char * const name, const std::size_t nameSize)
 	{
-		if (m_hasParams) {
-			m_buf += '&';
-		} else {
-			m_buf += '?';
-			m_hasParams = true;
-		}
+		appendParamPrefix();
 		appendUrlEncoded(name, nameSize);
 		return *this;
 	}
@@ -93,12 +83,85 @@ public:
 		return *this;
 	}
 
-	inline UrlBuilder &paramValue(afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
+	inline UrlBuilder &paramValue(const afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
 
 	inline UrlBuilder &paramValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
 
+	// Neither name nor value are URL-encoded.
+	inline UrlBuilder &rawParam(const char * const name, const char * const value)
+	{
+		return rawParamName(name).rawParamValue(value);
+	}
+
+	// Neither name nor value are URL-encoded.
+	inline UrlBuilder &rawParam(const char * const name, const std::size_t nameSize,
+			const char * const value, const std::size_t valueSize)
+	{
+		return rawParamName(name, nameSize).rawParamValue(value, valueSize);
+	}
+
+	// Neither name nor value are URL-encoded.
+	inline UrlBuilder &rawParam(const afc::ConstStringRef name, const afc::ConstStringRef value)
+	{
+		return rawParamName(name).rawParamValue(value);
+	}
+
+	// Name is not URL-encoded.
+	inline UrlBuilder &rawParamName(const char * const name)
+	{
+		appendParamPrefix();
+		m_buf.append(name);
+		return *this;
+	}
+
+	// Name is not URL-encoded.
+	inline UrlBuilder &rawParamName(const char * const name, const std::size_t nameSize)
+	{
+		appendParamPrefix();
+		m_buf.append(name, nameSize);
+		return *this;
+	}
+
+	// Name is not URL-encoded.
+	inline UrlBuilder &rawParamName(afc::ConstStringRef name) { return paramName(name.value(), name.size()); }
+
+	// Name is not URL-encoded.
+	inline UrlBuilder &rawParamName(const std::string &name) { return paramName(name.c_str(), name.size()); }
+
+	// Value is not URL-encoded.
+	inline UrlBuilder &rawParamValue(const char * const value)
+	{
+		m_buf += '=';
+		appendUrlEncoded(value);
+		return *this;
+	}
+
+	// Value is not URL-encoded.
+	inline UrlBuilder &rawParamValue(const char * const value, const std::size_t valueSize)
+	{
+		m_buf += '=';
+		appendUrlEncoded(value, valueSize);
+		return *this;
+	}
+
+	// Value is not URL-encoded.
+	inline UrlBuilder &rawParamValue(const afc::ConstStringRef value) { return paramValue(value.value(), value.size()); }
+
+	// Value is not URL-encoded.
+	inline UrlBuilder &rawParamValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
+
 	const std::string &toString() const { return m_buf; }
 private:
+	inline void appendParamPrefix()
+	{
+		if (m_hasParams) {
+			m_buf += '&';
+		} else {
+			m_buf += '?';
+			m_hasParams = true;
+		}
+	}
+
 	inline void appendUrlEncoded(const char *str)
 	{
 		char c;
