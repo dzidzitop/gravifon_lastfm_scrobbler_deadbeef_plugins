@@ -92,7 +92,7 @@ public:
 	inline UrlBuilder &paramValue(const char * const value, const std::size_t valueSize)
 	{
 		// The maximal length of the escaped parameter value with '='.
-		m_buf.reserve(1 + 3 * valueSize);
+		m_buf.reserve(m_buf.size() + 1 + 3 * valueSize);
 
 		m_buf += '=';
 		appendUrlEncoded(value, valueSize);
@@ -114,7 +114,7 @@ public:
 			const char * const value, const std::size_t valueSize)
 	{
 		// The maximal length of the raw parameter with '?'/'&' and '='.
-		m_buf.reserve(2 + nameSize + valueSize);
+		m_buf.reserve(m_buf.size() + 2 + nameSize + valueSize);
 
 		appendParamPrefix();
 		m_buf.append(name, nameSize);
@@ -136,7 +136,7 @@ public:
 	inline UrlBuilder &rawParamName(const char * const name, const std::size_t nameSize)
 	{
 		// The maximal length of the raw parameter name with '?'/'&'.
-		m_buf.reserve(1 + nameSize);
+		m_buf.reserve(m_buf.size() + 1 + nameSize);
 
 		appendParamPrefix();
 		m_buf.append(name, nameSize);
@@ -156,7 +156,7 @@ public:
 	inline UrlBuilder &rawParamValue(const char * const value, const std::size_t valueSize)
 	{
 		// The maximal length of the raw parameter value with '='.
-		m_buf.reserve(1 + valueSize);
+		m_buf.reserve(m_buf.size() + 1 + valueSize);
 
 		m_buf += '=';
 		m_buf.append(value, valueSize);
