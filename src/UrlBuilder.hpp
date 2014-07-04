@@ -20,6 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
 #include <afc/StringRef.hpp>
+#include <afc/FastStringBuffer.hpp>
+#include <cstring>
+#include <algorithm>
 
 class UrlBuilder
 {
@@ -29,9 +32,19 @@ private:
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
 	UrlBuilder &operator=(UrlBuilder &&) = delete;
 public:
-	UrlBuilder(const char * const urlBase) : m_buf(urlBase), m_hasParams(false) {}
-	UrlBuilder(const std::string &urlBase) : m_buf(urlBase), m_hasParams(false) {}
-	UrlBuilder(std::string &&urlBase) : m_buf(urlBase), m_hasParams(false) {}
+	UrlBuilder(const char * const urlBase) : UrlBuilder(urlBase, std::strlen(urlBase)) {}
+
+	UrlBuilder(const char * const urlBase, const std::size_t n) : m_buf(), m_hasParams(false)
+	{
+		/* Many short urls have length less than 64 characters. Setting this value
+		 * as the minimal capacity to minimise re-allocations.
+		 */
+		m_buf.reserve(std::max(std::size_t(64), n));
+		m_buf.append(urlBase, n);
+	}
+
+	UrlBuilder(const afc::ConstStringRef urlBase) : UrlBuilder(urlBase.value(), urlBase.size()) {}
+	UrlBuilder(const std::string &urlBase) : UrlBuilder(urlBase.c_str(), urlBase.size()) {}
 
 	~UrlBuilder() = default;
 
@@ -44,7 +57,7 @@ public:
 			const char * const value, const std::size_t valueSize)
 	{
 		// The maximal length of the escaped parameter with '?'/'&' and '='.
-		m_buf.reserve(2 + (3 * nameSize + valueSize));
+		m_buf.reserve(m_buf.size() + 2 + (3 * nameSize + valueSize));
 
 		appendParamPrefix();
 		appendUrlEncoded(name, nameSize);
@@ -58,17 +71,12 @@ public:
 		return param(name.value(), name.size(), value.value(), value.size());
 	}
 
-	inline UrlBuilder &paramName(const char * const name)
-	{
-		appendParamPrefix();
-		appendUrlEncoded(name);
-		return *this;
-	}
+	inline UrlBuilder &paramName(const char * const name) { return paramName(name, std::strlen(name)); }
 
 	inline UrlBuilder &paramName(const char * const name, const std::size_t nameSize)
 	{
 		// The maximal length of the escaped parameter name with '?'/'&'.
-		m_buf.reserve(1 + 3 * nameSize);
+		m_buf.reserve(m_buf.size() + 1 + 3 * nameSize);
 
 		appendParamPrefix();
 		appendUrlEncoded(name, nameSize);
@@ -79,12 +87,7 @@ public:
 
 	inline UrlBuilder &paramName(const std::string &name) { return paramName(name.c_str(), name.size()); }
 
-	inline UrlBuilder &paramValue(const char * const value)
-	{
-		m_buf += '=';
-		appendUrlEncoded(value);
-		return *this;
-	}
+	inline UrlBuilder &paramValue(const char * const value) { return paramValue(value, std::strlen(value)); }
 
 	inline UrlBuilder &paramValue(const char * const value, const std::size_t valueSize)
 	{
@@ -127,12 +130,7 @@ public:
 	}
 
 	// Name is not URL-encoded.
-	inline UrlBuilder &rawParamName(const char * const name)
-	{
-		appendParamPrefix();
-		m_buf.append(name);
-		return *this;
-	}
+	inline UrlBuilder &rawParamName(const char * const name) { return rawParamName(name, std::strlen(name)); }
 
 	// Name is not URL-encoded.
 	inline UrlBuilder &rawParamName(const char * const name, const std::size_t nameSize)
@@ -152,12 +150,7 @@ public:
 	inline UrlBuilder &rawParamName(const std::string &name) { return rawParamName(name.c_str(), name.size()); }
 
 	// Value is not URL-encoded.
-	inline UrlBuilder &rawParamValue(const char * const value)
-	{
-		m_buf += '=';
-		m_buf.append(value);
-		return *this;
-	}
+	inline UrlBuilder &rawParamValue(const char * const value) { return rawParamValue(value, std::strlen(value)); }
 
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const char * const value, const std::size_t valueSize)
@@ -179,7 +172,8 @@ public:
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
 
-	const std::string &toString() const { return m_buf; }
+	const char *c_str() const { return m_buf.c_str(); }
+	const std::size_t size() const { return m_buf.size(); }
 private:
 	inline void appendParamPrefix()
 	{
@@ -191,15 +185,6 @@ private:
 		}
 	}
 
-	inline void appendUrlEncoded(const char *str)
-	{
-		char c;
-		std::size_t i = 0;
-		while ((c = str[i++]) != '\0') {
-			appendUrlEncoded(c, m_buf);
-		}
-	}
-
 	inline void appendUrlEncoded(const char *str, const std::size_t n)
 	{
 		for (std::size_t i = 0; i < n; ++i) {
@@ -207,9 +192,9 @@ private:
 		}
 	}
 
-	static void appendUrlEncoded(char c, std::string &dest);
+	static void appendUrlEncoded(char c, afc::FastStringBuffer<char> &dest);
 
-	std::string m_buf;
+	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
 };
 

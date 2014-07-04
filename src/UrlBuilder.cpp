@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 using namespace afc;
 
-void UrlBuilder::appendUrlEncoded(const char c, std::string &dest)
+void UrlBuilder::appendUrlEncoded(const char c, FastStringBuffer<char> &dest)
 {
 	if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
 			c == '-' || c == '_' || c == '.' || c == '~') {

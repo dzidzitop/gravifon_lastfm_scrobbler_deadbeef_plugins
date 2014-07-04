@@ -26,9 +26,10 @@ void UrlBuilderTest::testUrlWithNoQuery()
 {
 	UrlBuilder builder("http://hello/world");
 
-	const string result(builder.toString());
+	const string result(builder.c_str());
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
@@ -36,9 +37,10 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
 	UrlBuilder builder("http://hello/world");
 	builder.param("foo", "bar");
 
-	const string result(builder.toString());
+	const string result(builder.c_str());
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo=bar"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
@@ -46,9 +48,10 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
 	UrlBuilder builder("http://hello/world");
 	builder.param("fo o", "bar");
 
-	const string result(builder.toString());
+	const string result(builder.c_str());
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?fo%20o=bar"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
@@ -56,9 +59,10 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
 	UrlBuilder builder("http://hello/world");
 	builder.param("foo", "ba+r");
 
-	const string result(builder.toString());
+	const string result(builder.c_str());
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo=ba%2br"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
 
 void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
@@ -66,7 +70,8 @@ void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
 	UrlBuilder builder("http://hello/world");
 	builder.param("foo", "ba+r").param("ba&^z", "==quu_x").param("foo", "123");
 
-	const string result(builder.toString());
+	const string result(builder.c_str());
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo=ba%2br&ba%26%5ez=%3d%3dquu_x&foo=123"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
