@@ -170,7 +170,7 @@ public:
 	}
 
 	// Value is not URL-encoded.
-	inline UrlBuilder &rawParamValue(const std::string &value) { return paramValue(value.c_str(), value.size()); }
+	inline UrlBuilder &rawParamValue(const std::string &value) { return rawParamValue(value.c_str(), value.size()); }
 
 	const char *c_str() const { return m_buf.c_str(); }
 	const std::size_t size() const { return m_buf.size(); }
