@@ -181,6 +181,7 @@ private:
 			m_buf += '&';
 		} else {
 			m_buf += '?';
+			// TODO think of moving this outside else {} to simplify branching.
 			m_hasParams = true;
 		}
 	}
