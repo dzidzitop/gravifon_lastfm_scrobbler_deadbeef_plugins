@@ -106,7 +106,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assert(!m_pendingScrobbles.empty());
 
 	if (!m_configured) {
-		logError("Scrobbler is not configured properly.");
+		fputs("Scrobbler is not configured properly.", stderr);
 		return 0;
 	}
 
@@ -116,7 +116,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		 * pending scrobbles (see above) to be submitted (among other scrobbles) when
 		 * the URL is configured to point to a scrobbling server.
 		 */
-		logError("URL to the scrobbling server is undefined.");
+		fputs("URL to the scrobbling server is undefined.", stderr);
 		return 0;
 	}
 
@@ -188,11 +188,13 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
+	string &responseBody = response.body;
+
 	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
-	logDebug(string("[LastfmScrobbler] Authentication response body: ") + response.body);
+	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);
 
 	if (response.statusCode != 200) {
-		logError("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.");
+		fputs("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.", stderr);
 		return false;
 	}
 
@@ -200,21 +202,21 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * '\n'-separated values within a single string.
 	 */
 	string::iterator start, end;
-	Tokeniser<char> t(response.body, '\n');
+	Tokeniser<> t(responseBody, '\n');
 	t.next(start, end);
 	if (end - start == 2 && *start == 'O' && *(start + 1) == 'K') {
 		if (!t.hasNext()) { // Session ID.
-			logError(string("[LastfmScrobbler] Invalid response body: ") + response.body);
+			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
 		}
 		m_sessionId = std::move(t.next());
 
 		if (!t.hasNext()) { // Now-playing URL. It is ignored for now.
-			logError(string("[LastfmScrobbler] Invalid response body: ") + response.body);
+			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
 		}
 		if (!t.hasNext()) { // Submission URL.
-			logError(string("[LastfmScrobbler] Invalid response body: ") + response.body);
+			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
 		}
 		m_submissionUrl = std::move(t.next());
@@ -224,8 +226,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return true;
 	} else {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-		logError(string("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason code: ") +
-				string(start, end));
+		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason code: '%s'.\n",
+				string(start, end).c_str());
 		return false;
 	}
 }
