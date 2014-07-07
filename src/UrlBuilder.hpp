@@ -222,13 +222,9 @@ public:
 private:
 	inline void appendParamPrefix()
 	{
-		if (m_hasParams) {
-			m_buf += '&';
-		} else {
-			m_buf += '?';
-			// TODO think of moving this outside else {} to simplify branching.
-			m_hasParams = true;
-		}
+		m_buf += m_hasParams ? '&' : '?';
+		// Has params is assigned in either case to produce less jumps.
+		m_hasParams = true;
 	}
 
 	inline void appendUrlEncoded(const char *str, const std::size_t n)
