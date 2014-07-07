@@ -234,14 +234,7 @@ private:
 		m_hasParams = true;
 	}
 
-	inline void appendUrlEncoded(const char *str, const std::size_t n)
-	{
-		for (std::size_t i = 0; i < n; ++i) {
-			appendUrlEncoded(str[i], m_buf);
-		}
-	}
-
-	static void appendUrlEncoded(char c, afc::FastStringBuffer<char> &dest);
+	void appendUrlEncoded(const char *str, const std::size_t n);
 
 	template<typename... Parts>
 	static constexpr std::size_t maxEncodedSize(const UrlPart<ordinary> part, Parts ...parts)

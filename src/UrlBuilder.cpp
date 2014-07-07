@@ -18,24 +18,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 using namespace afc;
 
-void UrlBuilder::appendUrlEncoded(const char c, FastStringBuffer<char> &dest)
+namespace
 {
-	if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
-			c == '-' || c == '_' || c == '.' || c == '~') {
-		// An unreserved character. No escaping is needed.
-		dest += c;
-	} else {
-		/* A non-unreserved character. Escaping it to percent-encoded representation.
-		 * The reserved characters are escaped, too, for simplicity. */
-
+	inline void appendUrlEncoded(const char c, FastStringBuffer<char> &dest)
+	{
 		/* Casting to unsigned since bitwise operators are defined well for them
 		 * in terms of values.
+		 *
+		 * Only the lowest octet matters for URL encoding, even if unsigned char is larger.
 		 */
-		const unsigned char ac = c;
+		const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
 
-		// 0xff is applied just in case non-octet bytes are used.
-		const char high = toHex((ac & 0xff) >> 4);
-		const char low = toHex(ac & 0xf);
-		dest.append({'%', high, low});
+		if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') ||
+				uc == '-' || uc == '_' || uc == '.' || uc == '~') {
+			// An unreserved character. No escaping is needed.
+			dest += c;
+		} else {
+			/* A non-unreserved character. Escaping it to percent-encoded representation.
+			 * The reserved characters are escaped, too, for simplicity. */
+			const char high = toHex((uc) >> 4);
+			const char low = toHex(uc & 0xf);
+			dest.append({'%', high, low});
+		}
+	}
+}
+
+void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n)
+{
+	for (std::size_t i = 0; i < n; ++i) {
+		::appendUrlEncoded(str[i], m_buf);
 	}
 }
