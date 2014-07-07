@@ -66,19 +66,28 @@ private:
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
 	UrlBuilder &operator=(UrlBuilder &&) = delete;
 public:
-	UrlBuilder(const char * const urlBase) : UrlBuilder(urlBase, std::strlen(urlBase)) {}
+	template<typename... Parts>
+	UrlBuilder(const char * const urlBase, Parts... paramParts)
+			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
 
-	UrlBuilder(const char * const urlBase, const std::size_t n) : m_buf(), m_hasParams(false)
+	template<typename... Parts>
+	UrlBuilder(const char * const urlBase, const std::size_t n, Parts... paramParts) : m_buf(), m_hasParams(false)
 	{
 		/* Many short urls have length less than 64 characters. Setting this value
 		 * as the minimal capacity to minimise re-allocations.
 		 */
-		m_buf.reserve(std::max(std::size_t(64), n));
+		m_buf.reserve(std::max(std::size_t(64), n + maxEncodedSize(paramParts...)));
 		m_buf.append(urlBase, n);
+		appendParams(paramParts...);
 	}
 
-	UrlBuilder(const afc::ConstStringRef urlBase) : UrlBuilder(urlBase.value(), urlBase.size()) {}
-	UrlBuilder(const std::string &urlBase) : UrlBuilder(urlBase.c_str(), urlBase.size()) {}
+	template<typename... Parts>
+	UrlBuilder(const afc::ConstStringRef urlBase, Parts... paramParts)
+			: UrlBuilder(urlBase.value(), urlBase.size(), paramParts...) {}
+
+	template<typename... Parts>
+	UrlBuilder(const std::string &urlBase, Parts... paramParts)
+			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
 	~UrlBuilder() = default;
 
@@ -209,12 +218,10 @@ public:
 	template<typename... Parts>
 	inline void params(Parts... parts)
 	{
-		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
-
 		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
-		appendParamName(parts...);
+		appendParams(parts...);
 	}
 
 	const char *c_str() const { return m_buf.c_str(); }
@@ -250,6 +257,14 @@ private:
 
 	// Terminates the maxEncodedSize() template recusion.
 	static constexpr std::size_t maxEncodedSize() { return 0; }
+
+	template<typename... Parts>
+	void appendParams(Parts... parts)
+	{
+		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
+
+		appendParamName(parts...);
+	}
 
 	template<typename... Parts>
 	void appendParamName(const UrlPart<ordinary> name, Parts ...parts)
