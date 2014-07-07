@@ -145,8 +145,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	buildAuthToken(m_password, timestamp, authToken);
 
 	// TODO set real client ID and version.
-	UrlBuilder url(m_scrobblerUrl);
-	url.params(UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
+	UrlBuilder url(m_scrobblerUrl,
+			UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
 			UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
 			UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
 			UrlPart<raw>("v"_s), UrlPart<raw>("1.0"_s),
