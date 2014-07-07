@@ -24,6 +24,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include <algorithm>
 
+enum UrlPartType {
+	// Characters are URL encoded.
+	ordinary,
+	// No characters are URL encoded.
+	raw
+};
+
+template<UrlPartType type = ordinary>
+class UrlPart
+{
+public:
+	explicit constexpr UrlPart(const char * const value) : UrlPart(value, std::strlen(value)) {}
+	explicit constexpr UrlPart(const char * const value, const std::size_t n) : m_value(value), m_size(n) {}
+	explicit constexpr UrlPart(const afc::ConstStringRef value) : UrlPart(value.value(), value.size()) {}
+	explicit constexpr UrlPart(const std::string &value) : UrlPart(value.c_str(), value.size()) {}
+
+	constexpr const char *value() const { return m_value; };
+	constexpr std::size_t size() const { return m_size; }
+	constexpr std::size_t maxEncodedSize() const;
+private:
+	const char * const m_value;
+	const std::size_t m_size;
+};
+
+template<>
+constexpr std::size_t UrlPart<ordinary>::maxEncodedSize() const
+{
+	// Each character can be escaped as %xx.
+	return 3 * m_size;
+}
+
+template<>
+constexpr std::size_t UrlPart<raw>::maxEncodedSize() const { return m_size; }
+
 class UrlBuilder
 {
 private:
@@ -172,6 +206,17 @@ public:
 	// Value is not URL-encoded.
 	inline UrlBuilder &rawParamValue(const std::string &value) { return rawParamValue(value.c_str(), value.size()); }
 
+	template<typename... Parts>
+	inline void params(Parts... parts)
+	{
+		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
+
+		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
+		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
+
+		appendParamName(parts...);
+	}
+
 	const char *c_str() const { return m_buf.c_str(); }
 	const std::size_t size() const { return m_buf.size(); }
 private:
@@ -194,6 +239,60 @@ private:
 	}
 
 	static void appendUrlEncoded(char c, afc::FastStringBuffer<char> &dest);
+
+	template<typename... Parts>
+	static constexpr std::size_t maxEncodedSize(const UrlPart<ordinary> part, Parts ...parts)
+	{
+		return part.maxEncodedSize() + maxEncodedSize(parts...);
+	}
+
+	template<typename... Parts>
+	static constexpr std::size_t maxEncodedSize(const UrlPart<raw> part, Parts... parts)
+	{
+		return part.maxEncodedSize() + maxEncodedSize(parts...);
+	}
+
+	// Terminates the maxEncodedSize() template recusion.
+	static constexpr std::size_t maxEncodedSize() { return 0; }
+
+	template<typename... Parts>
+	void appendParamName(const UrlPart<ordinary> name, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		appendParamPrefix();
+		appendUrlEncoded(name.value(), name.size());
+		appendParamValue(parts...);
+	}
+
+	template<typename... Parts>
+	void appendParamName(const UrlPart<raw> name, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		appendParamPrefix();
+		m_buf.append(name.value(), name.size());
+		appendParamValue(parts...);
+	}
+
+	// Terminates the maxEncodedSize() template recusion.
+	void appendParamName() {}
+
+	template<typename... Parts>
+	void appendParamValue(const UrlPart<ordinary> value, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		m_buf += '=';
+		appendUrlEncoded(value.value(), value.size());
+		appendParamName(parts...);
+	}
+
+	template<typename... Parts>
+	void appendParamValue(const UrlPart<raw> value, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		m_buf += '=';
+		m_buf.append(value.value(), value.size());
+		appendParamName(parts...);
+	}
 
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;

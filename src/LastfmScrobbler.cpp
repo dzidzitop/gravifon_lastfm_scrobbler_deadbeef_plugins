@@ -138,24 +138,24 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 
 	logDebug("[LastfmScrobbler] Authenticating the user...");
 
-	// TODO set real client ID and version.
-	UrlBuilder url(m_scrobblerUrl);
-	url.rawParam("hs"_s, "true"_s).
-			rawParam("p"_s, "1.2.1"_s).
-			rawParam("c"_s, "tst"_s).
-			rawParam("v"_s, "1.0"_s).
-			rawParamName("u"_s).paramValue(m_username);
-
 	const string timestamp(to_string(currentUTCTimeSeconds()));
 	string authToken;
 
+
 	buildAuthToken(m_password, timestamp, authToken);
 
-	/* Neither timestamp nor authToken need to be URL-encoded since they are
-	 * decimal and hex numbers, respectively.
-	 */
-	url.rawParamName("t"_s).rawParamValue(timestamp);
-	url.rawParamName("a"_s).rawParamValue(authToken);
+	// TODO set real client ID and version.
+	UrlBuilder url(m_scrobblerUrl);
+	url.params(UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
+			UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
+			UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
+			UrlPart<raw>("v"_s), UrlPart<raw>("1.0"_s),
+			UrlPart<raw>("u"_s), UrlPart<>(m_username),
+			/* Neither timestamp nor authToken need to be URL-encoded since they are
+			 * decimal and hex numbers, respectively.
+			 */
+			UrlPart<raw>("t"_s), UrlPart<raw>(timestamp),
+			UrlPart<raw>("a"_s), UrlPart<raw>(authToken));
 
 	StatusCode result;
 	HttpResponseEntity response;
