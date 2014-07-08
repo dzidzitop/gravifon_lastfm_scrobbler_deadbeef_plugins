@@ -42,7 +42,6 @@ namespace
 		const size_t md5LengthOctets = 32; // Each octet is represented as two characters.
 		string tmp;
 		tmp.reserve(md5LengthOctets + timestamp.size());
-		dest.reserve(dest.size() + md5LengthOctets);
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
 		md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
 		tmp += timestamp;
@@ -140,7 +139,6 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 
 	const string timestamp(to_string(currentUTCTimeSeconds()));
 	string authToken;
-
 
 	buildAuthToken(m_password, timestamp, authToken);
 
