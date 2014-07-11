@@ -248,14 +248,8 @@ private:
 
 	void appendUrlEncoded(const char *str, const std::size_t n);
 
-	template<typename... Parts>
-	static constexpr std::size_t maxEncodedSize(const UrlPart<ordinary> part, Parts ...parts)
-	{
-		return part.maxEncodedSize() + maxEncodedSize(parts...);
-	}
-
-	template<typename... Parts>
-	static constexpr std::size_t maxEncodedSize(const UrlPart<raw> part, Parts... parts)
+	template<typename Part, typename... Parts>
+	static constexpr std::size_t maxEncodedSize(const Part part, Parts ...parts)
 	{
 		return part.maxEncodedSize() + maxEncodedSize(parts...);
 	}
@@ -279,65 +273,40 @@ private:
 		appendParamName(queryOnly, parts...);
 	}
 
-	template<typename... Parts>
-	void appendParamName(const UrlPart<ordinary> name, Parts ...parts)
+	template<typename ParamName, typename... Parts>
+	void appendParamName(const ParamName name, Parts ...parts)
 	{
 		// ::params() ensured that there is enough capacity.
 		appendParamPrefix();
-		appendUrlEncoded(name.value(), name.size());
+		appendParamPart(name);
 		appendParamValue(parts...);
 	}
 
-	template<typename... Parts>
-	void appendParamName(QueryOnly, const UrlPart<ordinary> name, Parts ...parts)
+	template<typename ParamName, typename... Parts>
+	void appendParamName(QueryOnly, const ParamName name, Parts ...parts)
 	{
 		// ::params() ensured that there is enough capacity.
-		// A query is built only so there is no need to append '?' to the first parameter.
+		// A query string is built only so there is no need to put '?' before the first parameter.
 		m_hasParams = true;
-		appendUrlEncoded(name.value(), name.size());
+		appendParamPart(name);
 		appendParamValue(parts...);
 	}
 
-	template<typename... Parts>
-	void appendParamName(const UrlPart<raw> name, Parts ...parts)
-	{
-		// ::params() ensured that there is enough capacity.
-		appendParamPrefix();
-		m_buf.append(name.value(), name.size());
-		appendParamValue(parts...);
-	}
-
-	template<typename... Parts>
-	void appendParamName(QueryOnly, const UrlPart<raw> name, Parts ...parts)
-	{
-		// ::params() ensured that there is enough capacity.
-		// A query is built only so there is no need to append '?' to the first parameter.
-		m_hasParams = true;
-		m_buf.append(name.value(), name.size());
-		appendParamValue(parts...);
-	}
-
-	// Terminate the maxEncodedSize() template recusion.
+	// Terminate the maxEncodedSize() template recursion.
 	void appendParamName() {}
 	void appendParamName(QueryOnly) {}
 
-	template<typename... Parts>
-	void appendParamValue(const UrlPart<ordinary> value, Parts ...parts)
+	template<typename ParamValue, typename... Parts>
+	void appendParamValue(const ParamValue value, Parts ...parts)
 	{
 		// ::params() ensured that there is enough capacity.
 		m_buf += '=';
-		appendUrlEncoded(value.value(), value.size());
+		appendParamPart(value);
 		appendParamName(parts...);
 	}
 
-	template<typename... Parts>
-	void appendParamValue(const UrlPart<raw> value, Parts ...parts)
-	{
-		// ::params() ensured that there is enough capacity.
-		m_buf += '=';
-		m_buf.append(value.value(), value.size());
-		appendParamName(parts...);
-	}
+	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
+	void appendParamPart(const UrlPart<raw> part) { m_buf.append(part.value(), part.size()); }
 
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
