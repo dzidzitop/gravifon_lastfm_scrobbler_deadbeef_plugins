@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef URLBUILDER_HPP_
 #define URLBUILDER_HPP_
 
+#include <cassert>
 #include <string>
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
@@ -80,7 +81,7 @@ public:
 		 */
 		m_buf.reserve(std::max(std::size_t(64), n + maxEncodedSize(paramParts...)));
 		m_buf.append(urlBase, n);
-		appendParams(paramParts...);
+		appendParams<urlFirst, Parts...>(paramParts...);
 	}
 
 	template<typename... Parts>
@@ -92,13 +93,13 @@ public:
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(QueryOnly queryOnly, Parts... paramParts) : m_buf(), m_hasParams(false)
+	UrlBuilder(QueryOnly, Parts... paramParts) : m_buf(), m_hasParams(false)
 	{
 		/* Many short urls have length less than 64 characters. Setting this value
 		 * as the minimal capacity to minimise re-allocations.
 		 */
 		m_buf.reserve(std::max(std::size_t(64), maxEncodedSize(paramParts...)));
-		appendParams(queryOnly, paramParts...);
+		appendParams<queryString, Parts...>(paramParts...);
 	}
 
 	~UrlBuilder() = default;
@@ -233,7 +234,7 @@ public:
 		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
-		appendParams(parts...);
+		appendParams<urlUnknown, Parts...>(parts...);
 	}
 
 	const char *c_str() const { return m_buf.c_str(); }
@@ -257,52 +258,62 @@ private:
 	// Terminates the maxEncodedSize() template recusion.
 	static constexpr std::size_t maxEncodedSize() { return 0; }
 
-	template<typename... Parts>
+	enum ParamMode
+	{
+		// A URL is being built; the next parameter is known to be first.
+		urlFirst,
+		// A URL is being built; it is unknown if the next parameter is first.
+		urlUnknown,
+		// A query string is being built.
+		queryString,
+		// The next parameter is known to be not first.
+		notFirst
+	};
+
+	template<ParamMode mode, typename... Parts>
 	void appendParams(Parts... parts)
 	{
 		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
 
-		appendParamName(parts...);
+		appendParamName<mode, Parts...>(parts...);
 	}
 
-	template<typename... Parts>
-	void appendParams(QueryOnly queryOnly, Parts... parts)
-	{
-		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
-
-		appendParamName(queryOnly, parts...);
-	}
-
-	template<typename ParamName, typename... Parts>
+	template<ParamMode mode, typename ParamName, typename... Parts>
 	void appendParamName(const ParamName name, Parts ...parts)
 	{
-		// ::params() ensured that there is enough capacity.
-		appendParamPrefix();
-		appendParamPart(name);
-		appendParamValue(parts...);
-	}
-
-	template<typename ParamName, typename... Parts>
-	void appendParamName(QueryOnly, const ParamName name, Parts ...parts)
-	{
-		// ::params() ensured that there is enough capacity.
-		// A query string is built only so there is no need to put '?' before the first parameter.
-		m_hasParams = true;
+		// It is guaranteed that there is enough capacity for all the parameters.
+		switch (mode) {
+		case urlFirst:
+			m_buf += '?';
+			m_hasParams = true;
+			break;
+		case urlUnknown:
+			appendParamPrefix();
+			break;
+		case queryString:
+			m_hasParams = true;
+			break;
+		case notFirst:
+			m_buf += '&';
+			break;
+		default:
+			assert(false);
+		}
 		appendParamPart(name);
 		appendParamValue(parts...);
 	}
 
 	// Terminate the maxEncodedSize() template recursion.
+	template<ParamMode mode>
 	void appendParamName() {}
-	void appendParamName(QueryOnly) {}
 
 	template<typename ParamValue, typename... Parts>
 	void appendParamValue(const ParamValue value, Parts ...parts)
 	{
-		// ::params() ensured that there is enough capacity.
+		// It is guaranteed that there is enough capacity for all the parameters.
 		m_buf += '=';
 		appendParamPart(value);
-		appendParamName(parts...);
+		appendParamName<notFirst, Parts...>(parts...);
 	}
 
 	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
