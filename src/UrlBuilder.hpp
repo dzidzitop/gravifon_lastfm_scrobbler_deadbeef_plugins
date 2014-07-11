@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include <algorithm>
 
+struct QueryOnly {} static const queryOnly;
+
 enum UrlPartType {
 	// Characters are URL encoded.
 	ordinary,
@@ -88,6 +90,16 @@ public:
 	template<typename... Parts>
 	UrlBuilder(const std::string &urlBase, Parts... paramParts)
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
+
+	template<typename... Parts>
+	UrlBuilder(QueryOnly queryOnly, Parts... paramParts) : m_buf(), m_hasParams(false)
+	{
+		/* Many short urls have length less than 64 characters. Setting this value
+		 * as the minimal capacity to minimise re-allocations.
+		 */
+		m_buf.reserve(std::max(std::size_t(64), maxEncodedSize(paramParts...)));
+		appendParams(queryOnly, paramParts...);
+	}
 
 	~UrlBuilder() = default;
 
@@ -260,10 +272,28 @@ private:
 	}
 
 	template<typename... Parts>
+	void appendParams(QueryOnly queryOnly, Parts... parts)
+	{
+		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
+
+		appendParamName(queryOnly, parts...);
+	}
+
+	template<typename... Parts>
 	void appendParamName(const UrlPart<ordinary> name, Parts ...parts)
 	{
 		// ::params() ensured that there is enough capacity.
 		appendParamPrefix();
+		appendUrlEncoded(name.value(), name.size());
+		appendParamValue(parts...);
+	}
+
+	template<typename... Parts>
+	void appendParamName(QueryOnly, const UrlPart<ordinary> name, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		// A query is built only so there is no need to append '?' to the first parameter.
+		m_hasParams = true;
 		appendUrlEncoded(name.value(), name.size());
 		appendParamValue(parts...);
 	}
@@ -277,8 +307,19 @@ private:
 		appendParamValue(parts...);
 	}
 
-	// Terminates the maxEncodedSize() template recusion.
+	template<typename... Parts>
+	void appendParamName(QueryOnly, const UrlPart<raw> name, Parts ...parts)
+	{
+		// ::params() ensured that there is enough capacity.
+		// A query is built only so there is no need to append '?' to the first parameter.
+		m_hasParams = true;
+		m_buf.append(name.value(), name.size());
+		appendParamValue(parts...);
+	}
+
+	// Terminate the maxEncodedSize() template recusion.
 	void appendParamName() {}
+	void appendParamName(QueryOnly) {}
 
 	template<typename... Parts>
 	void appendParamValue(const UrlPart<ordinary> value, Parts ...parts)

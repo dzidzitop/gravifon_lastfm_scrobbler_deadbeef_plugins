@@ -19,6 +19,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION(UrlBuilderTest);
 
 #include <UrlBuilder.hpp>
 #include <string>
+#include <cstddef>
 
 using namespace std;
 
@@ -74,4 +75,87 @@ void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo=ba%2br&ba%26%5ez=%3d%3dquu_x&foo=123"), result);
 	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_NoParams()
+{
+	UrlBuilder builder(queryOnly);
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string(), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(0), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_NoEscaping()
+{
+	UrlBuilder builder(queryOnly, UrlPart<>("hello"), UrlPart<>("world"));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("hello=world"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(11), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEscaped()
+{
+	UrlBuilder builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<>("world"));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co~=world"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(18), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEscaped()
+{
+	UrlBuilder builder(queryOnly, UrlPart<>("hello"), UrlPart<>("**w*rld  "));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("hello=%2a%2aw%2arld%20%20"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(25), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamName()
+{
+	UrlBuilder builder(queryOnly, UrlPart<raw>("he ll,o~"), UrlPart<ordinary>("**w*rld  "));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("he ll,o~=%2a%2aw%2arld%20%20"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(28), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue()
+{
+	UrlBuilder builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<raw>("**w*rld  "));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co~=**w*rld  "), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(22), builder.size());
+}
+
+void UrlBuilderTest::testQueryOnly_ConstructorBuilding_MultipleParams()
+{
+	UrlBuilder builder(queryOnly,
+			UrlPart<>("abc"), UrlPart<>("c e"),
+			UrlPart<>("f*hijk"), UrlPart<>(""),
+			UrlPart<raw>("l+no"), UrlPart<ordinary>("p%*rs"),
+			UrlPart<raw>(""), UrlPart<>("tuvwxyz!"),
+			UrlPart<raw>("abc"), UrlPart<>("1234"),
+			UrlPart<ordinary>("abc"), UrlPart<>("www222"));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("abc=c%20e&f%2ahijk=&l+no=p%25%2ars&=tuvwxyz%21&abc=1234&abc=www222"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(66), builder.size());
 }

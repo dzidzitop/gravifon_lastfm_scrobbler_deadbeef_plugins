@@ -29,6 +29,14 @@ class UrlBuilderTest : public CppUnit::TestFixture
 	CPPUNIT_TEST(testUrlWithQuery_SingleParam_ValueEscaped);
 
 	CPPUNIT_TEST(testUrlWithQuery_MultipleParams_RepeatedNames);
+
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_NoParams);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_NoEscaping);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEscaped);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEscaped);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_RawParamName);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue);
+	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_MultipleParams);
 	CPPUNIT_TEST_SUITE_END();
 public:
 	void testUrlWithNoQuery();
@@ -38,6 +46,14 @@ public:
 	void testUrlWithQuery_SingleParam_ValueEscaped();
 
 	void testUrlWithQuery_MultipleParams_RepeatedNames();
+
+	void testQueryOnly_ConstructorBuilding_NoParams();
+	void testQueryOnly_ConstructorBuilding_SingleParam_NoEscaping();
+	void testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEscaped();
+	void testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEscaped();
+	void testQueryOnly_ConstructorBuilding_SingleParam_RawParamName();
+	void testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue();
+	void testQueryOnly_ConstructorBuilding_MultipleParams();
 };
 
 #endif /* URLBUILDERTEST_HPP_ */
