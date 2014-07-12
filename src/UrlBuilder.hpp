@@ -117,7 +117,7 @@ public:
 
 		appendParamPrefix();
 		appendUrlEncoded(name, nameSize);
-		m_buf += '=';
+		m_buf.append('=');
 		appendUrlEncoded(value, valueSize);
 		return *this;
 	}
@@ -150,7 +150,7 @@ public:
 		// The maximal length of the escaped parameter value with '='.
 		m_buf.reserve(m_buf.size() + 1 + 3 * valueSize);
 
-		m_buf += '=';
+		m_buf.append('=');
 		appendUrlEncoded(value, valueSize);
 		return *this;
 	}
@@ -174,7 +174,7 @@ public:
 
 		appendParamPrefix();
 		m_buf.append(name, nameSize);
-		m_buf += '=';
+		m_buf.append('=');
 		m_buf.append(value, valueSize);
 		return *this;
 	}
@@ -214,7 +214,7 @@ public:
 		// The maximal length of the raw parameter value with '='.
 		m_buf.reserve(m_buf.size() + 1 + valueSize);
 
-		m_buf += '=';
+		m_buf.append('=');
 		m_buf.append(value, valueSize);
 		return *this;
 	}
@@ -242,7 +242,7 @@ public:
 private:
 	inline void appendParamPrefix()
 	{
-		m_buf += m_hasParams ? '&' : '?';
+		m_buf.append(m_hasParams ? '&' : '?');
 		// Has params is assigned in either case to produce less jumps.
 		m_hasParams = true;
 	}
@@ -284,7 +284,7 @@ private:
 		// It is guaranteed that there is enough capacity for all the parameters.
 		switch (mode) {
 		case urlFirst:
-			m_buf += '?';
+			m_buf.append('?');
 			m_hasParams = true;
 			break;
 		case urlUnknown:
@@ -294,7 +294,7 @@ private:
 			m_hasParams = true;
 			break;
 		case notFirst:
-			m_buf += '&';
+			m_buf.append('&');
 			break;
 		default:
 			assert(false);
@@ -311,7 +311,7 @@ private:
 	void appendParamValue(const ParamValue value, Parts ...parts)
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
-		m_buf += '=';
+		m_buf.append('=');
 		appendParamPart(value);
 		appendParamName<notFirst, Parts...>(parts...);
 	}

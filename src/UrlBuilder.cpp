@@ -32,7 +32,7 @@ namespace
 		if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') ||
 				uc == '-' || uc == '_' || uc == '.' || uc == '~') {
 			// An unreserved character. No escaping is needed.
-			dest += c;
+			dest.append(c);
 		} else {
 			/* A non-unreserved character. Escaping it to percent-encoded representation.
 			 * The reserved characters are escaped, too, for simplicity. */
