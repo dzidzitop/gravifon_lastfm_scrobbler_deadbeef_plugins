@@ -41,7 +41,7 @@ public:
 	explicit constexpr UrlPart(const char * const value) : UrlPart(value, std::strlen(value)) {}
 	explicit constexpr UrlPart(const char * const value, const std::size_t n) : m_value(value), m_size(n) {}
 	explicit constexpr UrlPart(const afc::ConstStringRef value) : UrlPart(value.value(), value.size()) {}
-	explicit constexpr UrlPart(const std::string &value) : UrlPart(value.c_str(), value.size()) {}
+	explicit constexpr UrlPart(const std::string &value) : UrlPart(value.data(), value.size()) {}
 
 	constexpr const char *value() const { return m_value; };
 	constexpr std::size_t size() const { return m_size; }
