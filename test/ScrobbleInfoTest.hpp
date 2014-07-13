@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
 
+#include <memory>
+#include <string>
+
 class ScrobbleInfoTest : public CppUnit::TestFixture
 {
 	CPPUNIT_TEST_SUITE(ScrobbleInfoTest);
@@ -31,7 +34,7 @@ class ScrobbleInfoTest : public CppUnit::TestFixture
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_MalformedJson);
 	CPPUNIT_TEST_SUITE_END();
 
-	const char *m_timeZoneBackup;
+	std::unique_ptr<std::string> m_timeZoneBackup;
 public:
 	void setUp() override;
 	void tearDown() override;
