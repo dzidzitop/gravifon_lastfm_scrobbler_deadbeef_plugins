@@ -21,11 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
 #include <afc/StringRef.hpp>
 #include "logger.hpp"
-#include "dateutil.hpp"
 #include <afc/md5.hpp>
 #include <afc/Tokeniser.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <utility>
+#include <afc/dateutil.hpp>
 #include <afc/utils.h>
 
 using namespace std;

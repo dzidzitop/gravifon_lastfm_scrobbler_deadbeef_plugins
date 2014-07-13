@@ -20,7 +20,6 @@ rule linkDynamic
 rule bin
   command=g++ $ldFlags_test -o $out $in $libs
 
-build $buildDir/dateutil.o: cxx $srcDir/dateutil.cpp
 build $buildDir/GravifonScrobbler.o: cxx $srcDir/GravifonScrobbler.cpp
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
 build $buildDir/LastfmScrobbler.o: cxx $srcDir/LastfmScrobbler.cpp
@@ -29,7 +28,6 @@ build $buildDir/Scrobbler.o: cxx $srcDir/Scrobbler.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
 build $buildDir/UrlBuilder.o: cxx $srcDir/UrlBuilder.cpp
 
-build $buildDir/DateUtilTest.o: cxx_test $testDir/DateUtilTest.cpp
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
 build $buildDir/TrackTest.o: cxx_test $testDir/TrackTest.cpp
 build $buildDir/UrlBuilderTest.o: cxx_test $testDir/UrlBuilderTest.cpp
@@ -39,12 +37,10 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/GravifonScrobbler.o $
     $buildDir/HttpClient.o $
     $buildDir/Scrobbler.o $
-    $buildDir/dateutil.o $
     $buildDir/gravifon_scrobbler.o
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/lastfm_scrobbler.so: linkDynamic $
-    $buildDir/dateutil.o $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
@@ -53,11 +49,9 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/unit_tests: bin $
-    $buildDir/dateutil.o $
     $buildDir/GravifonScrobbler.o $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/HttpClient.o $
-    $buildDir/DateUtilTest.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/Scrobbler.o $
