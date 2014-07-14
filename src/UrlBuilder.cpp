@@ -14,14 +14,18 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
+#include <algorithm>
+#include <initializer_list>
 #include <afc/utils.h>
 
 using namespace afc;
 
-namespace
+void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n)
 {
-	inline void appendUrlEncoded(const char c, FastStringBuffer<char> &dest)
-	{
+	register FastStringBuffer<char>::Tail p = m_buf.borrowTail();
+	for (std::size_t i = 0; i < n; ++i) {
+		const char c = str[i];
+
 		/* Casting to unsigned since bitwise operators are defined well for them
 		 * in terms of values.
 		 *
@@ -32,20 +36,15 @@ namespace
 		if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') ||
 				uc == '-' || uc == '_' || uc == '.' || uc == '~') {
 			// An unreserved character. No escaping is needed.
-			dest.append(c);
+			*p++ = c;
 		} else {
 			/* A non-unreserved character. Escaping it to percent-encoded representation.
 			 * The reserved characters are escaped, too, for simplicity. */
 			const char high = toHex((uc) >> 4);
 			const char low = toHex(uc & 0xf);
-			dest.append({'%', high, low});
+			std::initializer_list<char> encoded = {'%', high, low};
+			p = std::copy_n(encoded.begin(), encoded.size(), p);
 		}
 	}
-}
-
-void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n)
-{
-	for (std::size_t i = 0; i < n; ++i) {
-		::appendUrlEncoded(str[i], m_buf);
-	}
+	m_buf.returnTail(p);
 }
