@@ -174,7 +174,9 @@ private:
 		appendParamValue(parts...);
 	}
 
-	// Terminate the maxEncodedSize() template recursion.
+	/* Terminates the appendParamName() template recursion.
+	 * No '?' is appended even if there are no parameters at all.
+	 */
 	template<ParamMode mode>
 	void appendParamName() {}
 
