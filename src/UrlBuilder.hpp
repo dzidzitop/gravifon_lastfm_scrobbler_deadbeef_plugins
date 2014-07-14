@@ -116,13 +116,6 @@ public:
 	const char *c_str() const { return m_buf.c_str(); }
 	const std::size_t size() const { return m_buf.size(); }
 private:
-	inline void appendParamPrefix()
-	{
-		m_buf.append(m_hasParams ? '&' : '?');
-		// Has params is assigned in either case to produce less jumps.
-		m_hasParams = true;
-	}
-
 	void appendUrlEncoded(const char *str, const std::size_t n);
 
 	template<typename Part, typename... Parts>
@@ -164,7 +157,9 @@ private:
 			m_hasParams = true;
 			break;
 		case urlUnknown:
-			appendParamPrefix();
+			m_buf.append(m_hasParams ? '&' : '?');
+			// Has params is assigned in either case to produce less jumps.
+			m_hasParams = true;
 			break;
 		case queryString:
 			m_hasParams = true;
