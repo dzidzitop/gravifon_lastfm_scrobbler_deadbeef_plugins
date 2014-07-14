@@ -113,6 +113,7 @@ public:
 		appendParams<urlUnknown, Parts...>(parts...);
 	}
 
+	const char *data() const { return m_buf.data(); }
 	const char *c_str() const { return m_buf.c_str(); }
 	const std::size_t size() const { return m_buf.size(); }
 private:
