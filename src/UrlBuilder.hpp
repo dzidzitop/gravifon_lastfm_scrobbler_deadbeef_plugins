@@ -38,28 +38,28 @@ template<UrlPartType type = ordinary>
 class UrlPart
 {
 public:
-	explicit constexpr UrlPart(const char * const value) : UrlPart(value, std::strlen(value)) {}
-	explicit constexpr UrlPart(const char * const value, const std::size_t n) : m_value(value), m_size(n) {}
-	explicit constexpr UrlPart(const afc::ConstStringRef value) : UrlPart(value.value(), value.size()) {}
-	explicit constexpr UrlPart(const std::string &value) : UrlPart(value.data(), value.size()) {}
+	explicit constexpr UrlPart(const char * const value) noexcept : UrlPart(value, std::strlen(value)) {}
+	explicit constexpr UrlPart(const char * const value, const std::size_t n) noexcept : m_value(value), m_size(n) {}
+	explicit constexpr UrlPart(const afc::ConstStringRef value) noexcept : UrlPart(value.value(), value.size()) {}
+	explicit constexpr UrlPart(const std::string &value) noexcept : UrlPart(value.data(), value.size()) {}
 
-	constexpr const char *value() const { return m_value; };
-	constexpr std::size_t size() const { return m_size; }
-	constexpr std::size_t maxEncodedSize() const;
+	constexpr const char *value() const noexcept { return m_value; };
+	constexpr std::size_t size() const noexcept { return m_size; }
+	constexpr std::size_t maxEncodedSize() const noexcept;
 private:
 	const char * const m_value;
 	const std::size_t m_size;
 };
 
 template<>
-constexpr std::size_t UrlPart<ordinary>::maxEncodedSize() const
+constexpr std::size_t UrlPart<ordinary>::maxEncodedSize() const noexcept
 {
 	// Each character can be escaped as %xx.
 	return 3 * m_size;
 }
 
 template<>
-constexpr std::size_t UrlPart<raw>::maxEncodedSize() const { return m_size; }
+constexpr std::size_t UrlPart<raw>::maxEncodedSize() const noexcept { return m_size; }
 
 class UrlBuilder
 {
@@ -113,20 +113,20 @@ public:
 		appendParams<urlUnknown, Parts...>(parts...);
 	}
 
-	const char *data() const { return m_buf.data(); }
-	const char *c_str() const { return m_buf.c_str(); }
-	const std::size_t size() const { return m_buf.size(); }
+	const char *data() const noexcept { return m_buf.data(); }
+	const char *c_str() const noexcept { return m_buf.c_str(); }
+	const std::size_t size() const noexcept { return m_buf.size(); }
 private:
-	void appendUrlEncoded(const char *str, const std::size_t n);
+	void appendUrlEncoded(const char *str, const std::size_t n) noexcept;
 
 	template<typename Part, typename... Parts>
-	static constexpr std::size_t maxEncodedSize(const Part part, Parts ...parts)
+	static constexpr std::size_t maxEncodedSize(const Part part, Parts ...parts) noexcept
 	{
 		return part.maxEncodedSize() + maxEncodedSize(parts...);
 	}
 
 	// Terminates the maxEncodedSize() template recusion.
-	static constexpr std::size_t maxEncodedSize() { return 0; }
+	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
 
 	enum ParamMode
 	{
@@ -141,7 +141,7 @@ private:
 	};
 
 	template<ParamMode mode, typename... Parts>
-	void appendParams(Parts... parts)
+	void appendParams(Parts... parts) noexcept
 	{
 		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
 
@@ -149,7 +149,7 @@ private:
 	}
 
 	template<ParamMode mode, typename ParamName, typename... Parts>
-	void appendParamName(const ParamName name, Parts ...parts)
+	void appendParamName(const ParamName name, Parts ...parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		switch (mode) {
@@ -179,10 +179,10 @@ private:
 	 * No '?' is appended even if there are no parameters at all.
 	 */
 	template<ParamMode mode>
-	void appendParamName() {}
+	void appendParamName() noexcept {}
 
 	template<typename ParamValue, typename... Parts>
-	void appendParamValue(const ParamValue value, Parts ...parts)
+	void appendParamValue(const ParamValue value, Parts ...parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		m_buf.append('=');

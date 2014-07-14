@@ -20,10 +20,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 using namespace afc;
 
-void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n)
+void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n) noexcept
 {
+	if (n == 0) {
+		return;
+	}
+
 	register FastStringBuffer<char>::Tail p = m_buf.borrowTail();
-	for (std::size_t i = 0; i < n; ++i) {
+
+	std::size_t i = 0;
+	do {
 		const char c = str[i];
 
 		/* Casting to unsigned since bitwise operators are defined well for them
@@ -45,6 +51,7 @@ void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n)
 			std::initializer_list<char> encoded = {'%', high, low};
 			p = std::copy_n(encoded.begin(), encoded.size(), p);
 		}
-	}
+	} while (++i < n);
+
 	m_buf.returnTail(p);
 }
