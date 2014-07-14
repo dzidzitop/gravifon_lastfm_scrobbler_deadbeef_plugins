@@ -36,7 +36,7 @@ void UrlBuilderTest::testUrlWithNoQuery()
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
 {
 	UrlBuilder builder("http://hello/world");
-	builder.param("foo", "bar");
+	builder.params(UrlPart<>("foo"), UrlPart<>("bar"));
 
 	const string result(builder.c_str());
 
@@ -47,7 +47,7 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
 {
 	UrlBuilder builder("http://hello/world");
-	builder.param("fo o", "bar");
+	builder.params(UrlPart<>("fo o"), UrlPart<>("bar"));
 
 	const string result(builder.c_str());
 
@@ -58,7 +58,7 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
 void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
 {
 	UrlBuilder builder("http://hello/world");
-	builder.param("foo", "ba+r");
+	builder.params(UrlPart<>("foo"), UrlPart<>("ba+r"));
 
 	const string result(builder.c_str());
 
@@ -69,7 +69,9 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
 void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
 {
 	UrlBuilder builder("http://hello/world");
-	builder.param("foo", "ba+r").param("ba&^z", "==quu_x").param("foo", "123");
+	builder.params(UrlPart<>("foo"), UrlPart<>("ba+r"),
+			UrlPart<>("ba&^z"), UrlPart<>("==quu_x"),
+			UrlPart<>("foo"), UrlPart<>("123"));
 
 	const string result(builder.c_str());
 
