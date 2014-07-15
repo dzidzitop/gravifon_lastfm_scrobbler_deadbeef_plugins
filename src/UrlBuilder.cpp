@@ -14,9 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "UrlBuilder.hpp"
-#include <algorithm>
-#include <initializer_list>
-#include <afc/utils.h>
+#include <afc/number.h>
 
 using namespace afc;
 
@@ -46,10 +44,10 @@ void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n) noexcept
 		} else {
 			/* A non-unreserved character. Escaping it to percent-encoded representation.
 			 * The reserved characters are escaped, too, for simplicity. */
-			const char high = toHex((uc) >> 4);
-			const char low = toHex(uc & 0xf);
-			std::initializer_list<char> encoded = {'%', high, low};
-			p = std::copy_n(encoded.begin(), encoded.size(), p);
+			char c[3];
+			c[0] = '%';
+			octetToHex(uc, &c[1]);
+			p = std::copy_n(c, 3, p);
 		}
 	} while (++i < n);
 
