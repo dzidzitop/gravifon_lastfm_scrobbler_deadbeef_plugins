@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "LastfmScrobbler.hpp"
-#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <limits>
@@ -41,20 +40,20 @@ namespace
 	{
 		typedef decltype(currentUTCTimeSeconds()) TimestampType;
 		constexpr size_t maxTimestampSize = afc::maxPrintedSize<TimestampType, 10>();
-		char timestamp[maxTimestampSize];
-		char * const timestampEnd = printNumber<TimestampType, 10>(currentUTCTimeSeconds(), timestamp);
 
 		/* Auth token is generated as md5(md5(password) + timestamp),
 		 * where md5 is a lowercase hex-encoded ASCII MD5 hash and + is concatenation.
 		 */
 		constexpr size_t digestSize = 32; // Each octet is represented as two characters.
 		char tmp[digestSize + maxTimestampSize];
+		// md5(password). In addition, the timestamp is stored right after the end of this digest.
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
-		char *tmpEnd = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
-		tmpEnd = std::copy(timestamp, timestampEnd, tmpEnd);
-
+		char * const timestampStart = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
+		// md5(password) + timestamp
+		char * const timestampEnd = printNumber<TimestampType, 10>(currentUTCTimeSeconds(), timestampStart);
+		// Finally, generating authToken.
 		char authToken[digestSize];
-		md5String(reinterpret_cast<const unsigned char *>(tmp), tmpEnd - tmp, authToken);
+		md5String(reinterpret_cast<const unsigned char *>(tmp), timestampEnd - tmp, authToken);
 
 		// TODO set real client ID and version.
 		return UrlBuilder(scrobblerUrl,
@@ -66,7 +65,7 @@ namespace
 				/* Neither timestamp nor authToken need to be URL-encoded since they are
 				 * decimal and hex numbers, respectively.
 				 */
-				UrlPart<raw>("t"_s), UrlPart<raw>(timestamp, timestampEnd - timestamp),
+				UrlPart<raw>("t"_s), UrlPart<raw>(timestampStart, timestampEnd - timestampStart),
 				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
