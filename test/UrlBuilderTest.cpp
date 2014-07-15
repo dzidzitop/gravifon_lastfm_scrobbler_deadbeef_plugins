@@ -161,3 +161,114 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_MultipleParams()
 	CPPUNIT_ASSERT_EQUAL(string("abc=c%20e&f%2ahijk=&l+no=p%25%2ars&=tuvwxyz%21&abc=1234&abc=www222"), string(result));
 	CPPUNIT_ASSERT_EQUAL(size_t(66), builder.size());
 }
+
+void UrlBuilderTest::testCapacityComputation_QueryOnly_OrdinaryParams_NoEscaping()
+{
+	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
+	 * while the size of param parts is less than 127.
+	 */
+	UrlBuilder builder(queryOnly,
+			UrlPart<>(string(21, 'a')), UrlPart<>(string(10, 'b')),
+			UrlPart<>(string(6, 'c')), UrlPart<>(string(5, 'd')));
+
+	const string expectedResult(string(21, 'a') + "=" + string(10, 'b') + "&" + string(6, 'c') + "=" + string(5, 'd'));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(expectedResult, string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(45), builder.size());
+}
+
+void UrlBuilderTest::testCapacityComputation_QueryOnly_OrdinaryParams_AllEscaped()
+{
+	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
+	 * while the size of param parts is less than 127.
+	 */
+	UrlBuilder builder(queryOnly,
+			UrlPart<>(string(21, '+')), UrlPart<>(string(10, '$')),
+			UrlPart<>(string(6, '#')), UrlPart<>(string(5, '@')));
+
+	string expectedResult;
+	for (int i = 0; i < 21; ++i) {
+		expectedResult += "%2b";
+	}
+	expectedResult += '=';
+	for (int i = 0; i < 10; ++i) {
+		expectedResult += "%24";
+	}
+	expectedResult += '&';
+	for (int i = 0; i < 6; ++i) {
+		expectedResult += "%23";
+	}
+	expectedResult += '=';
+	for (int i = 0; i < 5; ++i) {
+		expectedResult += "%40";
+	}
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(expectedResult, string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(129), builder.size());
+}
+
+void UrlBuilderTest::testCapacityComputation_QueryOnly_RawParams()
+{
+	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
+	 * while the size of param parts is less than 127.
+	 */
+	UrlBuilder builder(queryOnly,
+			UrlPart<raw>(string(40, 'a')), UrlPart<raw>(string(40, 'b')),
+			UrlPart<raw>(string(20, 'c')), UrlPart<raw>(string(5, 'd')),
+			UrlPart<raw>(string(10, 'e')), UrlPart<raw>(string(10, 'f')));
+
+	const string expectedResult(string(40, 'a') + "=" + string(40, 'b') + "&" +
+			string(20, 'c') + "=" + string(5, 'd') + "&" + string(10, 'e') + "=" + string(10, 'f'));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(expectedResult, string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(130), builder.size());
+}
+
+void UrlBuilderTest::testCapacityComputation_UrlWithQuery()
+{
+	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
+	 * while the size of param parts is less than 127.
+	 */
+	UrlBuilder builder("abcde",
+			UrlPart<>(string(19, 'a')), UrlPart<>(string(10, 'b')),
+			UrlPart<>(string(6, 'c')), UrlPart<>(string(5, 'd')));
+
+	const string expectedResult(string("abcde") + "?" + string(19, 'a') + "=" + string(10, 'b') + "&" +
+			string(6, 'c') + "=" + string(5, 'd'));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(expectedResult, string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(49), builder.size());
+}
+
+void UrlBuilderTest::testCapacityComputation_ParamsAppended()
+{
+	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
+	 * while the size of param parts is less than 127.
+	 */
+	UrlBuilder builder(queryOnly,
+			UrlPart<raw>(string(40, 'a')), UrlPart<raw>(string(40, 'b')));
+	builder.params(
+			UrlPart<raw>(string(20, 'c')), UrlPart<raw>(string(5, 'd')),
+			UrlPart<raw>(string(10, 'e')), UrlPart<raw>(string(10, 'f')));
+
+	const string expectedResult(string(40, 'a') + "=" + string(40, 'b') + "&" +
+			string(20, 'c') + "=" + string(5, 'd') + "&" + string(10, 'e') + "=" + string(10, 'f'));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(expectedResult, string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(130), builder.size());
+}

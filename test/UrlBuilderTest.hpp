@@ -37,6 +37,12 @@ class UrlBuilderTest : public CppUnit::TestFixture
 	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_RawParamName);
 	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue);
 	CPPUNIT_TEST(testQueryOnly_ConstructorBuilding_MultipleParams);
+
+	CPPUNIT_TEST(testCapacityComputation_QueryOnly_OrdinaryParams_NoEscaping);
+	CPPUNIT_TEST(testCapacityComputation_QueryOnly_OrdinaryParams_AllEscaped);
+	CPPUNIT_TEST(testCapacityComputation_QueryOnly_RawParams);
+	CPPUNIT_TEST(testCapacityComputation_UrlWithQuery);
+	CPPUNIT_TEST(testCapacityComputation_ParamsAppended);
 	CPPUNIT_TEST_SUITE_END();
 public:
 	void testUrlWithNoQuery();
@@ -54,6 +60,12 @@ public:
 	void testQueryOnly_ConstructorBuilding_SingleParam_RawParamName();
 	void testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue();
 	void testQueryOnly_ConstructorBuilding_MultipleParams();
+
+	void testCapacityComputation_QueryOnly_OrdinaryParams_NoEscaping();
+	void testCapacityComputation_QueryOnly_OrdinaryParams_AllEscaped();
+	void testCapacityComputation_QueryOnly_RawParams();
+	void testCapacityComputation_UrlWithQuery();
+	void testCapacityComputation_ParamsAppended();
 };
 
 #endif /* URLBUILDERTEST_HPP_ */

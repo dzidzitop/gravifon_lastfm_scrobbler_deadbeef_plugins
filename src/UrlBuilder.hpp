@@ -40,7 +40,7 @@ class UrlPart
 {
 public:
 	explicit constexpr UrlPart(const char * const value) noexcept : UrlPart(value, std::strlen(value)) {}
-	explicit constexpr UrlPart(const char * const value, const std::size_t n) noexcept : m_value(value), m_size(n) {}
+	constexpr UrlPart(const char * const value, const std::size_t n) noexcept : m_value(value), m_size(n) {}
 	explicit constexpr UrlPart(const afc::ConstStringRef value) noexcept : UrlPart(value.value(), value.size()) {}
 	explicit constexpr UrlPart(const std::string &value) noexcept : UrlPart(value.data(), value.size()) {}
 
@@ -118,7 +118,9 @@ private:
 	template<typename Part, typename... Parts>
 	static constexpr std::size_t maxEncodedSize(const Part part, Parts ...parts) noexcept
 	{
-		return part.maxEncodedSize() + maxEncodedSize(parts...);
+		// TODO think of removing the redundant '?' from here for query-string-only cases.
+		// '?' or '&' or '=' is counted here, too.
+		return 1 + part.maxEncodedSize() + maxEncodedSize(parts...);
 	}
 
 	// Terminates the maxEncodedSize() template recusion.
