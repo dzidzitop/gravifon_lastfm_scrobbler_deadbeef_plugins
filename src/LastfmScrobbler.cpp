@@ -15,10 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "LastfmScrobbler.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <limits>
 #include "HttpClient.hpp"
 #include "UrlBuilder.hpp"
+#include <afc/number.h>
 #include <afc/StringRef.hpp>
 #include "logger.hpp"
 #include <afc/md5.hpp>
@@ -34,18 +37,37 @@ using StatusCode = HttpClient::StatusCode;
 
 namespace
 {
-	inline void buildAuthToken(const string &password, const string &timestamp, string &dest)
+	inline UrlBuilder buildAuthUrl(const string &scrobblerUrl, const string &username, const string &password)
 	{
+		typedef decltype(currentUTCTimeSeconds()) TimestampType;
+		constexpr size_t maxTimestampSize = afc::maxPrintedSize<TimestampType, 10>();
+		char timestamp[maxTimestampSize];
+		char * const timestampEnd = printNumber<TimestampType, 10>(currentUTCTimeSeconds(), timestamp);
+
 		/* Auth token is generated as md5(md5(password) + timestamp),
 		 * where md5 is a lowercase hex-encoded ASCII MD5 hash and + is concatenation.
 		 */
-		const size_t md5LengthOctets = 32; // Each octet is represented as two characters.
-		string tmp;
-		tmp.reserve(md5LengthOctets + timestamp.size());
+		constexpr size_t digestSize = 32; // Each octet is represented as two characters.
+		char tmp[digestSize + maxTimestampSize];
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
-		md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
-		tmp += timestamp;
-		md5String(reinterpret_cast<const unsigned char *>(tmp.c_str()), tmp.size(), dest);
+		char *tmpEnd = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
+		tmpEnd = std::copy(timestamp, timestampEnd, tmpEnd);
+
+		char authToken[digestSize];
+		md5String(reinterpret_cast<const unsigned char *>(tmp), tmpEnd - tmp, authToken);
+
+		// TODO set real client ID and version.
+		return UrlBuilder(scrobblerUrl,
+				UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
+				UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
+				UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
+				UrlPart<raw>("v"_s), UrlPart<raw>("1.0"_s),
+				UrlPart<raw>("u"_s), UrlPart<>(username),
+				/* Neither timestamp nor authToken need to be URL-encoded since they are
+				 * decimal and hex numbers, respectively.
+				 */
+				UrlPart<raw>("t"_s), UrlPart<raw>(timestamp, timestampEnd - timestamp),
+				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
 	inline void reportHttpClientError(const StatusCode result)
@@ -137,23 +159,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 
 	logDebug("[LastfmScrobbler] Authenticating the user...");
 
-	const string timestamp(to_string(currentUTCTimeSeconds()));
-	string authToken;
-
-	buildAuthToken(m_password, timestamp, authToken);
-
 	// TODO set real client ID and version.
-	UrlBuilder url(m_scrobblerUrl,
-			UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
-			UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
-			UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
-			UrlPart<raw>("v"_s), UrlPart<raw>("1.0"_s),
-			UrlPart<raw>("u"_s), UrlPart<>(m_username),
-			/* Neither timestamp nor authToken need to be URL-encoded since they are
-			 * decimal and hex numbers, respectively.
-			 */
-			UrlPart<raw>("t"_s), UrlPart<raw>(timestamp),
-			UrlPart<raw>("a"_s), UrlPart<raw>(authToken));
+	const UrlBuilder url = buildAuthUrl(m_scrobblerUrl, m_username, m_password);
 
 	StatusCode result;
 	HttpResponseEntity response;
