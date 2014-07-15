@@ -74,7 +74,7 @@ public:
 
 	template<typename... Parts>
 	UrlBuilder(const char * const urlBase, const std::size_t n, Parts... paramParts)
-			: m_buf(std::max(MIN_BUF_CAPACITY, n + maxEncodedSize(paramParts...))), m_hasParams(false)
+			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
 		m_buf.append(urlBase, n);
 		appendParams<urlFirst, Parts...>(paramParts...);
@@ -90,7 +90,7 @@ public:
 
 	template<typename... Parts>
 	UrlBuilder(QueryOnly, Parts... paramParts)
-			: m_buf(std::max(MIN_BUF_CAPACITY, maxEncodedSize(paramParts...))), m_hasParams(false)
+			: m_buf(std::max(minBufCapacity(), maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
 		appendParams<queryString, Parts...>(paramParts...);
 	}
@@ -189,7 +189,12 @@ private:
 	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
 	void appendParamPart(const UrlPart<raw> part) { m_buf.append(part.value(), part.size()); }
 
-	static const std::size_t MIN_BUF_CAPACITY;
+	/* Many short urls have length less than 64 characters. Setting this value
+	 * as the minimal capacity to minimise re-allocations.
+	 *
+	 * This function emulates normal inlinable constants.
+	 */
+	static constexpr std::size_t minBufCapacity() { return 64; };
 
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
