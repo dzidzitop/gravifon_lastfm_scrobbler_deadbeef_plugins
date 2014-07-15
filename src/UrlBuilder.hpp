@@ -74,12 +74,9 @@ public:
 			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(const char * const urlBase, const std::size_t n, Parts... paramParts) : m_buf(), m_hasParams(false)
+	UrlBuilder(const char * const urlBase, const std::size_t n, Parts... paramParts)
+			: m_buf(std::max(MIN_BUF_CAPACITY, n + maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
-		/* Many short urls have length less than 64 characters. Setting this value
-		 * as the minimal capacity to minimise re-allocations.
-		 */
-		m_buf.reserve(std::max(std::size_t(64), n + maxEncodedSize(paramParts...)));
 		m_buf.append(urlBase, n);
 		appendParams<urlFirst, Parts...>(paramParts...);
 	}
@@ -93,12 +90,9 @@ public:
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(QueryOnly, Parts... paramParts) : m_buf(), m_hasParams(false)
+	UrlBuilder(QueryOnly, Parts... paramParts)
+			: m_buf(std::max(MIN_BUF_CAPACITY, maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
-		/* Many short urls have length less than 64 characters. Setting this value
-		 * as the minimal capacity to minimise re-allocations.
-		 */
-		m_buf.reserve(std::max(std::size_t(64), maxEncodedSize(paramParts...)));
 		appendParams<queryString, Parts...>(paramParts...);
 	}
 
@@ -192,6 +186,11 @@ private:
 
 	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
 	void appendParamPart(const UrlPart<raw> part) { m_buf.append(part.value(), part.size()); }
+
+	/* Many short urls have length less than 64 characters. Setting this value
+	 * as the minimal capacity to minimise re-allocations.
+	 */
+	static const std::size_t MIN_BUF_CAPACITY = 64;
 
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
