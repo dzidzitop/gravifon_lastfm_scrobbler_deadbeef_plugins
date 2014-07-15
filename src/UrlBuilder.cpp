@@ -20,6 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 using namespace afc;
 
+/* Many short urls have length less than 64 characters. Setting this value
+ * as the minimal capacity to minimise re-allocations.
+ */
+const std::size_t UrlBuilder::MIN_BUF_CAPACITY = 64;
+
 void UrlBuilder::appendUrlEncoded(const char *str, const std::size_t n) noexcept
 {
 	if (n == 0) {

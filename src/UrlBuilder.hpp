@@ -66,9 +66,7 @@ class UrlBuilder
 {
 private:
 	UrlBuilder(const UrlBuilder &) = delete;
-	UrlBuilder(UrlBuilder &&) = delete;
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
-	UrlBuilder &operator=(UrlBuilder &&) = delete;
 public:
 	template<typename... Parts>
 	UrlBuilder(const char * const urlBase, Parts... paramParts)
@@ -97,7 +95,10 @@ public:
 		appendParams<queryString, Parts...>(paramParts...);
 	}
 
+	UrlBuilder(UrlBuilder &&) = default;
 	~UrlBuilder() = default;
+
+	UrlBuilder &operator=(UrlBuilder &&) = default;
 
 	template<typename... Parts>
 	inline void params(Parts... parts)
@@ -188,10 +189,7 @@ private:
 	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
 	void appendParamPart(const UrlPart<raw> part) { m_buf.append(part.value(), part.size()); }
 
-	/* Many short urls have length less than 64 characters. Setting this value
-	 * as the minimal capacity to minimise re-allocations.
-	 */
-	static const std::size_t MIN_BUF_CAPACITY = 64;
+	static const std::size_t MIN_BUF_CAPACITY;
 
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
