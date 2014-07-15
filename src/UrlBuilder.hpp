@@ -27,7 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 struct QueryOnly {} static const queryOnly;
 
-enum UrlPartType {
+enum UrlPartType
+{
 	// Characters are URL encoded.
 	ordinary,
 	// No characters are URL encoded.
