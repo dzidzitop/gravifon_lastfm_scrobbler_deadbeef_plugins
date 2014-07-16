@@ -306,9 +306,6 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
-	/* Adding tags one by one. DeaDBeeF returns them as
-	 * '\n'-separated values within a single string.
-	 */
 	string::iterator start, end;
 	Tokeniser<> t(responseBody, '\n');
 	t.next(start, end);
