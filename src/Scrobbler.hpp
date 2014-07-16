@@ -32,10 +32,28 @@ class Track
 {
 public:
 	void setTitle(const std::string &trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); m_artistSet = true; }
-	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); m_albumArtistSet = true; }
+	std::string &getTitle() noexcept { assert(m_titleSet); return m_title; }
+	const std::string &getTitle() const noexcept { assert(m_titleSet); return m_title; }
+	bool hasTitle() const noexcept { return m_titleSet; }
+
+	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); }
+	std::vector<std::string> &getArtists() noexcept { return m_artists; }
+	const std::vector<std::string> &getArtists() const noexcept { return m_artists; }
+	bool hasArtist() const noexcept { return !m_artists.empty(); }
+
+	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); }
+	std::vector<std::string> &getAlbumArtists() noexcept { return m_albumArtists; }
+	const std::vector<std::string> &getAlbumArtists() const noexcept { return m_albumArtists; }
+	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
+
 	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
+	std::string &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
+	const std::string &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
+	bool hasAlbumTitle() const noexcept { return m_albumSet; }
+
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
+	long getDurationMillis() noexcept { assert(m_durationSet); return m_duration; }
+	bool hasDurationMillis() const noexcept { return m_durationSet; }
 
 	// Appends this ScrobbleInfo in the JSON format to a given string.
 	void appendAsJsonTo(std::string &str) const;
@@ -47,8 +65,6 @@ private:
 	// Track duration in milliseconds.
 	long m_duration;
 	bool m_titleSet = false;
-	bool m_artistSet = false;
-	bool m_albumArtistSet = false;
 	bool m_albumSet = false;
 	bool m_durationSet = false;
 };

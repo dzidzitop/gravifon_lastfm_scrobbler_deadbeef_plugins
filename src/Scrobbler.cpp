@@ -596,7 +596,7 @@ void Track::appendAsJsonTo(string &str) const
 		str.append(u8R"("album":{"title":")");
 		writeJsonString(m_album, str);
 		str.append(u8"\"");
-		if (m_albumArtistSet) {
+		if (hasAlbumArtist()) {
 			str.append(u8R"(,"artists":[)");
 			for (const string &artist : m_albumArtists) {
 				str.append(u8R"({"name":")");
