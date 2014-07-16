@@ -71,10 +71,11 @@ namespace
 	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
 	{
 		assert(index < 50); // max amount of scrobbles per request.
-		assert(scrobbleInfo.hasTitle());
-		assert(scrobbleInfo.hasArtist());
 
 		const Track &track = scrobbleInfo.track;
+		assert(track.hasTitle());
+		assert(track.hasArtist());
+
 		// TODO optimise parameter name/value creation. They can be allocated statically.
 		const string idx(to_string(index));
 		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
@@ -95,7 +96,7 @@ namespace
 				// The length of the track in seconds. Required for 'Chosen by the user'.
 				UrlPart<raw>("l[" + idx + "]"), UrlPart<raw>(trackLength),
 				// The album title, or an empty string if not known.
-				UrlPart<raw>("b[" + idx + "]"), UrlPart<>(track.hasAlbumTitle() ? string() : track.getAlbumTitle()),
+				UrlPart<raw>("b[" + idx + "]"), UrlPart<>(track.hasAlbumTitle() ? track.getAlbumTitle() : string()),
 				// TODO Support track numbers.
 				// The position of the track on the album, or an empty string if not known.
 				UrlPart<raw>("n[" + idx + "]"), UrlPart<>(""_s),
@@ -167,19 +168,87 @@ std::size_t LastfmScrobbler::doScrobbling()
 
 	if (m_scrobblerUrl.empty()) {
 		/* There is no sense to try to send a request because the URL to the scrobbling
-		 * service (e.g. Gravifon API) is undefined. The scrobble is added to the list of
-		 * pending scrobbles (see above) to be submitted (among other scrobbles) when
-		 * the URL is configured to point to a scrobbling server.
+		 * service is undefined. The scrobble is added to the list of pending scrobbles
+		 * (see above) to be submitted (among other scrobbles) when the URL is configured
+		 * to point to a scrobbling server.
 		 */
 		fputs("URL to the scrobbling server is undefined.", stderr);
 		return 0;
 	}
 
-	if (ensureAuthenticated()) {
+	if (!ensureAuthenticated()) {
 		return 0;
 	}
 
-	// TODO implement scrobbling.
+	UrlBuilder builder(queryOnly,
+			// TODO URL-encode session ID right after it is obtained during the authentication process.
+			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId));
+
+	// Adding up to 50 scrobbles to the request.
+	// 50 is the max number of scrobbles in a single request.
+	unsigned submittedCount = 0;
+	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
+			submittedCount < 50 && it != end; ++submittedCount, ++it) {
+		appendScrobbleInfo(builder, *it, submittedCount);
+	}
+
+	HttpEntity request;
+	request.body.assign(builder.data(), builder.size());
+
+	// Making a copy of shared data to pass outside the critical section.
+	const string submissionUrlCopy(m_submissionUrl);
+
+#ifndef NDEBUG
+	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
+#endif
+
+	StatusCode result;
+	HttpResponseEntity response;
+
+	/* Each HTTP call is performed outside the critical section so that other threads can:
+	 * - add scrobbles without waiting for this call to finish
+	 * - stop this Scrobbler by invoking Scrobbler::stop(). In this case this HTTP call
+	 * is aborted and the scrobbles involved are left in the list of pending scrobbles
+	 * so that they can be stored to the data file and be completed later.
+	 *
+	 * It is safe to unlock the mutex because:
+	 * - no shared data is accessed outside the critical section
+	 * - other threads cannot delete scrobbles in the meantime (because the scrobbling thread
+	 * assumes that the scrobbles being submitted are the first {submittedCount} elements in
+	 * the list of pending scrobbles.
+	 *
+	 * In addition, it is safe to use m_finishScrobblingFlag outside the critical section
+	 * because it is atomic.
+	 */
+	{ UnlockGuard unlockGuard(m_mutex);
+		logDebug(string("[LastfmScrobbler] Submission URL: ") + submissionUrlCopy);
+		logDebug(string("[LastfmScrobbler] Submission request body: ") + request.body);
+
+		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
+		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,
+				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
+	}
+
+	/* Ensure that no scrobbles are deleted by other threads during the HTTP call.
+	 * Only the scrobbling thread and ::stop() can do this, and ::stop() must wait for
+	 * the scrobbling thread to finish in order to do this.
+	 */
+	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
+
+	if (result == StatusCode::ABORTED_BY_CLIENT) {
+		logDebug("[LastfmScrobbler] An HTTP call is aborted.");
+		return 0;
+	}
+	if (result != StatusCode::SUCCESS) {
+		reportHttpClientError(result);
+		return 0;
+	}
+
+	logDebug(string("[LastfmScrobbler] Response status code: ") + to_string(response.statusCode));
+
+	// TODO implement response processing.
+	logDebug(response.body);
+
 	return 0;
 }
 
@@ -254,6 +323,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
 		}
+		t.next(); // Ignored.
+
 		if (!t.hasNext()) { // Submission URL.
 			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
