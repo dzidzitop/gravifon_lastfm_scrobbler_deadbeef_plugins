@@ -38,8 +38,7 @@ namespace
 {
 	inline UrlBuilder buildAuthUrl(const string &scrobblerUrl, const string &username, const string &password)
 	{
-		typedef decltype(currentUTCTimeSeconds()) TimestampType;
-		constexpr size_t maxTimestampSize = afc::maxPrintedSize<TimestampType, 10>();
+		constexpr size_t maxTimestampSize = afc::maxPrintedSize<long, 10>();
 
 		/* Auth token is generated as md5(md5(password) + timestamp),
 		 * where md5 is a lowercase hex-encoded ASCII MD5 hash and + is concatenation.
@@ -50,7 +49,7 @@ namespace
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
 		char * const timestampStart = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
 		// md5(password) + timestamp
-		char * const timestampEnd = printNumber<TimestampType, 10>(currentUTCTimeSeconds(), timestampStart);
+		char * const timestampEnd = printNumber<long, 10>(now().millis() / 1000, timestampStart);
 		// Finally, generating authToken.
 		char authToken[digestSize];
 		md5String(reinterpret_cast<const unsigned char *>(tmp), timestampEnd - tmp, authToken);
