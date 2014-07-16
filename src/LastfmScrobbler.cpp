@@ -323,7 +323,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 			return false;
 		}
-		t.next(); // Ignored.
+		t.skip();
 
 		if (!t.hasNext()) { // Submission URL.
 			fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
