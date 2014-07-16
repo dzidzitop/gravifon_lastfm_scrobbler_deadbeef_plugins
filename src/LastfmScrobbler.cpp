@@ -68,6 +68,42 @@ namespace
 				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
+	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
+	{
+		assert(index < 50); // max amount of scrobbles per request.
+		assert(scrobbleInfo.hasTitle());
+		assert(scrobbleInfo.hasArtist());
+
+		const Track &track = scrobbleInfo.track;
+		// TODO optimise parameter name/value creation. They can be allocated statically.
+		const string idx(to_string(index));
+		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
+		const string trackLength(to_string(track.getDurationMillis() / 1000));
+
+		builder.params(
+				// The artist name. Required.
+				UrlPart<raw>("a[" + idx + "]"), UrlPart<>(track.getArtists()[0]),
+				// The track title. Required.
+				UrlPart<raw>("t[" + idx + "]"), UrlPart<>(track.getTitle()),
+				// The time the track started playing, in UNIX timestamp format. Required.
+				UrlPart<raw>("i[" + idx + "]"), UrlPart<raw>(scrobbleStartTs),
+				// The source of the track. Required. 'Chosen by the user' in all cases.
+				UrlPart<raw>("o[" + idx + "]"), UrlPart<raw>("P"_s),
+				// TODO Support track ratings.
+				// A single character denoting the rating of the track. Empty, since not applicable.
+				UrlPart<raw>("r[" + idx + "]"), UrlPart<raw>(""_s),
+				// The length of the track in seconds. Required for 'Chosen by the user'.
+				UrlPart<raw>("l[" + idx + "]"), UrlPart<raw>(trackLength),
+				// The album title, or an empty string if not known.
+				UrlPart<raw>("b[" + idx + "]"), UrlPart<>(track.hasAlbumTitle() ? string() : track.getAlbumTitle()),
+				// TODO Support track numbers.
+				// The position of the track on the album, or an empty string if not known.
+				UrlPart<raw>("n[" + idx + "]"), UrlPart<>(""_s),
+				// TODO Support MusicBrainz Track IDs.
+				// The MusicBrainz Track ID, or an empty string if not known.
+				UrlPart<raw>("m[" + idx + "]"), UrlPart<>(""_s));
+	}
+
 	inline void reportHttpClientError(const StatusCode result)
 	{
 		assert(result != StatusCode::SUCCESS);

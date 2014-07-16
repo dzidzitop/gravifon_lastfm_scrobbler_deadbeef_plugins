@@ -52,7 +52,7 @@ public:
 	bool hasAlbumTitle() const noexcept { return m_albumSet; }
 
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
-	long getDurationMillis() noexcept { assert(m_durationSet); return m_duration; }
+	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
 
 	// Appends this ScrobbleInfo in the JSON format to a given string.
