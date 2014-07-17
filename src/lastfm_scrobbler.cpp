@@ -76,24 +76,11 @@ namespace
 		const char * const lastfmUrlInUtf8 = deadbeef->conf_get_str_fast(
 				"lastfmScrobbler.lastfmUrl", u8"http://post.audioscrobbler.com");
 
-		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
+		/* It is assumed that Last.fm expected username and password in UTF-8. Since strings
+		 * from the DeaDBeeF configuration are already in UTF-8, no conversion is needed.
+		 */
 		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("lastfmScrobbler.username", "");
-		string usernameInAscii;
-		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
-			logError("[lastfm_scrobbler] Non-ASCII characters are present in the username.");
-			lastfmClient.invalidateConfiguration();
-			// Scrobbles are still to be recorded though not submitted.
-			return true;
-		}
-
 		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("lastfmScrobbler.password", "");
-		string passwordInAscii;
-		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
-			logError("[lastfm_scrobbler] Non-ASCII characters are present in the password.");
-			lastfmClient.invalidateConfiguration();
-			// Scrobbles are still to be recorded though not submitted.
-			return true;
-		}
 
 		double threshold = deadbeef->conf_get_float("lastfmScrobbler.threshold", 0.f);
 		if (threshold < 0.d || threshold > 100.d) {
@@ -103,7 +90,7 @@ namespace
 
 		// TODO do not re-configure if settings are the same.
 		lastfmClient.configure(convertFromUtf8(lastfmUrlInUtf8, systemCharset().c_str()).c_str(),
-				usernameInAscii.c_str(), passwordInAscii.c_str());
+				usernameInUtf8, passwordInUtf8);
 
 		return true;
 	}
