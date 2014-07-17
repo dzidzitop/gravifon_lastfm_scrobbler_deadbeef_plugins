@@ -69,6 +69,46 @@ namespace
 				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
+	class ScrobbleParamName
+	{
+	public:
+		ScrobbleParamName(const unsigned char index) : m_step(0)
+		{
+			char idx[2];
+			printNumber<unsigned char, 10>(index, idx);
+
+			m_value[1] = '[';
+			m_value[2] = idx[0];
+			if (index < 10) {
+				m_value[3] = ']';
+				m_size = 4;
+			} else {
+				m_value[3] = idx[1];
+				m_value[4] = ']';
+				m_size = 5;
+			}
+		}
+
+		UrlPartType type() const noexcept { return raw; }
+		std::size_t size() const noexcept { return m_size; }
+		std::size_t maxEncodedSize() const noexcept { return 5; }
+
+		const char *value() noexcept
+		{
+			assert(m_step < 9);
+			m_value[0] = namePrefixes[m_step++];
+			return m_value;
+		};
+	private:
+		static const char namePrefixes[9];
+
+		mutable std::size_t m_step;
+		std::size_t m_size;
+		mutable char m_value[5];
+	};
+
+	const char ScrobbleParamName::namePrefixes[9] = {'a', 't', 'i', 'o', 'r', 'l', 'b', 'n', 'm'};
+
 	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
 	{
 		assert(index < 50); // max amount of scrobbles per request.
@@ -82,28 +122,30 @@ namespace
 		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
 		const string trackLength(to_string(track.getDurationMillis() / 1000));
 
+		ScrobbleParamName scrobbleParamName(index);
+
 		builder.params(
 				// The artist name. Required.
-				UrlPart<raw>("a[" + idx + "]"), UrlPart<>(track.getArtists()[0]),
+				scrobbleParamName, UrlPart<>(track.getArtists()[0]),
 				// The track title. Required.
-				UrlPart<raw>("t[" + idx + "]"), UrlPart<>(track.getTitle()),
+				scrobbleParamName, UrlPart<>(track.getTitle()),
 				// The time the track started playing, in UNIX timestamp format. Required.
-				UrlPart<raw>("i[" + idx + "]"), UrlPart<raw>(scrobbleStartTs),
+				scrobbleParamName, UrlPart<raw>(scrobbleStartTs),
 				// The source of the track. Required. 'Chosen by the user' in all cases.
-				UrlPart<raw>("o[" + idx + "]"), UrlPart<raw>("P"_s),
+				scrobbleParamName, UrlPart<raw>("P"_s),
 				// TODO Support track ratings.
 				// A single character denoting the rating of the track. Empty, since not applicable.
-				UrlPart<raw>("r[" + idx + "]"), UrlPart<raw>(""_s),
+				scrobbleParamName, UrlPart<raw>(""_s),
 				// The length of the track in seconds. Required for 'Chosen by the user'.
-				UrlPart<raw>("l[" + idx + "]"), UrlPart<raw>(trackLength),
+				scrobbleParamName, UrlPart<raw>(trackLength),
 				// The album title, or an empty string if not known.
-				UrlPart<raw>("b[" + idx + "]"), UrlPart<>(track.hasAlbumTitle() ? track.getAlbumTitle() : string()),
+				scrobbleParamName, UrlPart<>(track.hasAlbumTitle() ? track.getAlbumTitle() : string()),
 				// TODO Support track numbers.
 				// The position of the track on the album, or an empty string if not known.
-				UrlPart<raw>("n[" + idx + "]"), UrlPart<>(""_s),
+				scrobbleParamName, UrlPart<>(""_s),
 				// TODO Support MusicBrainz Track IDs.
 				// The MusicBrainz Track ID, or an empty string if not known.
-				UrlPart<raw>("m[" + idx + "]"), UrlPart<>(""_s));
+				scrobbleParamName, UrlPart<>(""_s));
 	}
 
 	inline void reportHttpClientError(const StatusCode result)
