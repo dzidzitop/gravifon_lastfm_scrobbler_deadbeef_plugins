@@ -69,11 +69,11 @@ private:
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
 public:
 	template<typename... Parts>
-	UrlBuilder(const char * const urlBase, Parts... paramParts)
+	UrlBuilder(const char * const urlBase, Parts&&... paramParts)
 			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(const char * const urlBase, const std::size_t n, Parts... paramParts)
+	UrlBuilder(const char * const urlBase, const std::size_t n, Parts&&... paramParts)
 			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
 		m_buf.append(urlBase, n);
@@ -81,15 +81,15 @@ public:
 	}
 
 	template<typename... Parts>
-	UrlBuilder(const afc::ConstStringRef urlBase, Parts... paramParts)
+	UrlBuilder(const afc::ConstStringRef urlBase, Parts&&... paramParts)
 			: UrlBuilder(urlBase.value(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(const std::string &urlBase, Parts... paramParts)
+	UrlBuilder(const std::string &urlBase, Parts&&... paramParts)
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts>
-	UrlBuilder(QueryOnly, Parts... paramParts)
+	UrlBuilder(QueryOnly, Parts&&... paramParts)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
 		appendParams<queryString, Parts...>(paramParts...);
@@ -101,7 +101,7 @@ public:
 	UrlBuilder &operator=(UrlBuilder &&) = default;
 
 	template<typename... Parts>
-	inline void params(Parts... parts)
+	inline void params(Parts&&... parts)
 	{
 		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
