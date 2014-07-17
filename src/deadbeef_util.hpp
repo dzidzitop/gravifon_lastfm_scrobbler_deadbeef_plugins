@@ -120,7 +120,9 @@ std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const tr
 	scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 	scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 	Track &trackInfo = scrobbleInfo->track;
+	asm("nop");
 	trackInfo.setTitle(title);
+	asm("nop");
 	if (album != nullptr) {
 		trackInfo.setAlbumTitle(album);
 	}

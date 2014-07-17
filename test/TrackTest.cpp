@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 CPPUNIT_TEST_SUITE_REGISTRATION(TrackTest);
 
-#include <Scrobbler.hpp>
+#include <ScrobblerInfo.hpp>
 
 using namespace std;
 
