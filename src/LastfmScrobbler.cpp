@@ -71,19 +71,24 @@ namespace
 
 	class ScrobbleParamName
 	{
+		// The same instance must be used.
+		ScrobbleParamName(const ScrobbleParamName &) = delete;
+		ScrobbleParamName(ScrobbleParamName &&) = delete;
 	public:
 		ScrobbleParamName(const unsigned char index) : m_step(0)
 		{
-			char idx[2];
-			printNumber<unsigned char, 10>(index, idx);
+			assert(index < 100);
 
 			m_value[1] = '[';
-			m_value[2] = idx[0];
 			if (index < 10) {
+				m_value[2] = digitToChar(index);
 				m_value[3] = ']';
 				m_size = 4;
 			} else {
-				m_value[3] = idx[1];
+				const unsigned char highDigit = index / 10;
+				const unsigned char lowDigit = index - highDigit;
+				m_value[2] = digitToChar(highDigit);
+				m_value[3] = digitToChar(lowDigit);
 				m_value[4] = ']';
 				m_size = 5;
 			}
@@ -91,11 +96,11 @@ namespace
 
 		UrlPartType type() const noexcept { return raw; }
 		std::size_t size() const noexcept { return m_size; }
-		std::size_t maxEncodedSize() const noexcept { return 5; }
+		std::size_t maxEncodedSize() const noexcept { return sizeof(m_value); }
 
 		const char *value() noexcept
 		{
-			assert(m_step < 9);
+			assert(m_step < sizeof(namePrefixes));
 			m_value[0] = namePrefixes[m_step++];
 			return m_value;
 		};
@@ -117,8 +122,7 @@ namespace
 		assert(track.hasTitle());
 		assert(track.hasArtist());
 
-		// TODO optimise parameter name/value creation. They can be allocated statically.
-		const string idx(to_string(index));
+		// TODO optimise parameter value creation. They can be allocated statically.
 		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
 		const string trackLength(to_string(track.getDurationMillis() / 1000));
 
