@@ -110,7 +110,7 @@ void GravifonScrobbler::configure(const char * const serverUrl, const string &us
 		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
 		m_scrobblerUrl = move(tmpUrl);
 		m_authHeader = move(tmpAuthHeader);
-		m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
+		m_scrobblesToWait = minScrobblesToWait();
 	}
 
 	m_configured = true;

@@ -150,7 +150,7 @@ void LastfmScrobbler::configure(const char * const serverUrl, const string &user
 
 	if (reconfigured) {
 		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
-		m_scrobblesToWait = MIN_SCROBBLES_TO_WAIT;
+		m_scrobblesToWait = minScrobblesToWait();
 		m_authenticated = false;
 	}
 

@@ -18,12 +18,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "Scrobbler.hpp"
 #include <cstddef>
-#include <string>
+#include <deque>
 #include <mutex>
+#include <string>
 #include <utility>
 #include <afc/ensure_ascii.hpp>
 
-class LastfmScrobbler : public Scrobbler
+/* For Last.fm submission API v1.2.1 the scrobbles submitted are either all accepted or
+ * all rejected, so they are removed all at once strictly from the front of the queue.
+ * In this case deque is the best choice to store pending scrobbles in memory.
+ */
+class LastfmScrobbler : public Scrobbler<std::deque<ScrobbleInfo>>
 {
 public:
 	LastfmScrobbler() : Scrobbler(), m_scrobblerUrl(), m_username(), m_password(), m_dataFilePath(),

@@ -18,11 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "Scrobbler.hpp"
 #include <cstddef>
-#include <string>
+#include <list>
 #include <mutex>
+#include <string>
 #include <utility>
 
-class GravifonScrobbler : public Scrobbler
+// TODO think of choosing a better in-memory container for pending scrobbles (issue #16).
+class GravifonScrobbler : public Scrobbler<std::list<ScrobbleInfo>>
 {
 public:
 	GravifonScrobbler() : Scrobbler(), m_scrobblerUrl(), m_authHeader(), m_dataFilePath()
