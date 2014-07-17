@@ -180,16 +180,22 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
+	// 50 is the max number of scrobbles that can be submitted within a single request.
+	constexpr unsigned maxScrobblesPerRequest = 50;
+
+	// Adding up to maxScrobblesPerRequest scrobbles to the request.
 	UrlBuilder builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId));
 
-	// Adding up to 50 scrobbles to the request.
-	// 50 is the max number of scrobbles in a single request.
+	/* Points to the position after the end of the chunk of scrobbles submitted and is used
+	 * to remove these scrobbles from the queue if they are submitted successfully.
+	 */
+	auto chunkEnd = m_pendingScrobbles.begin();
 	unsigned submittedCount = 0;
-	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
-			submittedCount < 50 && it != end; ++submittedCount, ++it) {
-		appendScrobbleInfo(builder, *it, submittedCount);
+	for (auto end = m_pendingScrobbles.end(); chunkEnd != end && submittedCount < maxScrobblesPerRequest;
+			++chunkEnd, ++submittedCount) {
+		appendScrobbleInfo(builder, *chunkEnd, submittedCount);
 	}
 
 	HttpEntity request;
@@ -244,10 +250,33 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug(string("[LastfmScrobbler] Response status code: ") + to_string(response.statusCode));
+	const string &responseBody = response.body;
 
-	// TODO implement response processing.
-	logDebug(response.body);
+	logDebug(string("[LastfmScrobbler] Submission response status code: ") + to_string(response.statusCode));
+	logDebug(string("[LastfmScrobbler] Submission response body: ") + responseBody);
+
+	if (response.statusCode != 200) {
+		fputs("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm.", stderr);
+		return false;
+	}
+
+	const std::size_t end = responseBody.find('\n');
+	if (end == string::npos) {
+		fprintf(stderr, "[LastfmScrobbler] Invalid response body (missing line feed): '%s'.\n", responseBody.c_str());
+		return false;
+	}
+	if (end == 2 && responseBody[0] == 'O' && responseBody[1] == 'K') {
+		logDebug("[LastfmScrobbler] The scrobbles are submitted successfully.");
+
+		// TODO use deque instead of list.
+		m_pendingScrobbles.erase(m_pendingScrobbles.begin(), chunkEnd);
+		return submittedCount;
+	} else {
+		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
+		fprintf(stderr, "[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '%s'.\n",
+				string(0, end).c_str());
+		return 0;
+	}
 
 	return 0;
 }
@@ -333,7 +362,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return true;
 	} else {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason code: '%s'.\n",
+		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
 				string(start, end).c_str());
 		return false;
 	}
