@@ -136,18 +136,13 @@ std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const tr
 	return scrobbleInfo;
 }
 
-inline bool utf8ToAscii(const char * const src, std::string &dest)
+inline bool isAscii(const char * const str, const std::size_t n)
 {
-	const char *ptr = src;
-	for (;;) {
-		const unsigned char c = *ptr++;
+	for (std::size_t i = 0; i < n; ++i) {
+		const unsigned char c = static_cast<unsigned char>(str[i]);
 		if (c >= 128) {
 			return false;
 		}
-		if (c == 0) {
-			return true;
-		}
-		dest.push_back(c);
 	}
 }
 

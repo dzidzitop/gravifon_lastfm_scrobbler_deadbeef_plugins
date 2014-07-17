@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <deadbeef.h>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include "Scrobbler.hpp"
 #include "ScrobblerInfo.hpp"
@@ -76,19 +77,22 @@ namespace
 		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 
-		// Only ASCII subset of ISO-8859-1 is valid to be used in username and password.
-		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
-		string usernameInAscii;
-		if (!utf8ToAscii(usernameInUtf8, usernameInAscii)) {
+		/* Non-ASCII characters in username and password are definitely disallowed by Gravifon.
+		 * UTF-8 strings are returned from the configuration. To avoid conversion, just checking
+		 * that the username and password are from the ASCII subset.
+		 */
+		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
+		const std::size_t usernameSize = std::strlen(username);
+		if (!isAscii(username, usernameSize)) {
 			logError("[gravifon_scrobbler] Non-ASCII characters are present in the username.");
 			gravifonClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
 		}
 
-		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
-		string passwordInAscii;
-		if (!utf8ToAscii(passwordInUtf8, passwordInAscii)) {
+		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
+		const std::size_t passwordSize = std::strlen(password);
+		if (!isAscii(password, passwordSize)) {
 			logError("[gravifon_scrobbler] Non-ASCII characters are present in the password.");
 			gravifonClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
@@ -103,7 +107,7 @@ namespace
 
 		// TODO do not re-configure if settings are the same.
 		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
-				usernameInAscii.c_str(), passwordInAscii.c_str());
+				username, usernameSize, password, passwordSize);
 
 		return true;
 	}

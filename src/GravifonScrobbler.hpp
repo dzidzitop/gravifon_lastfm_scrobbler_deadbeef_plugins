@@ -41,8 +41,13 @@ public:
 		std::lock_guard<std::mutex> lock(m_mutex);
 	}
 
-	// username and password are to be in ISO-8859-1; serverUrl is to be in the system encoding.
-	void configure(const char *serverUrl, const std::string &username, const std::string &password);
+	/* - serverUrl is to be in the system encoding;
+	 * - username should conform to https://gist.github.com/bassstorm/bae655c72a1449f7e6ab
+	 * - password should conform to https://gist.github.com/bassstorm/a53fa95806650648fdda
+	 * - both username and password are expected to be in ISO-8859-1.
+	 */
+	void configure(const char *serverUrl, const char *username, std::size_t usernameSize,
+			const char *password, std::size_t passwordSize);
 
 	void setDataFilePath(const std::string &dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);

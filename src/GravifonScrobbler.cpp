@@ -23,6 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
+#include <afc/FastStringBuffer.hpp>
+#include <afc/ensure_ascii.hpp>
 #include <afc/utils.h>
 
 using namespace std;
@@ -89,7 +91,9 @@ void GravifonScrobbler::stopExtra()
 	m_authHeader.clear();
 }
 
-void GravifonScrobbler::configure(const char * const serverUrl, const string &username, const string &password)
+void GravifonScrobbler::configure(const char * const serverUrl,
+		const char * const username, const std::size_t usernameSize,
+		const char * const password, const std::size_t passwordSize)
 { lock_guard<mutex> lock(m_mutex);
 	assert(serverUrl != nullptr);
 
@@ -104,7 +108,14 @@ void GravifonScrobbler::configure(const char * const serverUrl, const string &us
 	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
 	 */
-	tmpAuthHeader += encodeBase64(username + u8":"[0] + password);
+	// TODO replace with FastStringBuffer.
+	string token;
+	token.reserve(usernameSize + passwordSize + 1);
+	token.append(username, usernameSize);
+	token += ':';
+	token.append(password, passwordSize);
+
+	tmpAuthHeader += encodeBase64(token);
 
 	if (m_scrobblerUrl != tmpUrl || m_authHeader != tmpAuthHeader) {
 		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
