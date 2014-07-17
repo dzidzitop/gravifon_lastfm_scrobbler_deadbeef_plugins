@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <cassert>
 #include <string>
+#include <utility>
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
 #include <afc/StringRef.hpp>
@@ -35,7 +36,7 @@ enum UrlPartType
 	raw
 };
 
-template<UrlPartType type = ordinary>
+template<UrlPartType partType = ordinary>
 class UrlPart
 {
 public:
@@ -44,6 +45,7 @@ public:
 	explicit constexpr UrlPart(const afc::ConstStringRef value) noexcept : UrlPart(value.value(), value.size()) {}
 	explicit constexpr UrlPart(const std::string &value) noexcept : UrlPart(value.data(), value.size()) {}
 
+	constexpr UrlPartType type() const noexcept { return partType; }
 	constexpr const char *value() const noexcept { return m_value; };
 	constexpr std::size_t size() const noexcept { return m_size; }
 	constexpr std::size_t maxEncodedSize() const noexcept;
@@ -92,7 +94,7 @@ public:
 	UrlBuilder(QueryOnly, Parts&&... paramParts)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize(paramParts...))), m_hasParams(false)
 	{
-		appendParams<queryString, Parts...>(paramParts...);
+		appendParams<queryString, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
 	UrlBuilder(UrlBuilder &&) = default;
@@ -106,7 +108,7 @@ public:
 		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
-		appendParams<urlUnknown, Parts...>(parts...);
+		appendParams<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
 	}
 
 	const char *data() const noexcept { return m_buf.data(); }
@@ -116,7 +118,7 @@ private:
 	void appendUrlEncoded(const char *str, const std::size_t n) noexcept;
 
 	template<typename Part, typename... Parts>
-	static constexpr std::size_t maxEncodedSize(const Part part, Parts ...parts) noexcept
+	static constexpr std::size_t maxEncodedSize(Part &&part, Parts&&... parts) noexcept
 	{
 		// TODO think of removing the redundant '?' from here for query-string-only cases.
 		// '?' or '&' or '=' is counted here, too.
@@ -139,15 +141,15 @@ private:
 	};
 
 	template<ParamMode mode, typename... Parts>
-	void appendParams(Parts... parts) noexcept
+	void appendParams(Parts&&... parts) noexcept
 	{
 		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
 
-		appendParamName<mode, Parts...>(parts...);
+		appendParamName<mode, Parts...>(std::forward<Parts>(parts)...);
 	}
 
 	template<ParamMode mode, typename ParamName, typename... Parts>
-	void appendParamName(const ParamName name, Parts ...parts) noexcept
+	void appendParamName(ParamName &&name, Parts&&... parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		switch (mode) {
@@ -180,7 +182,7 @@ private:
 	void appendParamName() noexcept {}
 
 	template<typename ParamValue, typename... Parts>
-	void appendParamValue(const ParamValue value, Parts ...parts) noexcept
+	void appendParamValue(ParamValue &&value, Parts&&... parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		m_buf.append('=');
@@ -188,8 +190,15 @@ private:
 		appendParamName<notFirst, Parts...>(parts...);
 	}
 
-	void appendParamPart(const UrlPart<ordinary> part) { appendUrlEncoded(part.value(), part.size()); }
-	void appendParamPart(const UrlPart<raw> part) { m_buf.append(part.value(), part.size()); }
+	template<typename Part>
+	void appendParamPart(Part &&part) noexcept
+	{
+		if (part.type() == raw) {
+			m_buf.append(part.value(), part.size());
+		} else {
+			appendUrlEncoded(part.value(), part.size());
+		}
+	}
 
 	/* Many short urls have length less than 64 characters. Setting this value
 	 * as the minimal capacity to minimise re-allocations.
