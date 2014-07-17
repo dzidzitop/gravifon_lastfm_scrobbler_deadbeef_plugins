@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <mutex>
 #include <utility>
+#include <afc/ensure_ascii.hpp>
 
 class LastfmScrobbler : public Scrobbler
 {
@@ -58,8 +59,9 @@ protected:
 
 	virtual void stopExtra() override;
 private:
-	// Must be invoked within the critical section upon Scrobbler::m_mutex.
-	inline bool ensureAuthenticated();
+	// All these functions must be invoked within the critical section upon Scrobbler::m_mutex.
+	bool ensureAuthenticated();
+	void deauthenticate() noexcept;
 
 	std::string m_scrobblerUrl;
 	std::string m_username;

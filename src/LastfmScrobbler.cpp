@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "LastfmScrobbler.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <limits>
@@ -250,6 +251,10 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
+	/* No conversion to the system encoding is used as the body is assumed to be in
+	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
+	 * messages that are safe to be used without conversion with hope they are in ASCII, too.
+	 */
 	const string &responseBody = response.body;
 
 	logDebug(string("[LastfmScrobbler] Submission response status code: ") + to_string(response.statusCode));
@@ -268,10 +273,20 @@ std::size_t LastfmScrobbler::doScrobbling()
 			m_pendingScrobbles.erase(m_pendingScrobbles.begin(), chunkEnd);
 			return submittedCount;
 		} else {
-			// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-			fprintf(stderr, "[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '%s'.\n",
-					string(0, end).c_str());
-			return 0;
+			constexpr ConstStringRef badSession = "BADSESSION"_s;
+			if (end == badSession.size() && equal(badSession.begin(), badSession.end(), responseBody.begin())) {
+				logDebug("[LastfmScrobbler] The scrobbles are not submitted. "
+						"The user is not authenticated to Last.fm.");
+
+				deauthenticate();
+				return 0;
+			} else {
+				// TODO think of counting hard failures, as the specification suggests.
+				// A hard failure or an unknown status is reported.
+				fprintf(stderr, "[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '%s'.\n",
+						string(0, end).c_str());
+				return 0;
+			}
 		}
 	} else {
 		fputs("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm.", stderr);
@@ -325,6 +340,11 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
+	/* No conversion to the system encoding is used as the body is assumed to be in
+	 * an ASCII-compatible encoding. It contains status codes, URLs (both are in ASCII),
+	 * and some reason messages that are safe to be used without conversion with hope
+	 * they are in ASCII, too.
+	 */
 	string &responseBody = response.body;
 
 	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
@@ -366,4 +386,13 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		fputs("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.", stderr);
 		return false;
 	}
+}
+
+inline void LastfmScrobbler::deauthenticate() noexcept
+{
+	assertLocked();
+	// Updated in the order they are declared in.
+	m_sessionId.clear();
+	m_submissionUrl.clear();
+	m_authenticated = false;
 }
