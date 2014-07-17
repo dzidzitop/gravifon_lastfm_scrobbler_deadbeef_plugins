@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ namespace
 		return dataSize;
 	}
 
-	HttpClient::StatusCode toStatusCode(CURLcode curlErrorCode)
+	inline HttpClient::StatusCode toStatusCode(const CURLcode curlErrorCode)
 	{
 		switch (curlErrorCode) {
 		case CURLE_COULDNT_CONNECT:
@@ -124,8 +124,9 @@ namespace
 	}
 }
 
-HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &request, HttpResponseEntity &response,
-		const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
+HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * const url, const HttpEntity &request,
+		HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
+		const std::atomic<bool> &abortFlag)
 {
 	if (!::CurlInit::instance.initialised) {
 		return StatusCode::INIT_ERROR;
@@ -145,9 +146,11 @@ HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &req
 	}
 
 	// TODO add response headers
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	if (method == HttpMethod::POST) {
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
+	}
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
@@ -163,7 +166,7 @@ HttpClient::StatusCode HttpClient::send(const string &url, const HttpEntity &req
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, connectionTimeoutMillis);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, socketTimeoutMillis);
 
-	CURLcode status = curl_easy_perform(curl);
+	const CURLcode status = curl_easy_perform(curl);
 	if (status != 0) {
 		return toStatusCode(status);
 	}

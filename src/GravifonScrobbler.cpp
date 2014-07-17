@@ -13,7 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 #include "GravifonScrobbler.hpp"
 #include <cassert>
 #include <afc/base64.hpp>
@@ -24,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
+#include <afc/utils.h>
 
 using namespace std;
 using namespace afc;
@@ -74,26 +74,13 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		fprintf(stderr, "[GravifonScrobbler] Unable to send the scrobble message: %s\n", message);
+		std::fprintf(stderr, "[GravifonScrobbler] Unable to send the scrobble message: %s\n", message);
 	}
 
 	inline bool isRecoverableError(const unsigned long errorCode)
 	{
 		return errorCode < 10000 || errorCode == 10003 || errorCode > 10006;
 	}
-
-	struct UnlockGuard
-	{
-		UnlockGuard(mutex &mutex) : m_mutex(mutex) { m_mutex.unlock(); };
-		~UnlockGuard() { m_mutex.lock(); }
-	private:
-		UnlockGuard(const UnlockGuard &) = delete;
-		UnlockGuard(UnlockGuard &&) = delete;
-		UnlockGuard &operator=(const UnlockGuard &) = delete;
-		UnlockGuard &operator=(UnlockGuard &&) = delete;
-
-		mutex &m_mutex;
-	};
 }
 
 void GravifonScrobbler::stopExtra()
@@ -131,12 +118,8 @@ void GravifonScrobbler::configure(const char * const serverUrl, const string &us
 
 size_t GravifonScrobbler::doScrobbling()
 {
+	assertLocked();
 	assert(!m_pendingScrobbles.empty());
-	/* Ensures that this function is executed within the critical section against m_mutex.
-	 * Even though mutex::try_lock() has side effects it is fine to acquire the lock m_mutex
-	 * since the application is terminated immediately in this case.
-	 */
-	assert(!m_mutex.try_lock());
 
 	if (!m_configured) {
 		logError("Scrobbler is not configured properly.");
@@ -193,7 +176,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 *
 	 * It is safe to unlock the mutex because:
 	 * - no shared data is accessed outside the critical section
-	 * - other threads cannot delete scrobbles in the meantime (becase the scrobbling thread
+	 * - other threads cannot delete scrobbles in the meantime (because the scrobbling thread
 	 * assumes that the scrobbles being submitted are the first {submittedCount} elements in
 	 * the list of pending scrobbles.
 	 *
@@ -204,7 +187,8 @@ size_t GravifonScrobbler::doScrobbling()
 		logDebug(string("[GravifonScrobbler] Request body: ") + request.body);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().send(scrobblerUrlCopy, request, response, 0L, 0L, m_finishScrobblingFlag);
+		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,
+				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 
 	/* Ensure that no scrobbles are deleted by other threads during the HTTP call.

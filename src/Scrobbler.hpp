@@ -24,17 +24,36 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <condition_variable>
 #include <atomic>
 #include <cstddef>
-#include "dateutil.hpp"
+#include <cassert>
+#include <afc/dateutil.hpp>
 
 // All strings are utf8-encoded.
 class Track
 {
 public:
 	void setTitle(const std::string &trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); m_artistSet = true; }
-	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); m_albumArtistSet = true; }
+	std::string &getTitle() noexcept { assert(m_titleSet); return m_title; }
+	const std::string &getTitle() const noexcept { assert(m_titleSet); return m_title; }
+	bool hasTitle() const noexcept { return m_titleSet; }
+
+	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); }
+	std::vector<std::string> &getArtists() noexcept { return m_artists; }
+	const std::vector<std::string> &getArtists() const noexcept { return m_artists; }
+	bool hasArtist() const noexcept { return !m_artists.empty(); }
+
+	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); }
+	std::vector<std::string> &getAlbumArtists() noexcept { return m_albumArtists; }
+	const std::vector<std::string> &getAlbumArtists() const noexcept { return m_albumArtists; }
+	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
+
 	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
+	std::string &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
+	const std::string &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
+	bool hasAlbumTitle() const noexcept { return m_albumSet; }
+
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
+	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
+	bool hasDurationMillis() const noexcept { return m_durationSet; }
 
 	// Appends this ScrobbleInfo in the JSON format to a given string.
 	void appendAsJsonTo(std::string &str) const;
@@ -46,8 +65,6 @@ private:
 	// Track duration in milliseconds.
 	long m_duration;
 	bool m_titleSet = false;
-	bool m_artistSet = false;
-	bool m_albumArtistSet = false;
 	bool m_albumSet = false;
 	bool m_durationSet = false;
 };
@@ -64,9 +81,9 @@ struct ScrobbleInfo
 	static bool parse(const std::string &str, ScrobbleInfo &dest);
 
 	// Date and time when scrobble event was initiated.
-	DateTime scrobbleStartTimestamp;
+	afc::DateTime scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.
-	DateTime scrobbleEndTimestamp;
+	afc::DateTime scrobbleEndTimestamp;
 	// Scrobble length in milliseconds.
 	long scrobbleDuration;
 	// Track to scrobble.
@@ -151,6 +168,12 @@ protected:
 	 * @return true if this routine succeeds; false otherwise.
 	 */
 	virtual void stopExtra() { /* Nothing to do by default. */ }
+
+	/* Ensures that this function is executed within the critical section against m_mutex.
+	 * Even though mutex::try_lock() has side effects it is fine to acquire the lock m_mutex
+	 * since the application is terminated immediately in this case.
+	 */
+	inline void assertLocked() { assert(!m_mutex.try_lock()); }
 
 	const static size_t MIN_SCROBBLES_TO_WAIT;
 	const static size_t MAX_SCROBBLES_TO_WAIT;

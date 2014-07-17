@@ -1,4 +1,6 @@
 {
-	global: gravifon_scrobbler_load;
+	global:
+		gravifon_scrobbler_load;
+		lastfm_scrobbler_load;
 	local: *;
 };

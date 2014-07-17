@@ -44,14 +44,17 @@ namespace
 
 void ScrobbleInfoTest::setUp()
 {
-	m_timeZoneBackup = getenv("TZ");
+	const char * const tz = getenv("TZ");
+	if (tz != nullptr) {
+		m_timeZoneBackup.reset(new string(tz));
+	}
 	setenv("TZ", "ABC-02:30", true);
 }
 
 void ScrobbleInfoTest::tearDown()
 {
-	if (m_timeZoneBackup == nullptr) {
-		setenv("TZ", m_timeZoneBackup, true);
+	if (m_timeZoneBackup != nullptr) {
+		setenv("TZ", m_timeZoneBackup->c_str(), true);
 	} else {
 		unsetenv("TZ");
 	}

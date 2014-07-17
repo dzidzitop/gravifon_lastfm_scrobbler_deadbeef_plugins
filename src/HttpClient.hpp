@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013 Dźmitry Laŭčuk
+Copyright (C) 2013-2014 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -39,6 +39,8 @@ public:
 	{
 		SUCCESS, INIT_ERROR, UNKNOWN_ERROR, UNABLE_TO_CONNECT, OPERATION_TIMEOUT, ABORTED_BY_CLIENT
 	};
+
+	static const long NO_TIMEOUT = 0L;
 private:
 	HttpClient(const HttpClient &) = delete;
 	HttpClient(HttpClient &&) = delete;
@@ -48,8 +50,23 @@ public:
 	HttpClient() = default;
 	~HttpClient() = default;
 
-	StatusCode send(const std::string &url, const HttpEntity &request, HttpResponseEntity &response,
-			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag);
+	StatusCode get(const char * const url, const HttpEntity &request, HttpResponseEntity &response,
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
+	{
+		return send(HttpMethod::GET, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
+	}
+
+	StatusCode post(const char * const url, const HttpEntity &request, HttpResponseEntity &response,
+			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
+	{
+		return send(HttpMethod::POST, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
+	}
+private:
+	enum class HttpMethod {GET, POST};
+
+	StatusCode send(const HttpMethod method, const char * const url, const HttpEntity &request,
+			HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
+			const std::atomic<bool> &abortFlag);
 };
 
 #endif /* HTTPCLIENT_HPP_ */

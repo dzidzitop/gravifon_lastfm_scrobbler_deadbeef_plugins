@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <algorithm>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
+#include <afc/ensure_ascii.hpp>
+
 
 using namespace std;
 using namespace afc;
@@ -41,15 +43,6 @@ const size_t Scrobbler::MAX_SCROBBLES_TO_WAIT = 32;
 
 namespace
 {
-	static_assert('\'' == u8"'"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('"' == u8"\""[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\\' == u8"\\"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\b' == u8"\b"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\f' == u8"\f"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\n' == u8"\n"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\r' == u8"\r"[0], "An ASCII-incompatible basic charset is used.");
-	static_assert('\t' == u8"\t"[0], "An ASCII-incompatible basic charset is used.");
-
 	inline void writeJsonString(const string &src, string &dest)
 	{
 		for (const char c : src) {
@@ -233,7 +226,7 @@ namespace
 
 		string buf;
 		for (auto it = begin; it != end; ++it) {
-			buf.resize(0);
+			buf.clear();
 			it->appendAsJsonTo(buf);
 			const size_t bufSize = buf.size();
 			if (fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
@@ -603,7 +596,7 @@ void Track::appendAsJsonTo(string &str) const
 		str.append(u8R"("album":{"title":")");
 		writeJsonString(m_album, str);
 		str.append(u8"\"");
-		if (m_albumArtistSet) {
+		if (hasAlbumArtist()) {
 			str.append(u8R"(,"artists":[)");
 			for (const string &artist : m_albumArtists) {
 				str.append(u8R"({"name":")");

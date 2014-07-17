@@ -1,7 +1,7 @@
 srcDir=src
 testDir=test
 buildDir=build
-cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O2 -fno-exceptions -fno-rtti -DNDEBUG
+cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O3 -march=native -fno-exceptions -fno-rtti -DNDEBUG
 ldFlags=-Llib -Wl,-version-script,export_symbols
 cxxFlags_test=-I"$srcDir" -I"include" -Wall -fPIC -std=c++11 -O2
 ldFlags_test=-L"$buildDir" $ldFlags
@@ -20,40 +20,51 @@ rule linkDynamic
 rule bin
   command=g++ $ldFlags_test -o $out $in $libs
 
-build $buildDir/dateutil.o: cxx $srcDir/dateutil.cpp
 build $buildDir/GravifonScrobbler.o: cxx $srcDir/GravifonScrobbler.cpp
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
+build $buildDir/LastfmScrobbler.o: cxx $srcDir/LastfmScrobbler.cpp
+build $buildDir/lastfm_scrobbler.o: cxx $srcDir/lastfm_scrobbler.cpp
 build $buildDir/Scrobbler.o: cxx $srcDir/Scrobbler.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
+build $buildDir/UrlBuilder.o: cxx $srcDir/UrlBuilder.cpp
 
-build $buildDir/DateUtilTest.o: cxx_test $testDir/DateUtilTest.cpp
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
 build $buildDir/TrackTest.o: cxx_test $testDir/TrackTest.cpp
+build $buildDir/UrlBuilderTest.o: cxx_test $testDir/UrlBuilderTest.cpp
 build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 
 build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/GravifonScrobbler.o $
     $buildDir/HttpClient.o $
     $buildDir/Scrobbler.o $
-    $buildDir/dateutil.o $
     $buildDir/gravifon_scrobbler.o
   libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
-build $buildDir/gravifon_scrobbler_test: bin $
-    $buildDir/dateutil.o $
+build $buildDir/lastfm_scrobbler.so: linkDynamic $
+    $buildDir/HttpClient.o $
+    $buildDir/LastfmScrobbler.o $
+    $buildDir/lastfm_scrobbler.o $
+    $buildDir/Scrobbler.o $
+    $buildDir/UrlBuilder.o
+  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
+
+build $buildDir/unit_tests: bin $
     $buildDir/GravifonScrobbler.o $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/HttpClient.o $
-    $buildDir/DateUtilTest.o $
+    $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/Scrobbler.o $
     $buildDir/TrackTest.o $
+    $buildDir/UrlBuilder.o $
+    $buildDir/UrlBuilderTest.o $
     $buildDir/run_tests.o
   libs=-lcppunit -lcurl -lafc -ljsoncpp
 
-build sharedLib: phony $buildDir/gravifon_scrobbler.so
+build sharedLib: phony $buildDir/gravifon_scrobbler.so $
+    $buildDir/lastfm_scrobbler.so
 
-build testBin: phony $buildDir/gravifon_scrobbler_test
+build testBin: phony $buildDir/unit_tests
 
 build all: phony sharedLib testBin
 
