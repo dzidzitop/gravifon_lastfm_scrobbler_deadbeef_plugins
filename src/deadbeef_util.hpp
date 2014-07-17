@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <chrono>
 #include <cstring>
 #include <string>
+#include <utility>
 #include "Scrobbler.hpp"
 #include "logger.hpp"
 
@@ -120,18 +121,16 @@ std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const tr
 	scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 	scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
 	Track &trackInfo = scrobbleInfo->track;
-	asm("nop");
 	trackInfo.setTitle(title);
-	asm("nop");
 	if (album != nullptr) {
 		trackInfo.setAlbumTitle(album);
 	}
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](std::string &&artistName) { trackInfo.addArtist(artistName); });
+	addMultiTag(artist, [&](std::string &&artistName) { trackInfo.addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](std::string &&artistName) { trackInfo.addAlbumArtist(artistName); });
+		addMultiTag(albumArtist, [&](std::string &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
 	return scrobbleInfo;

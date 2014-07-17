@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <cassert>
 #include <string>
+#include <utility>
 #include <vector>
 #include <afc/dateutil.hpp>
 
@@ -25,22 +26,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class Track
 {
 public:
-	void setTitle(const std::string &trackTitle) { m_title = trackTitle; m_titleSet = true; }
+	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
 	std::string &getTitle() noexcept { assert(m_titleSet); return m_title; }
 	const std::string &getTitle() const noexcept { assert(m_titleSet); return m_title; }
 	bool hasTitle() const noexcept { return m_titleSet; }
 
-	void addArtist(const std::string &artist) { m_artists.emplace_back(artist); }
+	void addArtist(std::string &&artist) { m_artists.emplace_back(std::move(artist)); }
 	std::vector<std::string> &getArtists() noexcept { return m_artists; }
 	const std::vector<std::string> &getArtists() const noexcept { return m_artists; }
 	bool hasArtist() const noexcept { return !m_artists.empty(); }
 
-	void addAlbumArtist(const std::string &artist) { m_albumArtists.emplace_back(artist); }
+	void addAlbumArtist(const std::string &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
 	std::vector<std::string> &getAlbumArtists() noexcept { return m_albumArtists; }
 	const std::vector<std::string> &getAlbumArtists() const noexcept { return m_albumArtists; }
 	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
 
-	void setAlbumTitle(const std::string &albumTitle) { m_album = albumTitle; m_albumSet = true; }
+	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
 	std::string &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
 	const std::string &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
 	bool hasAlbumTitle() const noexcept { return m_albumSet; }

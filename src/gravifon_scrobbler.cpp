@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdint>
 #include <memory>
 #include "Scrobbler.hpp"
+#include "ScrobblerInfo.hpp"
 #include "GravifonScrobbler.hpp"
 #include <mutex>
 #include "logger.hpp"

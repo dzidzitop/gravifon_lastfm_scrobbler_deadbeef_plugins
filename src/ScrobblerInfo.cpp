@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
+#include <utility>
 #include <time.h>
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
@@ -129,7 +130,7 @@ namespace
 			if (!isType(artistName, stringValue)) {
 				return false;
 			}
-			addArtistOp(artistName.asString());
+			addArtistOp(std::move(artistName.asString()));
 		}
 		return true;
 	}
@@ -163,7 +164,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	if (!isType(trackTitle, stringValue)) {
 		return false;
 	}
-	track.setTitle(trackTitle.asString());
+	track.setTitle(trackTitle.asCString());
 
 	const Value &trackAlbum = trackObject["album"];
 	const ValueType trackAlbumObjType = trackAlbum.type();
@@ -175,10 +176,10 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 		if (!isType(trackAlbumTitle, stringValue)) {
 			return false;
 		}
-		track.setAlbumTitle(trackAlbumTitle.asString());
+		track.setAlbumTitle(trackAlbumTitle.asCString());
 
 		if (!parseArtists(trackAlbum["artists"], false,
-				[&](string &&artistName) { track.addAlbumArtist(artistName); })) {
+				[&](string &&artistName) { track.addAlbumArtist(std::move(artistName)); })) {
 			return false;
 		}
 	}
@@ -190,7 +191,7 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	track.setDurationMillis(trackDuration);
 
 	if (!parseArtists(trackObject["artists"], true,
-			[&](string &&artistName) { track.addArtist(artistName); })) {
+			[&](string &&artistName) { track.addArtist(std::move(artistName)); })) {
 		return false;
 	}
 	return true;
