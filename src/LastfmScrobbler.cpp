@@ -91,7 +91,8 @@ namespace
 			}
 		}
 
-		std::size_t maxEncodedSize() const noexcept { return sizeof(m_value); }
+		// a[i] encoded can be a%5bxx%5d in the worst case.
+		std::size_t maxEncodedSize() const noexcept { return 9; }
 
 		template<typename Iterator>
 		Iterator appendTo(Iterator dest)
@@ -99,12 +100,14 @@ namespace
 			assert(m_step < sizeof(namePrefixes));
 
 			*dest++ = namePrefixes[m_step++];
-			*dest++ = '[';
+			// Writing URL-encoded '['.
+			dest = std::copy_n("%5b", 3, dest);
 			*dest++ = m_value[0];
 			if (m_longIndex) {
 				*dest++ = m_value[1];
 			}
-			*dest++ = ']';
+			// Writing URL-encoded ']'.
+			dest = std::copy_n("%5d", 3, dest);
 			return dest;
 		}
 	private:
