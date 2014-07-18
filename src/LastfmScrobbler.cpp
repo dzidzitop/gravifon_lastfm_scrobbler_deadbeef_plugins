@@ -75,9 +75,9 @@ namespace
 		ScrobbleParamName(const ScrobbleParamName &) = delete;
 		ScrobbleParamName(ScrobbleParamName &&) = delete;
 	public:
-		ScrobbleParamName(const unsigned char index) : m_step(0)
+		explicit ScrobbleParamName(const unsigned char index) : m_step(0)
 		{
-			assert(index < 100);
+			assert(index < 100); // one or two digits are expected and supported.
 
 			if (index < 10) {
 				m_value[0] = digitToChar(index);
@@ -115,6 +115,7 @@ namespace
 		bool m_longIndex;
 	};
 
+	// Prefixes are put in the order in which the parameters of a submission URL are processed.
 	const char ScrobbleParamName::namePrefixes[9] = {'a', 't', 'i', 'o', 'r', 'l', 'b', 'n', 'm'};
 
 	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
@@ -129,6 +130,7 @@ namespace
 		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
 		const string trackLength(to_string(track.getDurationMillis() / 1000));
 
+		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
 		ScrobbleParamName scrobbleParamName(index);
 
 		builder.params(
