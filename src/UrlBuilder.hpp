@@ -238,7 +238,7 @@ Iterator appendUrlEncoded(const char * const src, const std::size_t n, Iterator 
 		const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
 
 		if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') ||
-				uc == '-' || uc == '_' || uc == '.' || uc == '~') {
+				uc == '-' || uc == '_' || uc == '.') {
 			// An unreserved character. No escaping is needed.
 			*dest++ = c;
 		} else {
