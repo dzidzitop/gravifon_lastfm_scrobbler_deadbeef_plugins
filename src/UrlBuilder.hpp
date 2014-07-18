@@ -88,10 +88,12 @@ public:
 
 	template<typename... Parts>
 	UrlBuilder(const char * const urlBase, const std::size_t n, Parts&&... paramParts)
-			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize(paramParts...))), m_hasParams(false)
+			: m_buf(std::max(minBufCapacity(),
+					n + maxEncodedSize<urlFirst, Parts...>(std::forward<Parts>(paramParts)...))),
+			m_hasParams(false)
 	{
 		m_buf.append(urlBase, n);
-		appendParams<urlFirst, Parts...>(paramParts...);
+		appendParams<urlFirst, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
 	template<typename... Parts>
@@ -104,7 +106,9 @@ public:
 
 	template<typename... Parts>
 	UrlBuilder(QueryOnly, Parts&&... paramParts)
-			: m_buf(std::max(minBufCapacity(), maxEncodedSize(paramParts...))), m_hasParams(false)
+			: m_buf(std::max(minBufCapacity(),
+					maxEncodedSize<queryString, Parts...>(std::forward<Parts>(paramParts)...))),
+			m_hasParams(false)
 	{
 		appendParams<queryString, Parts...>(std::forward<Parts>(paramParts)...);
 	}
@@ -117,7 +121,8 @@ public:
 	template<typename... Parts>
 	inline void params(Parts&&... parts)
 	{
-		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 + maxEncodedSize(parts...);
+		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 +
+				maxEncodedSize<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
 		appendParams<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
@@ -127,28 +132,33 @@ public:
 	const char *c_str() const noexcept { return m_buf.c_str(); }
 	const std::size_t size() const noexcept { return m_buf.size(); }
 private:
-	template<typename Part, typename... Parts>
-	static constexpr std::size_t maxEncodedSize(Part &&part, Parts&&... parts) noexcept
-	{
-		// TODO think of removing the redundant '?' from here for query-string-only cases.
-		// '?' or '&' or '=' is counted here, too.
-		return 1 + part.maxEncodedSize() + maxEncodedSize(parts...);
-	}
-
-	// Terminates the maxEncodedSize() template recusion.
-	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
-
 	enum ParamMode
 	{
 		// A URL is being built; the next parameter is known to be first.
 		urlFirst,
-		// A URL is being built; it is unknown if the next parameter is first.
+		/* A URL is being built or a query string is appended with additional parameters;
+		 * it is unknown if the next parameter is first.
+		 */
 		urlUnknown,
 		// A query string is being built.
 		queryString,
 		// The next parameter is known to be not first.
 		notFirst
 	};
+
+	template<ParamMode mode, typename Part, typename... Parts>
+	static constexpr std::size_t maxEncodedSize(Part &&part, Parts&&... parts) noexcept
+	{
+		// One of {'?', '&', '='} is counted for all non-first and first non-query param elements.
+		return (mode == queryString ? part.maxEncodedSize() : part.maxEncodedSize() + 1) +
+				maxEncodedSize<notFirst, Parts...>(std::forward<Parts>(parts)...);
+	}
+
+	/* Terminates the maxEncodedSize() template recusion.
+	 * No '?' is appended even if there are no parameters at all.
+	 */
+	template<ParamMode mode>
+	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
 
 	template<ParamMode mode, typename... Parts>
 	void appendParams(Parts&&... parts) noexcept
