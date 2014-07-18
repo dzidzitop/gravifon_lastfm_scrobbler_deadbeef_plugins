@@ -16,17 +16,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef URLBUILDER_HPP_
 #define URLBUILDER_HPP_
 
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <string>
 #include <utility>
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
 #include <afc/StringRef.hpp>
 #include <afc/FastStringBuffer.hpp>
-#include <cstring>
-#include <algorithm>
+#include <afc/number.h>
 
 struct QueryOnly {} static const queryOnly;
+
+template<typename Iterator>
+Iterator appendUrlEncoded(const char *src, std::size_t n, Iterator dest);
 
 enum UrlPartType
 {
@@ -36,7 +40,7 @@ enum UrlPartType
 	raw
 };
 
-template<UrlPartType partType = ordinary>
+template<UrlPartType type = ordinary>
 class UrlPart
 {
 public:
@@ -45,9 +49,8 @@ public:
 	explicit constexpr UrlPart(const afc::ConstStringRef value) noexcept : UrlPart(value.value(), value.size()) {}
 	explicit constexpr UrlPart(const std::string &value) noexcept : UrlPart(value.data(), value.size()) {}
 
-	constexpr UrlPartType type() const noexcept { return partType; }
-	constexpr const char *value() const noexcept { return m_value; };
-	constexpr std::size_t size() const noexcept { return m_size; }
+	template<typename Iterator>
+	Iterator appendTo(Iterator dest) const noexcept;
 	constexpr std::size_t maxEncodedSize() const noexcept;
 private:
 	const char * const m_value;
@@ -63,6 +66,15 @@ constexpr std::size_t UrlPart<ordinary>::maxEncodedSize() const noexcept
 
 template<>
 constexpr std::size_t UrlPart<raw>::maxEncodedSize() const noexcept { return m_size; }
+
+
+template<>
+template<typename Iterator>
+inline Iterator UrlPart<ordinary>::appendTo(Iterator dest) const noexcept { return appendUrlEncoded(m_value, m_size, dest); };
+
+template<>
+template<typename Iterator>
+inline Iterator UrlPart<raw>::appendTo(Iterator dest) const noexcept { return std::copy_n(m_value, m_size, dest); };
 
 class UrlBuilder
 {
@@ -115,8 +127,6 @@ public:
 	const char *c_str() const noexcept { return m_buf.c_str(); }
 	const std::size_t size() const noexcept { return m_buf.size(); }
 private:
-	void appendUrlEncoded(const char *str, const std::size_t n) noexcept;
-
 	template<typename Part, typename... Parts>
 	static constexpr std::size_t maxEncodedSize(Part &&part, Parts&&... parts) noexcept
 	{
@@ -193,11 +203,9 @@ private:
 	template<typename Part>
 	void appendParamPart(Part &&part) noexcept
 	{
-		if (part.type() == raw) {
-			m_buf.append(part.value(), part.size());
-		} else {
-			appendUrlEncoded(part.value(), part.size());
-		}
+		afc::FastStringBuffer<char>::Tail p = m_buf.borrowTail();
+		afc::FastStringBuffer<char>::Tail q = part.appendTo(p);
+		m_buf.returnTail(q);
 	}
 
 	/* Many short urls have length less than 64 characters. Setting this value
@@ -210,5 +218,40 @@ private:
 	afc::FastStringBuffer<char> m_buf;
 	bool m_hasParams;
 };
+
+template<typename Iterator>
+Iterator appendUrlEncoded(const char * const src, const std::size_t n, Iterator dest)
+{
+	if (n == 0) {
+		return dest;
+	}
+
+	std::size_t i = 0;
+	do {
+		const char c = src[i];
+
+		/* Casting to unsigned since bitwise operators are defined well for them
+		 * in terms of values.
+		 *
+		 * Only the lowest octet matters for URL encoding, even if unsigned char is larger.
+		 */
+		const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
+
+		if ((uc >= 'A' && uc <= 'Z') || (uc >= 'a' && uc <= 'z') || (uc >= '0' && uc <= '9') ||
+				uc == '-' || uc == '_' || uc == '.' || uc == '~') {
+			// An unreserved character. No escaping is needed.
+			*dest++ = c;
+		} else {
+			/* A non-unreserved character. Escaping it to percent-encoded representation.
+			 * The reserved characters are escaped, too, for simplicity. */
+			char c[3];
+			c[0] = '%';
+			afc::octetToHex(uc, &c[1]);
+			dest = std::copy_n(c, 3, dest);
+		}
+	} while (++i < n);
+
+	return dest;
+}
 
 #endif /* URLBUILDER_HPP_ */

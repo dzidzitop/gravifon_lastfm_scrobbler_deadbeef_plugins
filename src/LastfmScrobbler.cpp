@@ -79,37 +79,40 @@ namespace
 		{
 			assert(index < 100);
 
-			m_value[1] = '[';
 			if (index < 10) {
-				m_value[2] = digitToChar(index);
-				m_value[3] = ']';
-				m_size = 4;
+				m_value[0] = digitToChar(index);
+				m_longIndex = false;
 			} else {
 				const unsigned char highDigit = index / 10;
 				const unsigned char lowDigit = index - highDigit;
-				m_value[2] = digitToChar(highDigit);
-				m_value[3] = digitToChar(lowDigit);
-				m_value[4] = ']';
-				m_size = 5;
+				m_value[0] = digitToChar(highDigit);
+				m_value[1] = digitToChar(lowDigit);
+				m_longIndex = true;
 			}
 		}
 
-		UrlPartType type() const noexcept { return raw; }
-		std::size_t size() const noexcept { return m_size; }
 		std::size_t maxEncodedSize() const noexcept { return sizeof(m_value); }
 
-		const char *value() noexcept
+		template<typename Iterator>
+		Iterator appendTo(Iterator dest)
 		{
 			assert(m_step < sizeof(namePrefixes));
-			m_value[0] = namePrefixes[m_step++];
-			return m_value;
-		};
+
+			*dest++ = namePrefixes[m_step++];
+			*dest++ = '[';
+			*dest++ = m_value[0];
+			if (m_longIndex) {
+				*dest++ = m_value[1];
+			}
+			*dest++ = ']';
+			return dest;
+		}
 	private:
 		static const char namePrefixes[9];
 
-		mutable std::size_t m_step;
-		std::size_t m_size;
-		mutable char m_value[5];
+		std::size_t m_step;
+		char m_value[2];
+		bool m_longIndex;
 	};
 
 	const char ScrobbleParamName::namePrefixes[9] = {'a', 't', 'i', 'o', 'r', 'l', 'b', 'n', 'm'};
