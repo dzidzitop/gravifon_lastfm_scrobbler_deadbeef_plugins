@@ -283,6 +283,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	}
 
 	HttpEntity request;
+	// TODO change API to avoid this copying.
 	request.body.assign(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
