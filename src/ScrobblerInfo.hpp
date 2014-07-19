@@ -75,6 +75,7 @@ struct ScrobbleInfo
 
 	static bool parse(const std::string &str, ScrobbleInfo &dest);
 
+	// TODO Use more memory-efficient representation.
 	// Date and time when scrobble event was initiated.
 	afc::DateTime scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.
