@@ -144,6 +144,7 @@ inline bool isAscii(const char * const str, const std::size_t n)
 			return false;
 		}
 	}
+	return true;
 }
 
 #endif /* DEADBEEF_UTIL_HPP_ */
