@@ -121,6 +121,23 @@ namespace
 	// Prefixes are put in the order in which the parameters of a submission URL are processed.
 	const char ScrobbleParamName::namePrefixes[9] = {'a', 't', 'i', 'o', 'r', 'l', 'b', 'n', 'm'};
 
+	template<typename Number>
+	class NumberUrlPart
+	{
+		// The same instance should be used.
+		NumberUrlPart(const NumberUrlPart &) = delete;
+		NumberUrlPart(NumberUrlPart &&) = delete;
+	public:
+		explicit constexpr NumberUrlPart(const Number number) : m_number(number) {}
+
+		constexpr std::size_t maxEncodedSize() const noexcept { return afc::maxPrintedSize<Number, 10>(); }
+
+		template<typename Iterator>
+		Iterator appendTo(Iterator dest) const { return afc::printNumber<Number, 10>(m_number, dest); }
+	private:
+		const Number m_number;
+	};
+
 	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
 	{
 		assert(index < 50); // max amount of scrobbles per request.
@@ -129,12 +146,24 @@ namespace
 		assert(track.hasTitle());
 		assert(track.hasArtist());
 
-		// TODO optimise parameter value creation. They can be allocated statically.
-		const string scrobbleStartTs(to_string(scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000));
-		const string trackLength(to_string(track.getDurationMillis() / 1000));
+		const NumberUrlPart<afc::Timestamp::time_type> scrobbleStartTs(
+				scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000);
+		const NumberUrlPart<long> trackDurationSeconds(track.getDurationMillis() / 1000);
 
 		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
 		ScrobbleParamName scrobbleParamName(index);
+
+		const char *albumTitleData;
+		std::size_t albumTitleSize;
+		if (track.hasAlbumTitle()) {
+			const string &str = track.getAlbumTitle();
+			albumTitleData = str.data();
+			albumTitleSize = str.size();
+		} else {
+			albumTitleData = nullptr;
+			albumTitleSize = 0;
+		}
+		const UrlPart<> albumTitle(albumTitleData, albumTitleSize);
 
 		builder.params(
 				// The artist name. Required.
@@ -142,16 +171,16 @@ namespace
 				// The track title. Required.
 				scrobbleParamName, UrlPart<>(track.getTitle()),
 				// The time the track started playing, in UNIX timestamp format. Required.
-				scrobbleParamName, UrlPart<raw>(scrobbleStartTs),
+				scrobbleParamName, scrobbleStartTs,
 				// The source of the track. Required. 'Chosen by the user' in all cases.
 				scrobbleParamName, UrlPart<raw>("P"_s),
 				// TODO Support track ratings.
 				// A single character denoting the rating of the track. Empty, since not applicable.
 				scrobbleParamName, UrlPart<raw>(""_s),
 				// The length of the track in seconds. Required for 'Chosen by the user'.
-				scrobbleParamName, UrlPart<raw>(trackLength),
+				scrobbleParamName, trackDurationSeconds,
 				// The album title, or an empty string if not known.
-				scrobbleParamName, UrlPart<>(track.hasAlbumTitle() ? track.getAlbumTitle() : string()),
+				scrobbleParamName, albumTitle,
 				// TODO Support track numbers.
 				// The position of the track on the album, or an empty string if not known.
 				scrobbleParamName, UrlPart<>(""_s),
