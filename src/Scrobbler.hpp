@@ -325,7 +325,7 @@ bool Scrobbler<ScrobbleQueue>::start()
 
 	logDebug("[Scrobbler] Starting the background scrobbling thread...");
 
-	m_scrobblingThread = std::thread(&Scrobbler::backgroundScrobbling, ref(*this));
+	m_scrobblingThread = std::thread([this]() { this->backgroundScrobbling(); });
 
 	m_scrobblesToWait = minScrobblesToWait();
 
