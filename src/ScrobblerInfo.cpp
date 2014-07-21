@@ -19,11 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
 #include <afc/ensure_ascii.hpp>
-#include <afc/utils.h>
 #include "jsonutil.hpp"
 
 using namespace std;
-using namespace afc;
 using Json::Value;
 using Json::ValueType;
 
@@ -73,9 +71,14 @@ namespace
 		 */
 		for (size_t outputSize = 25;; outputSize *= 2) {
 			char buf[outputSize];
-			if (::strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime) != 0) {
-				// The date is formatted successfully.
-				dest.append(u8"\"").append(convertToUtf8(buf, systemCharset().c_str())).append(u8"\"");
+			std::size_t nCopied = ::strftime(buf, outputSize, "%FT%T%z", &dateTime);
+			if (nCopied != 0) {
+				/* The date is formatted successfully.
+				 *
+				 * The output is locale-independent and is always an ASCII-compatible string.
+				 * There is no need to convert it to UTF-8 since the output is the same string.
+				 */
+				dest.append(u8"\"").append(buf, nCopied).append(u8"\"");
 				return;
 			}
 			// The size of the destination buffer is too small. Repeating with a larger buffer.
@@ -85,7 +88,8 @@ namespace
 	// writes value to out in utf-8
 	inline void writeJsonLong(const long value, string &dest)
 	{
-		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
+		// TODO do not create temp string.
+		dest.append(to_string(value));
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
