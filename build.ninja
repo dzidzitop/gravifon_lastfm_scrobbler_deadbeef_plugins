@@ -1,7 +1,7 @@
 srcDir=src
 testDir=test
 buildDir=build
-cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O3 -march=native -fno-exceptions -fno-rtti -DNDEBUG
+cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O3 -march=native -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections -DNDEBUG
 ldFlags=-Llib -Wl,-version-script,export_symbols
 cxxFlags_test=-I"$srcDir" -I"include" -Wall -fPIC -std=c++11 -O2
 ldFlags_test=-L"$buildDir" $ldFlags
@@ -37,14 +37,14 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/ScrobblerInfo.o $
     $buildDir/gravifon_scrobbler.o
-  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
+  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/lastfm_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
     $buildDir/ScrobblerInfo.o
-  libs=-Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
+  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/unit_tests: bin $
     $buildDir/GravifonScrobbler.o $
