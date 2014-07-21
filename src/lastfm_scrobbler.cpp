@@ -142,7 +142,7 @@ namespace
 			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
 
 			if (scrobbleInfo != nullptr) {
-				lastfmClient.scrobble(*scrobbleInfo, safeScrobbling);
+				lastfmClient.scrobble(std::move(*scrobbleInfo), safeScrobbling);
 			}
 			return 0;
 		}

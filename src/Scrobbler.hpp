@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <utility>
 #include <sys/stat.h>
 #include "logger.hpp"
 #include "ScrobblerInfo.hpp"
@@ -78,7 +79,7 @@ public:
 	 *         immediately, to save this scrobble even in case of an emergency.
 	 *         It is false by default.
 	 */
-	void scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling = false);
+	void scrobble(ScrobbleInfo &&scrobbleInfo, const bool safeScrobbling = false);
 
 	bool start();
 	bool stop();
@@ -205,14 +206,14 @@ finish:
 }
 
 template<typename ScrobbleQueue>
-void Scrobbler<ScrobbleQueue>::scrobble(const ScrobbleInfo &scrobbleInfo, const bool safeScrobbling)
+void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool safeScrobbling)
 { std::lock_guard<std::mutex> lock(m_mutex);
 	if (!m_started) {
 		// This Scrobbler is not started or is already stopped or is disabled.
 		return;
 	}
 
-	m_pendingScrobbles.emplace_back(scrobbleInfo);
+	m_pendingScrobbles.emplace_back(std::move(scrobbleInfo));
 
 	m_cv.notify_one();
 

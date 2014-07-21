@@ -159,7 +159,7 @@ namespace
 			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
 
 			if (scrobbleInfo != nullptr) {
-				gravifonClient.scrobble(*scrobbleInfo, safeScrobbling);
+				gravifonClient.scrobble(std::move(*scrobbleInfo), safeScrobbling);
 			}
 			return 0;
 		}

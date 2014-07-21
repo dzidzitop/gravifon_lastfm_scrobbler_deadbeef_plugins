@@ -25,7 +25,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 // All strings are utf8-encoded.
 class Track
 {
+private:
+	// Copying scrobbles is expensive. Move semantics is forced for them.
+	Track(const Track &) = delete;
+	Track &operator=(const Track &) = default;
 public:
+	Track() = default;
+	Track(Track &&) = default;
+
+	~Track() = default;
+
+	Track &operator=(Track &&) = default;
+
 	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
 	std::string &getTitle() noexcept { assert(m_titleSet); return m_title; }
 	const std::string &getTitle() const noexcept { assert(m_titleSet); return m_title; }
@@ -64,13 +75,18 @@ private:
 	bool m_durationSet = false;
 };
 
-struct ScrobbleInfo
+class ScrobbleInfo
 {
+private:
+	// Copying scrobbles is expensive. Move semantics is forced for them.
+	ScrobbleInfo(const ScrobbleInfo &) = delete;
+	ScrobbleInfo &operator=(const ScrobbleInfo &) = default;
+public:
 	ScrobbleInfo() = default;
-	ScrobbleInfo(const ScrobbleInfo &) = default;
 	ScrobbleInfo(ScrobbleInfo &&) = default;
 
-	ScrobbleInfo &operator=(const ScrobbleInfo &) = default;
+	~ScrobbleInfo() = default;
+
 	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
 
 	static bool parse(const std::string &str, ScrobbleInfo &dest);
