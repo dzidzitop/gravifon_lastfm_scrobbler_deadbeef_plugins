@@ -85,8 +85,8 @@ namespace
 		/* It is assumed that Last.fm expected username and password in UTF-8. Since strings
 		 * from the DeaDBeeF configuration are already in UTF-8, no conversion is needed.
 		 */
-		const char * const usernameInUtf8 = deadbeef->conf_get_str_fast("lastfmScrobbler.username", "");
-		const char * const passwordInUtf8 = deadbeef->conf_get_str_fast("lastfmScrobbler.password", "");
+		const char * const username = deadbeef->conf_get_str_fast("lastfmScrobbler.username", "");
+		const char * const password = deadbeef->conf_get_str_fast("lastfmScrobbler.password", "");
 
 		double threshold = deadbeef->conf_get_float("lastfmScrobbler.threshold", 0.f);
 		if (threshold < 0.d || threshold > 100.d) {
@@ -95,7 +95,7 @@ namespace
 		scrobbleThreshold = threshold / 100.d;
 
 		// TODO do not re-configure if settings are the same.
-		lastfmClient.configure(lastfmUrl, lastfmUrlSize, usernameInUtf8, passwordInUtf8);
+		lastfmClient.configure(lastfmUrl, lastfmUrlSize, username, password);
 
 		return true;
 	}

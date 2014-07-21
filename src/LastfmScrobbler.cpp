@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "LastfmScrobbler.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdio>
 #include <limits>
 #include "HttpClient.hpp"
@@ -213,8 +214,11 @@ void LastfmScrobbler::stopExtra()
 }
 
 void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t serverUrlSize,
-		const string &username, const string &password)
+		const char * const username, const char * const password)
 { lock_guard<mutex> lock(m_mutex);
+	assert(username != nullptr);
+	assert(password != nullptr);
+
 	bool reconfigured = false;
 
 	const bool urlsEqual = serverUrlSize == m_scrobblerUrl.size() &&
@@ -223,12 +227,20 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 		m_scrobblerUrl.assign(serverUrl, serverUrlSize);
 		reconfigured = true;
 	}
-	if (m_username != username) {
-		m_username = username;
+
+	const std::size_t usernameSize = std::strlen(username);
+	const bool usernamesEqual = usernameSize == m_username.size() &&
+			std::equal(username, username + usernameSize, m_username.begin());
+	if (usernamesEqual) {
+		m_username.assign(username, usernameSize);
 		reconfigured = true;
 	}
-	if (m_password != password) {
-		m_password = password;
+
+	const std::size_t passwordSize = std::strlen(password);
+	const bool passwordsEqual = passwordSize == m_password.size() &&
+			std::equal(password, password + passwordSize, m_password.begin());
+	if (passwordsEqual) {
+		m_password.assign(password, passwordSize);
 		reconfigured = true;
 	}
 

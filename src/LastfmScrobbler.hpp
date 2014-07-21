@@ -47,7 +47,7 @@ public:
 	}
 
 	// username and password should be in UTF-8; serverUrl must be in ASCII.
-	void configure(const char *serverUrl, std::size_t serverUrlSize, const std::string &username, const std::string &password);
+	void configure(const char *serverUrl, std::size_t serverUrlSize, const char *username, const char *password);
 
 	void setDataFilePath(const std::string &dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
