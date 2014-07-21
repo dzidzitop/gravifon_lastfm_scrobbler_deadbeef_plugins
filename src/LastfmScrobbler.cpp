@@ -212,14 +212,15 @@ void LastfmScrobbler::stopExtra()
 	m_scrobblerUrl.clear();
 }
 
-void LastfmScrobbler::configure(const char * const serverUrl, const string &username, const string &password)
+void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t serverUrlSize,
+		const string &username, const string &password)
 { lock_guard<mutex> lock(m_mutex);
-	assert(serverUrl != nullptr);
-
 	bool reconfigured = false;
 
-	if (m_scrobblerUrl != serverUrl) {
-		m_scrobblerUrl = serverUrl;
+	const bool urlsEqual = serverUrlSize == m_scrobblerUrl.size() &&
+			std::equal(serverUrl, serverUrl + serverUrlSize, m_scrobblerUrl.begin());
+	if (!urlsEqual) {
+		m_scrobblerUrl.assign(serverUrl, serverUrlSize);
 		reconfigured = true;
 	}
 	if (m_username != username) {

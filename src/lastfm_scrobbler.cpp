@@ -13,21 +13,20 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-#include <deadbeef.h>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
+#include <utility>
+#include <deadbeef.h>
 #include "Scrobbler.hpp"
 #include "ScrobblerInfo.hpp"
 #include "LastfmScrobbler.hpp"
-#include <mutex>
 #include "logger.hpp"
-#include <afc/utils.h>
-#include <utility>
 #include "pathutil.hpp"
 #include "deadbeef_util.hpp"
 
 using namespace std;
-using namespace afc;
 
 namespace
 {
@@ -73,8 +72,15 @@ namespace
 		safeScrobbling = deadbeef->conf_get_int("lastfmScrobbler.safeScrobbling", 0);
 
 		// DeaDBeeF configuration records are returned in UTF-8.
-		const char * const lastfmUrlInUtf8 = deadbeef->conf_get_str_fast(
+		const char * const lastfmUrl = deadbeef->conf_get_str_fast(
 				"lastfmScrobbler.lastfmUrl", u8"http://post.audioscrobbler.com");
+		const std::size_t lastfmUrlSize = std::strlen(lastfmUrl);
+		if (!isAscii(lastfmUrl, lastfmUrlSize)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm.");
+			lastfmClient.invalidateConfiguration();
+			// Scrobbles are still to be recorded though not submitted.
+			return true;
+		}
 
 		/* It is assumed that Last.fm expected username and password in UTF-8. Since strings
 		 * from the DeaDBeeF configuration are already in UTF-8, no conversion is needed.
@@ -89,8 +95,7 @@ namespace
 		scrobbleThreshold = threshold / 100.d;
 
 		// TODO do not re-configure if settings are the same.
-		lastfmClient.configure(convertFromUtf8(lastfmUrlInUtf8, systemCharset().c_str()).c_str(),
-				usernameInUtf8, passwordInUtf8);
+		lastfmClient.configure(lastfmUrl, lastfmUrlSize, usernameInUtf8, passwordInUtf8);
 
 		return true;
 	}
