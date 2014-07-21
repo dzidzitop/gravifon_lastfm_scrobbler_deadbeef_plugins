@@ -17,18 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <mutex>
+#include <utility>
+#include <afc/ensure_ascii.hpp>
+#include "deadbeef_util.hpp"
+#include "GravifonScrobbler.hpp"
+#include "logger.hpp"
+#include "pathutil.hpp"
 #include "Scrobbler.hpp"
 #include "ScrobblerInfo.hpp"
-#include "GravifonScrobbler.hpp"
-#include <mutex>
-#include "logger.hpp"
-#include <afc/utils.h>
-#include <utility>
-#include "pathutil.hpp"
-#include "deadbeef_util.hpp"
 
 using namespace std;
-using namespace afc;
 
 namespace
 {
@@ -74,8 +73,15 @@ namespace
 		safeScrobbling = deadbeef->conf_get_int("gravifonScrobbler.safeScrobbling", 0);
 
 		// DeaDBeeF configuration records are returned in UTF-8.
-		const char * const gravifonUrlInUtf8 = deadbeef->conf_get_str_fast(
+		const char * const gravifonUrl = deadbeef->conf_get_str_fast(
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
+		const std::size_t gravifonUrlSize = std::strlen(gravifonUrl);
+		if (!isAscii(gravifonUrl, gravifonUrlSize)) {
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Gravifon.");
+			gravifonClient.invalidateConfiguration();
+			// Scrobbles are still to be recorded though not submitted.
+			return true;
+		}
 
 		/* Non-ASCII characters in username and password are definitely disallowed by Gravifon.
 		 * UTF-8 strings are returned from the configuration. To avoid conversion, just checking
@@ -106,8 +112,7 @@ namespace
 		scrobbleThreshold = threshold / 100.d;
 
 		// TODO do not re-configure if settings are the same.
-		gravifonClient.configure(convertFromUtf8(gravifonUrlInUtf8, systemCharset().c_str()).c_str(),
-				username, usernameSize, password, passwordSize);
+		gravifonClient.configure(gravifonUrl, gravifonUrlSize, username, usernameSize, password, passwordSize);
 
 		return true;
 	}

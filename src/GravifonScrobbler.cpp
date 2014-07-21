@@ -91,14 +91,12 @@ void GravifonScrobbler::stopExtra()
 	m_authHeader.clear();
 }
 
-void GravifonScrobbler::configure(const char * const serverUrl,
+void GravifonScrobbler::configure(const char * const serverUrl, const std::size_t serverUrlSize,
 		const char * const username, const std::size_t usernameSize,
 		const char * const password, const std::size_t passwordSize)
 { lock_guard<mutex> lock(m_mutex);
-	assert(serverUrl != nullptr);
-
-	string tmpUrl(serverUrl);
-	if (!tmpUrl.empty()) {
+	string tmpUrl(serverUrl, serverUrlSize);
+	if (serverUrlSize > 0) {
 		appendToPath(tmpUrl, "scrobbles");
 	}
 
@@ -117,10 +115,17 @@ void GravifonScrobbler::configure(const char * const serverUrl,
 
 	tmpAuthHeader += encodeBase64(token);
 
-	if (m_scrobblerUrl != tmpUrl || m_authHeader != tmpAuthHeader) {
+	const bool sameScrobblerUrl = m_scrobblerUrl == tmpUrl;
+	const bool sameAuthHeader = m_authHeader == tmpAuthHeader;
+
+	if (!sameScrobblerUrl || !sameAuthHeader) {
 		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
-		m_scrobblerUrl = move(tmpUrl);
-		m_authHeader = move(tmpAuthHeader);
+		if (!sameScrobblerUrl) {
+			m_scrobblerUrl = std::move(tmpUrl);
+		}
+		if (!sameAuthHeader) {
+			m_authHeader = std::move(tmpAuthHeader);
+		}
 		m_scrobblesToWait = minScrobblesToWait();
 	}
 
