@@ -60,12 +60,12 @@ namespace
 		}
 	}
 
-	inline void writeJsonTimestamp(const DateTime &timestamp, string &dest)
+	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, string &dest)
 	{
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
 		 * Milliseconds are not supported.
 		 */
-		std::tm dateTime = static_cast<std::tm>(timestamp);
+		::tm dateTime = static_cast< ::tm >(timestamp);
 
 		/* Twenty five characters (including the terminating character) are really used
 		 * to store an ISO-8601-formatted date for a single-byte encoding. For multi-byte
@@ -73,7 +73,7 @@ namespace
 		 */
 		for (size_t outputSize = 25;; outputSize *= 2) {
 			char buf[outputSize];
-			if (strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime) != 0) {
+			if (::strftime(buf, outputSize, "%Y-%m-%dT%H:%M:%S%z", &dateTime) != 0) {
 				// The date is formatted successfully.
 				dest.append(u8"\"").append(convertToUtf8(buf, systemCharset().c_str())).append(u8"\"");
 				return;
@@ -88,7 +88,7 @@ namespace
 		dest.append(convertToUtf8(to_string(value), systemCharset().c_str()));
 	}
 
-	inline bool parseDateTime(const Value &dateTimeObject, DateTime &dest)
+	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
 	{
 		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asString(), dest);
 	}

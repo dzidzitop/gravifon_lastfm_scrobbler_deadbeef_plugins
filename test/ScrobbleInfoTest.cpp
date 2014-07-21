@@ -24,7 +24,7 @@ using namespace std;
 
 namespace
 {
-	time_t t(const int year, const int month, const int day, const int hour, const int minute, const int second)
+	time_t utcTime(const int year, const int month, const int day, const int hour, const int minute, const int second)
 	{
 		time_t t;
 		time(&t);
@@ -48,7 +48,7 @@ void ScrobbleInfoTest::setUp()
 	if (tz != nullptr) {
 		m_timeZoneBackup.reset(new string(tz));
 	}
-	setenv("TZ", "ABC-02:30", true);
+	setenv("TZ", "ABC+02:30", true);
 }
 
 void ScrobbleInfoTest::tearDown()
@@ -62,8 +62,8 @@ void ScrobbleInfoTest::tearDown()
 
 void ScrobbleInfoTest::testSerialiseScrobbleInfo_WithAllFields()
 {
-	time_t scrobbleStart = t(2000, 1, 1, 23, 12, 33);
-	time_t scrobbleEnd = t(2001, 2, 3, 12, 10, 4);
+	time_t scrobbleStart = utcTime(2000, 1, 1, 23, 12, 33);
+	time_t scrobbleEnd = utcTime(2001, 2, 3, 12, 10, 4);
 
 	ScrobbleInfo scrobbleInfo;
 	scrobbleInfo.scrobbleStartTimestamp = scrobbleStart;

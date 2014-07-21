@@ -91,11 +91,10 @@ public:
 
 	static bool parse(const std::string &str, ScrobbleInfo &dest);
 
-	// TODO Use more memory-efficient representation.
 	// Date and time when scrobble event was initiated.
-	afc::DateTime scrobbleStartTimestamp;
+	afc::TimestampTZ scrobbleStartTimestamp;
 	// Date and time when scrobble event was finished.
-	afc::DateTime scrobbleEndTimestamp;
+	afc::TimestampTZ scrobbleEndTimestamp;
 	// Scrobble length in milliseconds.
 	long scrobbleDuration;
 	// Track to scrobble.

@@ -147,7 +147,7 @@ namespace
 		assert(track.hasArtist());
 
 		const NumberUrlPart<afc::Timestamp::time_type> scrobbleStartTs(
-				scrobbleInfo.scrobbleStartTimestamp.timestamp().millis() / 1000);
+				scrobbleInfo.scrobbleStartTimestamp.millis() / 1000);
 		const NumberUrlPart<long> trackDurationSeconds(track.getDurationMillis() / 1000);
 
 		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
