@@ -108,8 +108,8 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEsca
 	const char * const result = builder.c_str();
 
 	CPPUNIT_ASSERT(result != nullptr);
-	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co~=world"), string(result));
-	CPPUNIT_ASSERT_EQUAL(size_t(18), builder.size());
+	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co%7e=world"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(20), builder.size());
 }
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEscaped()
@@ -141,8 +141,8 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue
 	const char * const result = builder.c_str();
 
 	CPPUNIT_ASSERT(result != nullptr);
-	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co~=**w*rld  "), string(result));
-	CPPUNIT_ASSERT_EQUAL(size_t(22), builder.size());
+	CPPUNIT_ASSERT_EQUAL(string("he%20ll%2co%7e=**w*rld  "), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(24), builder.size());
 }
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_MultipleParams()
