@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef GRAVIFONSCROBBLER_HPP_
 #define GRAVIFONSCROBBLER_HPP_
 
+#include "ScrobbleInfo.hpp"
 #include "Scrobbler.hpp"
-#include "ScrobblerInfo.hpp"
 #include <cstddef>
 #include <list>
 #include <mutex>

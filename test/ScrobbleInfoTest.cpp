@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 CPPUNIT_TEST_SUITE_REGISTRATION(ScrobbleInfoTest);
 
-#include <ScrobblerInfo.hpp>
+#include <ScrobbleInfo.hpp>
 #include <ctime>
 #include <afc/FastStringBuffer.hpp>
 

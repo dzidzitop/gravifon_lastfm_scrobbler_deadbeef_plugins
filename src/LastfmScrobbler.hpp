@@ -16,8 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef LASTFMSCROBBLER_HPP_
 #define LASTFMSCROBBLER_HPP_
 
+#include "ScrobbleInfo.hpp"
 #include "Scrobbler.hpp"
-#include "ScrobblerInfo.hpp"
 #include <cstddef>
 #include <deque>
 #include <mutex>

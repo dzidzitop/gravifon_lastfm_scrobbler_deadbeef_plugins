@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <utility>
 #include <deadbeef.h>
+#include "ScrobbleInfo.hpp"
 #include "Scrobbler.hpp"
-#include "ScrobblerInfo.hpp"
 #include "LastfmScrobbler.hpp"
 #include "logger.hpp"
 #include "pathutil.hpp"

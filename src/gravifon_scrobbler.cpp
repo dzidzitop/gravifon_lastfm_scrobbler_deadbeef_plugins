@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonScrobbler.hpp"
 #include "logger.hpp"
 #include "pathutil.hpp"
+#include "ScrobbleInfo.hpp"
 #include "Scrobbler.hpp"
-#include "ScrobblerInfo.hpp"
 
 using namespace std;
 

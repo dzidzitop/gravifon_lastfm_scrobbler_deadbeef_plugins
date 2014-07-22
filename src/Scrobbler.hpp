@@ -32,7 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/FastStringBuffer.hpp>
 #include <sys/stat.h>
 #include "logger.hpp"
-#include "ScrobblerInfo.hpp"
+#include "ScrobbleInfo.hpp"
 
 // TODO make logging tag configurable.
 template<typename ScrobbleQueue>

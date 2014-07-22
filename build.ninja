@@ -25,7 +25,7 @@ build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
 build $buildDir/LastfmScrobbler.o: cxx $srcDir/LastfmScrobbler.cpp
 build $buildDir/lastfm_scrobbler.o: cxx $srcDir/lastfm_scrobbler.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
-build $buildDir/ScrobblerInfo.o: cxx $srcDir/ScrobblerInfo.cpp
+build $buildDir/ScrobbleInfo.o: cxx $srcDir/ScrobbleInfo.cpp
 
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
 build $buildDir/UrlBuilderTest.o: cxx_test $testDir/UrlBuilderTest.cpp
@@ -34,7 +34,7 @@ build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/GravifonScrobbler.o $
     $buildDir/HttpClient.o $
-    $buildDir/ScrobblerInfo.o $
+    $buildDir/ScrobbleInfo.o $
     $buildDir/gravifon_scrobbler.o
   libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
@@ -42,7 +42,7 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
-    $buildDir/ScrobblerInfo.o
+    $buildDir/ScrobbleInfo.o
   libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
 
 build $buildDir/unit_tests: bin $
@@ -51,7 +51,7 @@ build $buildDir/unit_tests: bin $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
-    $buildDir/ScrobblerInfo.o $
+    $buildDir/ScrobbleInfo.o $
     $buildDir/UrlBuilderTest.o $
     $buildDir/run_tests.o
   libs=-lcppunit -lcurl -lafc -ljsoncpp
