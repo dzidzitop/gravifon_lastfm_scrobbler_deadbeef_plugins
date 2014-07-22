@@ -231,7 +231,7 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 	const std::size_t usernameSize = std::strlen(username);
 	const bool usernamesEqual = usernameSize == m_username.size() &&
 			std::equal(username, username + usernameSize, m_username.begin());
-	if (usernamesEqual) {
+	if (!usernamesEqual) {
 		m_username.assign(username, usernameSize);
 		reconfigured = true;
 	}
@@ -239,7 +239,7 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 	const std::size_t passwordSize = std::strlen(password);
 	const bool passwordsEqual = passwordSize == m_password.size() &&
 			std::equal(password, password + passwordSize, m_password.begin());
-	if (passwordsEqual) {
+	if (!passwordsEqual) {
 		m_password.assign(password, passwordSize);
 		reconfigured = true;
 	}
