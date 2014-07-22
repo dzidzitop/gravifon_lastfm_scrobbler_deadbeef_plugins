@@ -153,15 +153,19 @@ size_t GravifonScrobbler::doScrobbling()
 	}
 
 	HttpEntity request;
+	// TODO replace it with buffer.
 	string &body = request.body;
 	body += u8"[";
 
+	afc::FastStringBuffer<char> buf;
 	// Adding up to 20 scrobbles to the request.
 	// 20 is the max number of scrobbles in a single request.
 	unsigned submittedCount = 0;
 	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
 			submittedCount < 20 && it != end; ++submittedCount, ++it) {
-		it->appendAsJsonTo(body);
+		appendAsJson(*it, buf);
+		// TODO Use FastStringBuffer to build body.
+		body.append(buf.data(), buf.size());
 		body += u8",";
 	}
 	body.pop_back(); // Removing the redundant comma.
@@ -256,8 +260,7 @@ size_t GravifonScrobbler::doScrobbling()
 					[&responseBody, &it, &completedCount, this](
 							const unsigned long errorCode, const string &errorDescription)
 					{
-						string scrobbleAsStr;
-						it->appendAsJsonTo(scrobbleAsStr);
+						afc::FastStringBuffer<char> scrobbleAsStr = serialiseAsJson(*it);
 						if (isRecoverableError(errorCode)) {
 							fprintf(stderr, "[GravifonScrobbler] Scrobble '%s' is not processed. "
 									"Error: '%s' (%lu). It will be re-submitted later.\n",

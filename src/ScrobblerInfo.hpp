@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include <vector>
 #include <afc/dateutil.hpp>
+#include <afc/FastStringBuffer.hpp>
 
 // All strings are utf8-encoded.
 class Track
@@ -60,9 +61,6 @@ public:
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
-
-	// Appends this ScrobbleInfo in the JSON format to a given string.
-	void appendAsJsonTo(std::string &str) const;
 private:
 	std::string m_title;
 	std::vector<std::string> m_artists;
@@ -99,9 +97,10 @@ public:
 	long scrobbleDuration;
 	// Track to scrobble.
 	Track track;
-
-	// Appends this ScrobbleInfo in the JSON format to a given string.
-	void appendAsJsonTo(std::string &str) const;
 };
+
+// Writes this ScrobbleInfo in the JSON format to a buffer and returns the latter.
+afc::FastStringBuffer<char> serialiseAsJson(const ScrobbleInfo &scrobbleInfo);
+void appendAsJson(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> &dest);
 
 #endif /* SCROBBLER_INFO_HPP_ */

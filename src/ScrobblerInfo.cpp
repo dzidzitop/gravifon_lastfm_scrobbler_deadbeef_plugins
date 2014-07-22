@@ -14,51 +14,57 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
+#include <cstddef>
 #include <utility>
 #include <time.h>
+#include <afc/ensure_ascii.hpp>
+#include <afc/FastStringBuffer.hpp>
+#include <afc/number.h>
+#include <afc/StringRef.hpp>
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
-#include <afc/ensure_ascii.hpp>
 #include "jsonutil.hpp"
 
+using afc::operator"" _s;
 using namespace std;
 using Json::Value;
 using Json::ValueType;
 
 namespace
 {
-	inline void writeJsonString(const string &src, string &dest)
+	inline void writeJsonString(const string &src, afc::FastStringBuffer<char> &dest)
 	{
+		// TODO use borrow tail.
 		for (const char c : src) {
 			switch (c) {
 			case '"':
 			case '\\':
-				dest.push_back('\\');
-				dest.push_back(c);
+				dest.append('\\');
+				dest.append(c);
 				break;
 			case '\b':
-				dest.append(u8"\\b");
+				dest.append("\\b"_s);
 				break;
 			case '\f':
-				dest.append(u8"\\f");
+				dest.append("\\f"_s);
 				break;
 			case '\n':
-				dest.append(u8"\\n");
+				dest.append("\\n"_s);
 				break;
 			case '\r':
-				dest.append(u8"\\r");
+				dest.append("\\r"_s);
 				break;
 			case '\t':
-				dest.append(u8"\\t");
+				dest.append("\\t"_s);
 				break;
 			default:
-				dest.push_back(c);
+				dest.append(c);
 				break;
 			}
 		}
 	}
 
-	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, string &dest)
+	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, afc::FastStringBuffer<char> &dest)
 	{
 		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
 		 * Milliseconds are not supported.
@@ -78,18 +84,99 @@ namespace
 				 * The output is locale-independent and is always an ASCII-compatible string.
 				 * There is no need to convert it to UTF-8 since the output is the same string.
 				 */
-				dest.append(u8"\"").append(buf, nCopied).append(u8"\"");
+				dest.append(buf, nCopied);
 				return;
 			}
 			// The size of the destination buffer is too small. Repeating with a larger buffer.
 		}
 	}
 
-	// writes value to out in utf-8
-	inline void writeJsonLong(const long value, string &dest)
+	inline std::size_t maxJsonSize(const ScrobbleInfo &scrobbleInfo) noexcept
 	{
-		// TODO do not create temp string.
-		dest.append(to_string(value));
+		const Track &track = scrobbleInfo.track;
+
+		// Each free-text label can be escaped so it is doubled to cover the case when each character is escaped.
+		std::size_t maxSize = 0;
+		maxSize += 2; // {}
+		maxSize += R"("scrobble_start_datetime":"-XX-XXTXX:XX:XX+XXXX")"_s.size() +
+				afc::maxPrintedSize<decltype(std::tm::tm_year), 10>();
+		maxSize += 1; // ,
+		maxSize += R"("scrobble_end_datetime":"-XX-XXTXX:XX:XX+XXXX")"_s.size() +
+				afc::maxPrintedSize<decltype(std::tm::tm_year), 10>();
+		maxSize += 1; // ,
+		maxSize += R"("scrobble_duration":{"amount":,"unit":"ms"})"_s.size() +
+				afc::maxPrintedSize<decltype(scrobbleInfo.scrobbleDuration), 10>();
+		maxSize += 1; // ,
+		maxSize += R"("track":{})"_s.size();
+		maxSize += R"("title":"")"_s.size() + 2 * track.getTitle().size();
+		maxSize += 1; // ,
+		maxSize += R"("artists":[]");
+		maxSize += R"({"name":""})"_s.size() * track.getArtists().size() - 1; // With commas.
+		for (const string &artist : track.getArtists()) {
+			maxSize += 2 * artist.size();
+		}
+		maxSize += 1; // ,
+		if (track.hasAlbumTitle()) {
+			maxSize += R"("album":{"title":""})"_s.size();
+			maxSize += 2 * track.getAlbumTitle().size();
+			if (track.hasAlbumArtist()) {
+				maxSize += 1; // ,
+				maxSize += R"("artists":[]")_s.size();
+				maxSize += R"({"name":""})"_s.size() * 2 * track.getArtists().size() - 1; // With commas.
+				for (const string &artist : track.getArtists()) {
+					maxSize += 2 * artist.size();
+				}
+			}
+			maxSize += 1; // ,
+		}
+		maxSize += R"("length":{"amount":,"unit":"ms"})"_s.size() +
+				afc::maxPrintedSize<decltype(track.getDurationMillis()), 10>();
+
+		return maxSize;
+	}
+
+	inline void appendAsJsonImpl(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> &buf) noexcept
+	{
+		const Track &track = scrobbleInfo.track;
+
+		buf.append(R"({"scrobble_start_datetime":")"_s);
+		writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, buf);
+		buf.append(R"(","scrobble_end_datetime":")"_s);
+		writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, buf);
+		buf.append(R"(","scrobble_duration":{"amount":)"_s);
+		buf.returnTail(afc::printNumber<long, 10>(scrobbleInfo.scrobbleDuration, buf.borrowTail()));
+		buf.append(R"(,"unit":"ms"},"track":{"title":")"_s);
+		writeJsonString(track.getTitle(), buf);
+		// At least single artist is expected.
+		buf.append(R"(","artists":[)"_s);
+		for (const string &artist : track.getArtists()) {
+			// TODO improve performance by merging appends.
+			buf.append(R"({"name":")"_s);
+			writeJsonString(artist, buf);
+			buf.append(R"("},)"_s);
+		}
+		buf.returnTail(buf.borrowTail() - 1); // removing the last redundant comma.
+		if (track.hasAlbumTitle()) {
+			buf.append(R"(],"album":{"title":")"_s);
+			writeJsonString(track.getAlbumTitle(), buf);
+			if (track.hasAlbumArtist()) {
+				buf.append(R"(","artists":[)"_s);
+				for (const string &albumArtist : track.getAlbumArtists()) {
+					// TODO improve performance by merging appends.
+					buf.append(R"({"name":")"_s);
+					writeJsonString(albumArtist, buf);
+					buf.append(R"("},)"_s);
+				}
+				buf.returnTail(buf.borrowTail() - 1); // removing the last redundant comma.
+				buf.append(R"(]},"length":{"amount":)"_s);
+			} else {
+				buf.append(R"(}","length":{"amount":)"_s);
+			}
+		} else {
+			buf.append(R"(},"length":{"amount":)"_s);
+		}
+		buf.returnTail(afc::printNumber<long, 10>(track.getDurationMillis(), buf.borrowTail()));
+		buf.append(R"(,"unit":"ms"}}})"_s);
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
@@ -201,48 +288,20 @@ bool ScrobbleInfo::parse(const string &str, ScrobbleInfo &dest)
 	return true;
 }
 
-void ScrobbleInfo::appendAsJsonTo(string &str) const
+afc::FastStringBuffer<char> serialiseAsJson(const ScrobbleInfo &scrobbleInfo)
 {
-	str.append(u8R"({"scrobble_start_datetime":)");
-	writeJsonTimestamp(scrobbleStartTimestamp, str);
-	str.append(u8R"(,"scrobble_end_datetime":)");
-	writeJsonTimestamp(scrobbleEndTimestamp, str);
-	str.append(u8R"(,"scrobble_duration":{"amount":)");
-	writeJsonLong(scrobbleDuration, str);
-	str.append(u8R"(,"unit":"ms"},"track":)");
-	track.appendAsJsonTo(str);
-	str.append(u8"}");
+	const std::size_t maxSize = maxJsonSize(scrobbleInfo);
+	afc::FastStringBuffer<char> buf(maxSize);
+
+	appendAsJsonImpl(scrobbleInfo, buf);
+
+	return buf;
 }
 
-void Track::appendAsJsonTo(string &str) const
+void appendAsJson(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> &dest)
 {
-	str.append(u8R"({"title":")");
-	writeJsonString(m_title, str);
-	// A single artist is currently supported.
-	str.append(u8R"(","artists":[)");
-	for (const string &artist : m_artists) {
-		str.append(u8R"({"name":")");
-		writeJsonString(artist, str);
-		str.append(u8"\"},");
-	}
-	str.pop_back(); // removing the last redundant comma.
-	str.append(u8"],");
-	if (m_albumSet) {
-		str.append(u8R"("album":{"title":")");
-		writeJsonString(m_album, str);
-		str.append(u8"\"");
-		if (hasAlbumArtist()) {
-			str.append(u8R"(,"artists":[)");
-			for (const string &artist : m_albumArtists) {
-				str.append(u8R"({"name":")");
-				writeJsonString(artist, str);
-				str.append(u8"\"},");
-			}
-			str.back() = u8"]"[0]; // removing the last redundant comma as well.
-		}
-		str.append(u8R"(},)");
-	}
-	str.append(u8R"("length":{"amount":)");
-	writeJsonLong(m_duration, str);
-	str.append(u8R"(,"unit":"ms"}})");
+	const std::size_t maxSize = maxJsonSize(scrobbleInfo);
+	dest.reserve(dest.size() + maxSize);
+
+	appendAsJsonImpl(scrobbleInfo, dest);
 }

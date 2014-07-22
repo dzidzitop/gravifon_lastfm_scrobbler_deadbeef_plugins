@@ -28,7 +28,6 @@ build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
 build $buildDir/ScrobblerInfo.o: cxx $srcDir/ScrobblerInfo.cpp
 
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
-build $buildDir/TrackTest.o: cxx_test $testDir/TrackTest.cpp
 build $buildDir/UrlBuilderTest.o: cxx_test $testDir/UrlBuilderTest.cpp
 build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 
@@ -53,7 +52,6 @@ build $buildDir/unit_tests: bin $
     $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/ScrobblerInfo.o $
-    $buildDir/TrackTest.o $
     $buildDir/UrlBuilderTest.o $
     $buildDir/run_tests.o
   libs=-lcppunit -lcurl -lafc -ljsoncpp

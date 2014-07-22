@@ -25,13 +25,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class ScrobbleInfoTest : public CppUnit::TestFixture
 {
 	CPPUNIT_TEST_SUITE(ScrobbleInfoTest);
-	CPPUNIT_TEST(testSerialiseScrobbleInfo_WithAllFields);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_SingleArtist);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumArtists);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_NoAlbum);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_NoAlbumArtists);
 	CPPUNIT_TEST(testDeserialiseScrobbleInfo_MalformedJson);
+
+	CPPUNIT_TEST(testSerialiseAsJson_ScrobbleInfoWithAllFields);
 	CPPUNIT_TEST_SUITE_END();
 
 	std::unique_ptr<std::string> m_timeZoneBackup;
@@ -39,13 +40,14 @@ public:
 	void setUp() override;
 	void tearDown() override;
 
-	void testSerialiseScrobbleInfo_WithAllFields();
 	void testDeserialiseScrobbleInfo_WithAllFields_SingleArtist();
 	void testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists();
 	void testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumArtists();
 	void testDeserialiseScrobbleInfo_NoAlbum();
 	void testDeserialiseScrobbleInfo_NoAlbumArtists();
 	void testDeserialiseScrobbleInfo_MalformedJson();
+
+	void testSerialiseAsJson_ScrobbleInfoWithAllFields();
 };
 
 #endif /* SCROBBLEINFOTEST_HPP_ */

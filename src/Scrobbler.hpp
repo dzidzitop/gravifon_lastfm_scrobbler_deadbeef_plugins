@@ -29,6 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <afc/FastStringBuffer.hpp>
 #include <sys/stat.h>
 #include "logger.hpp"
 #include "ScrobblerInfo.hpp"
@@ -174,10 +175,10 @@ inline bool Scrobbler<ScrobbleQueue>::storeScrobbles(Iterator begin, const Itera
 
 	bool result = true;
 
-	std::string buf;
+	afc::FastStringBuffer<char> buf;
 	for (auto it = begin; it != end; ++it) {
 		buf.clear();
-		it->appendAsJsonTo(buf);
+		appendAsJson(*it, buf);
 		const std::size_t bufSize = buf.size();
 		if (std::fwrite(buf.c_str(), sizeof(unsigned char), bufSize, dataFile) != bufSize) {
 			result = false;
