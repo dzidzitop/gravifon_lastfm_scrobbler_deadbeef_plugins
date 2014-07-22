@@ -112,6 +112,7 @@ namespace
 		maxSize += 1; // ,
 		maxSize += R"("artists":[]");
 		maxSize += R"({"name":""})"_s.size() * track.getArtists().size() - 1; // With commas.
+		// TODO move loop invariant.
 		for (const string &artist : track.getArtists()) {
 			maxSize += 2 * artist.size();
 		}
@@ -123,6 +124,7 @@ namespace
 				maxSize += 1; // ,
 				maxSize += R"("artists":[]")_s.size();
 				maxSize += R"({"name":""})"_s.size() * 2 * track.getArtists().size() - 1; // With commas.
+				// TODO move loop invariant.
 				for (const string &artist : track.getArtists()) {
 					maxSize += 2 * artist.size();
 				}
