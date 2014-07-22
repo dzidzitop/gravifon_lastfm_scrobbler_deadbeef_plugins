@@ -170,10 +170,10 @@ namespace
 				buf.returnTail(buf.borrowTail() - 1); // removing the last redundant comma.
 				buf.append(R"(]},"length":{"amount":)"_s);
 			} else {
-				buf.append(R"(}","length":{"amount":)"_s);
+				buf.append(R"("},"length":{"amount":)"_s);
 			}
 		} else {
-			buf.append(R"(},"length":{"amount":)"_s);
+			buf.append(R"(],"length":{"amount":)"_s);
 		}
 		buf.returnTail(afc::printNumber<long, 10>(track.getDurationMillis(), buf.borrowTail()));
 		buf.append(R"(,"unit":"ms"}}})"_s);
