@@ -73,6 +73,9 @@ namespace
 	{
 		const Track &track = scrobbleInfo.track;
 
+		assert(track.hasTitle());
+		assert(track.hasArtist());
+
 		// Each free-text label can be escaped so it is doubled to cover the case when each character is escaped.
 		std::size_t maxSize = 0;
 		maxSize += 2; // {}
