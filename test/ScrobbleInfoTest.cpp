@@ -51,6 +51,7 @@ void ScrobbleInfoTest::setUp()
 		m_timeZoneBackup.reset(new string(tz));
 	}
 	setenv("TZ", "ABC-02:30", true);
+	tzset();
 }
 
 void ScrobbleInfoTest::tearDown()
