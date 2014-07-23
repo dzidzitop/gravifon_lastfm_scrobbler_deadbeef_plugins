@@ -87,7 +87,7 @@ public:
 
 	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
 
-	static std::pair<ScrobbleInfo, bool> parse(const char *begin, const char *end)
+	static std::pair<ScrobbleInfo, bool> parse(const char * const begin, const char * const end)
 	{
 		std::pair<ScrobbleInfo, bool> result;
 		result.second = parse(begin, end, result.first);
