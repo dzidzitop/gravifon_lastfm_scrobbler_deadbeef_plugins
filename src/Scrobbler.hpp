@@ -477,12 +477,14 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 			break;
 		}
 		if (c == 0x0a) { // c == u8'\n'
-			m_pendingScrobbles.emplace_back();
-			if (!ScrobbleInfo::parse(buf, m_pendingScrobbles.back())) {
+			std::pair<ScrobbleInfo, bool> parseResult(ScrobbleInfo::parse(buf));
+			if (parseResult.second) {
+				m_pendingScrobbles.emplace_back(std::move(parseResult.first));
+				buf.clear();
+			} else {
 				result = false;
 				goto finish;
 			}
-			buf.clear();
 		} else {
 			buf += (char) c;
 		}

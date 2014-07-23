@@ -87,7 +87,7 @@ public:
 
 	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
 
-	static bool parse(const std::string &str, ScrobbleInfo &dest);
+	static std::pair<ScrobbleInfo, bool> parse(const std::string &str);
 
 	// Date and time when scrobble event was initiated.
 	afc::TimestampTZ scrobbleStartTimestamp;
