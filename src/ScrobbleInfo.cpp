@@ -16,7 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
 #include <cstddef>
 #include <utility>
-#include <time.h>
+#include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/FastStringBuffer.hpp>
 #include <afc/number.h>
@@ -66,29 +66,7 @@ namespace
 
 	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, afc::FastStringBuffer<char> &dest)
 	{
-		/* The datetime format as required by https://github.com/gravidence/gravifon/wiki/Date-Time
-		 * Milliseconds are not supported.
-		 */
-		::tm dateTime = static_cast< ::tm >(timestamp);
-
-		/* Twenty five characters (including the terminating character) are really used
-		 * to store an ISO-8601-formatted date for a single-byte encoding. For multi-byte
-		 * encodings this is not the case, and a larger buffer could be needed.
-		 */
-		for (size_t outputSize = 25;; outputSize *= 2) {
-			char buf[outputSize];
-			std::size_t nCopied = ::strftime(buf, outputSize, "%FT%T%z", &dateTime);
-			if (nCopied != 0) {
-				/* The date is formatted successfully.
-				 *
-				 * The output is locale-independent and is always an ASCII-compatible string.
-				 * There is no need to convert it to UTF-8 since the output is the same string.
-				 */
-				dest.append(buf, nCopied);
-				return;
-			}
-			// The size of the destination buffer is too small. Repeating with a larger buffer.
-		}
+		dest.returnTail(afc::formatISODateTime(timestamp, dest.borrowTail()));
 	}
 
 	inline std::size_t maxJsonSize(const ScrobbleInfo &scrobbleInfo) noexcept
@@ -98,11 +76,9 @@ namespace
 		// Each free-text label can be escaped so it is doubled to cover the case when each character is escaped.
 		std::size_t maxSize = 0;
 		maxSize += 2; // {}
-		maxSize += R"("scrobble_start_datetime":"-XX-XXTXX:XX:XX+XXXX")"_s.size() +
-				afc::maxPrintedSize<decltype(std::tm::tm_year), 10>();
+		maxSize += R"("scrobble_start_datetime":"")"_s.size() + afc::maxISODateTimeSize();
 		maxSize += 1; // ,
-		maxSize += R"("scrobble_end_datetime":"-XX-XXTXX:XX:XX+XXXX")"_s.size() +
-				afc::maxPrintedSize<decltype(std::tm::tm_year), 10>();
+		maxSize += R"("scrobble_end_datetime":"")"_s.size() + afc::maxISODateTimeSize();
 		maxSize += 1; // ,
 		maxSize += R"("scrobble_duration":{"amount":,"unit":"ms"})"_s.size() +
 				afc::maxPrintedSize<decltype(scrobbleInfo.scrobbleDuration), 10>();
