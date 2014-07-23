@@ -205,37 +205,34 @@ namespace
 	}
 }
 
-std::pair<ScrobbleInfo, bool> ScrobbleInfo::parse(const char * const begin, const char * const end)
+bool ScrobbleInfo::parse(const char * const begin, const char * const end, ScrobbleInfo &dest)
 {
-	std::pair<ScrobbleInfo, bool> result; // result->second is false.
-	ScrobbleInfo &dest = result.first;
-
 	Json::Reader jsonReader;
 	Value object;
 
 	if (!jsonReader.parse(begin, end, object, false)) {
 		logError(string("[Scrobbler] Unable to parse the scrobble JSON object: ") +
 				jsonReader.getFormatedErrorMessages());
-		return result;
+		return false;
 	}
 	if (!isType(object, objectValue)) {
-		return result;
+		return false;
 	}
 	if (!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp) ||
 			!parseDateTime(object["scrobble_end_datetime"], dest.scrobbleEndTimestamp) ||
 			!parseDuration(object["scrobble_duration"], dest.scrobbleDuration)) {
-		return result;
+		return false;
 	}
 
 	Track &track = dest.track;
 
 	const Value trackObject = object["track"];
 	if (!isType(trackObject, objectValue)) {
-		return result;
+		return false;
 	}
 	const Value &trackTitle = trackObject["title"];
 	if (!isType(trackTitle, stringValue)) {
-		return result;
+		return false;
 	}
 	track.setTitle(trackTitle.asCString());
 
@@ -243,33 +240,32 @@ std::pair<ScrobbleInfo, bool> ScrobbleInfo::parse(const char * const begin, cons
 	const ValueType trackAlbumObjType = trackAlbum.type();
 	if (trackAlbumObjType != nullValue) {
 		if (trackAlbumObjType != objectValue) {
-			return result;
+			return false;
 		}
 		const Value &trackAlbumTitle = trackAlbum["title"];
 		if (!isType(trackAlbumTitle, stringValue)) {
-			return result;
+			return false;
 		}
 		track.setAlbumTitle(trackAlbumTitle.asCString());
 
 		if (!parseArtists(trackAlbum["artists"], false,
 				[&](string &&artistName) { track.addAlbumArtist(std::move(artistName)); })) {
-			return result;
+			return false;
 		}
 	}
 
 	long trackDuration;
 	if (!parseDuration(trackObject["length"], trackDuration)) {
-		return result;
+		return false;
 	}
 	track.setDurationMillis(trackDuration);
 
 	if (!parseArtists(trackObject["artists"], true,
 			[&](string &&artistName) { track.addArtist(std::move(artistName)); })) {
-		return result;
+		return false;
 	}
 
-	result.second = true;
-	return result;
+	return true;
 }
 
 afc::FastStringBuffer<char> serialiseAsJson(const ScrobbleInfo &scrobbleInfo)

@@ -455,6 +455,8 @@ Scrobbler<ScrobbleQueue>::openDataFile(const std::string &path, const char * con
 template<typename ScrobbleQueue>
 inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 {
+	assertLocked();
+
 	logDebug("[Scrobbler] Loading pending scrobbles...");
 
 	std::FILE *dataFile; // initialised by openDataFile();
@@ -477,11 +479,14 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 			break;
 		}
 		if (c == 0x0a) { // c == u8'\n'
-			std::pair<ScrobbleInfo, bool> parseResult(ScrobbleInfo::parse(buf.data(), buf.data() + buf.size()));
-			if (parseResult.second) {
-				m_pendingScrobbles.emplace_back(std::move(parseResult.first));
+			/* Instantiating the destination scrobble within the queue to minimise copying/moving.
+			 * It parsing fails then it is ejected. It is assumed that exceptions are disabled.
+			 */
+			m_pendingScrobbles.emplace_back();
+			if (ScrobbleInfo::parse(buf.data(), buf.data() + buf.size(), m_pendingScrobbles.back())) {
 				buf.clear();
 			} else {
+				m_pendingScrobbles.pop_back();
 				result = false;
 				goto finish;
 			}
@@ -509,6 +514,8 @@ finish:
 template<typename ScrobbleQueue>
 inline bool Scrobbler<ScrobbleQueue>::storePendingScrobbles()
 {
+	assertLocked();
+
 	logDebug("[Scrobbler] Storing pending scrobbles...");
 
 	/* The assumption is that all tracks are loaded into the list of pending scrobbles
