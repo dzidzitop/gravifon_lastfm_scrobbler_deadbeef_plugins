@@ -71,7 +71,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(result.second);
 
@@ -94,7 +94,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(result.second);
 
@@ -117,7 +117,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumAr
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"},{"name":"Scorpions"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(result.second);
 
@@ -139,7 +139,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(result.second);
 
@@ -161,7 +161,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 			u8R"("album":{"title":"A Night at the Opera"},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(result.second);
 
@@ -183,7 +183,7 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("length":{"amount":207026,"unit":"ms")");
 
-	std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input);
+	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
 	CPPUNIT_ASSERT(!result.second);
 }

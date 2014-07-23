@@ -205,7 +205,7 @@ namespace
 	}
 }
 
-std::pair<ScrobbleInfo, bool> ScrobbleInfo::parse(const string &str)
+std::pair<ScrobbleInfo, bool> ScrobbleInfo::parse(const char * const begin, const char * const end)
 {
 	std::pair<ScrobbleInfo, bool> result; // result->second is false.
 	ScrobbleInfo &dest = result.first;
@@ -213,7 +213,7 @@ std::pair<ScrobbleInfo, bool> ScrobbleInfo::parse(const string &str)
 	Json::Reader jsonReader;
 	Value object;
 
-	if (!jsonReader.parse(str, object, false)) {
+	if (!jsonReader.parse(begin, end, object, false)) {
 		logError(string("[Scrobbler] Unable to parse the scrobble JSON object: ") +
 				jsonReader.getFormatedErrorMessages());
 		return result;

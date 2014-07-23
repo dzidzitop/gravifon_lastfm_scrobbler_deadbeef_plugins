@@ -477,7 +477,7 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 			break;
 		}
 		if (c == 0x0a) { // c == u8'\n'
-			std::pair<ScrobbleInfo, bool> parseResult(ScrobbleInfo::parse(buf));
+			std::pair<ScrobbleInfo, bool> parseResult(ScrobbleInfo::parse(buf.data(), buf.data() + buf.size()));
 			if (parseResult.second) {
 				m_pendingScrobbles.emplace_back(std::move(parseResult.first));
 				buf.clear();
