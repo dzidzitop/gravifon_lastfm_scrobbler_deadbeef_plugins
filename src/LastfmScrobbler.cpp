@@ -26,10 +26,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/StringRef.hpp>
 #include "logger.hpp"
 #include <afc/md5.hpp>
-#include <afc/Tokeniser.hpp>
-#include <afc/ensure_ascii.hpp>
-#include <utility>
 #include <afc/dateutil.hpp>
+#include <afc/ensure_ascii.hpp>
+#include <afc/Tokeniser.hpp>
 #include <afc/utils.h>
 
 using namespace std;
@@ -448,15 +447,16 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);
 
 	if (response.statusCode == 200) {
-		string::iterator start, end;
-		Tokeniser<> t(responseBody, '\n');
+		string::const_iterator start, end;
+		Tokeniser<char, std::string::const_iterator> t(responseBody.cbegin(), responseBody.cend(), '\n');
 		t.next(start, end);
 		if (end - start == 2 && *start == 'O' && *(start + 1) == 'K') {
 			if (!t.hasNext()) { // Session ID.
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 				return false;
 			}
-			m_sessionId = std::move(t.next());
+			t.next(start, end);
+			m_sessionId.assign(start, end);
 
 			if (!t.hasNext()) { // Now-playing URL. It is ignored for now.
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
@@ -468,7 +468,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 				return false;
 			}
-			m_submissionUrl = std::move(t.next());
+			t.next(start, end);
+			m_submissionUrl.assign(start, end);
 
 			logDebug("[LastfmScrobbler] The user is authenticated...");
 			m_authenticated = true;
