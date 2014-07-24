@@ -20,15 +20,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <vector>
 #include <atomic>
 
-struct HttpEntity
+struct HttpRequestEntity
 {
 	std::string body;
 	// HttpEntity does not own headers.
 	std::vector<const char *> headers;
 };
 
-struct HttpResponseEntity : public HttpEntity
+struct HttpResponseEntity
 {
+	std::string body;
+	// HttpEntity does not own headers.
+	std::vector<const char *> headers;
+
 	int statusCode;
 };
 
@@ -50,13 +54,13 @@ public:
 	HttpClient() = default;
 	~HttpClient() = default;
 
-	StatusCode get(const char * const url, const HttpEntity &request, HttpResponseEntity &response,
+	StatusCode get(const char * const url, const HttpRequestEntity &request, HttpResponseEntity &response,
 			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
 	{
 		return send(HttpMethod::GET, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
 	}
 
-	StatusCode post(const char * const url, const HttpEntity &request, HttpResponseEntity &response,
+	StatusCode post(const char * const url, const HttpRequestEntity &request, HttpResponseEntity &response,
 			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
 	{
 		return send(HttpMethod::POST, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
@@ -64,7 +68,7 @@ public:
 private:
 	enum class HttpMethod {GET, POST};
 
-	StatusCode send(const HttpMethod method, const char * const url, const HttpEntity &request,
+	StatusCode send(const HttpMethod method, const char * const url, const HttpRequestEntity &request,
 			HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
 			const std::atomic<bool> &abortFlag);
 };

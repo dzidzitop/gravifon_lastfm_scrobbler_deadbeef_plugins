@@ -295,7 +295,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		appendScrobbleInfo(builder, *chunkEnd, submittedCount);
 	}
 
-	HttpEntity request;
+	HttpRequestEntity request;
 	// TODO change API to avoid this copying.
 	request.body.assign(builder.data(), builder.size());
 
@@ -424,7 +424,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		logDebug(string("[LastfmScrobbler] Authentication URL: ") + string(url.c_str(), url.size()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().get(url.c_str(), HttpEntity(), response,
+		result = HttpClient().get(url.c_str(), HttpRequestEntity(), response,
 				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 

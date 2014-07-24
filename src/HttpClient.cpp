@@ -124,8 +124,9 @@ namespace
 	}
 }
 
-HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * const url, const HttpEntity &request,
-		HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
+HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * const url,
+		const HttpRequestEntity &request, HttpResponseEntity &response,
+		const long connectionTimeoutMillis, const long socketTimeoutMillis,
 		const std::atomic<bool> &abortFlag)
 {
 	if (!::CurlInit::instance.initialised) {

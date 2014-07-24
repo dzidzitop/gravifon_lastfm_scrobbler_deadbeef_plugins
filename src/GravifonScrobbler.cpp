@@ -152,7 +152,7 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	HttpEntity request;
+	HttpRequestEntity request;
 	// TODO replace it with buffer.
 	string &body = request.body;
 	body += u8"[";
