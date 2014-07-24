@@ -16,21 +16,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef HTTPCLIENT_HPP_
 #define HTTPCLIENT_HPP_
 
+#include <cstddef>
 #include <string>
 #include <vector>
 #include <atomic>
 
-struct HttpRequestEntity
+class HttpRequestEntity
 {
-	std::string body;
-	// HttpEntity does not own headers.
+public:
+	void setBody(const char body[], const std::size_t n) noexcept { m_body = body; m_bodySize = n; }
+	const char *getBody() const noexcept { return m_body; }
+	std::size_t getBodySize() const noexcept { return m_bodySize; }
+private:
+	// HttpRequestEntity does not own body.
+	const char *m_body;
+	std::size_t m_bodySize;
+// TODO make it private.
+public:
+	// HttpRequestEntity does not own headers.
 	std::vector<const char *> headers;
 };
 
 struct HttpResponseEntity
 {
 	std::string body;
-	// HttpEntity does not own headers.
+	// HttpResponseEntity does not own headers.
 	std::vector<const char *> headers;
 
 	int statusCode;

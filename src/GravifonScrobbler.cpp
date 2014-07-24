@@ -152,9 +152,8 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	HttpRequestEntity request;
 	// TODO replace it with buffer.
-	string &body = request.body;
+	string body;
 	body += u8"[";
 
 	afc::FastStringBuffer<char> buf;
@@ -171,6 +170,8 @@ size_t GravifonScrobbler::doScrobbling()
 	body.pop_back(); // Removing the redundant comma.
 	body += u8"]";
 
+	HttpRequestEntity request;
+	request.setBody(body.data(), body.size());
 	request.headers.reserve(4);
 	request.headers.push_back(m_authHeader.c_str());
 	// Curl expects the basic charset in headers.
@@ -204,7 +205,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug(string("[GravifonScrobbler] Request body: ") + request.body);
+		logDebug(string("[GravifonScrobbler] Request body: ") + string(request.getBody(), request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,

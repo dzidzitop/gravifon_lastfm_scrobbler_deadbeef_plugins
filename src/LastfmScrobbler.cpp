@@ -296,8 +296,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	}
 
 	HttpRequestEntity request;
-	// TODO change API to avoid this copying.
-	request.body.assign(builder.data(), builder.size());
+	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
 	const string submissionUrlCopy(m_submissionUrl);
@@ -326,7 +325,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
 		logDebug(string("[LastfmScrobbler] Submission URL: ") + submissionUrlCopy);
-		logDebug(string("[LastfmScrobbler] Submission request body: ") + request.body);
+		logDebug(string("[LastfmScrobbler] Submission request body: ") +
+				string(request.getBody(), request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,

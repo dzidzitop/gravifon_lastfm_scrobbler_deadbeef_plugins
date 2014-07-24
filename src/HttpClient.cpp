@@ -149,8 +149,8 @@ HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * co
 	// TODO add response headers
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	if (method == HttpMethod::POST) {
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.body.size()));
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, static_cast<curl_off_t>(request.getBodySize()));
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.getBody());
 	}
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
