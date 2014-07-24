@@ -28,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/md5.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
-#include <afc/Tokeniser.hpp>
 #include <afc/utils.h>
 
 using namespace std;
@@ -447,29 +446,31 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);
 
 	if (response.statusCode == 200) {
-		string::const_iterator start, end;
-		Tokeniser<char, std::string::const_iterator> t(responseBody.cbegin(), responseBody.cend(), '\n');
-		t.next(start, end);
-		if (end - start == 2 && *start == 'O' && *(start + 1) == 'K') {
-			if (!t.hasNext()) { // Session ID.
+		const char delim = '\n';
+		string::const_iterator seqBegin = responseBody.cbegin(), seqEnd, end = responseBody.cend();
+		seqEnd = std::find(seqBegin, end, delim);
+		if (seqEnd - seqBegin == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
+			if (seqEnd == end) { // Session ID.
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 				return false;
 			}
-			t.next(start, end);
-			m_sessionId.assign(start, end);
+			seqBegin = seqEnd + 1;
+			seqEnd = std::find(seqBegin, end, delim);
+			m_sessionId.assign(seqBegin, seqEnd);
 
-			if (!t.hasNext()) { // Now-playing URL. It is ignored for now.
+			if (seqEnd == end) { // Now-playing URL. It is ignored for now.
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 				return false;
 			}
-			t.skip();
+			seqEnd = std::find(seqEnd + 1, end, delim);
 
-			if (!t.hasNext()) { // Submission URL.
+			if (seqEnd == end) { // Submission URL.
 				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 				return false;
 			}
-			t.next(start, end);
-			m_submissionUrl.assign(start, end);
+			seqBegin = seqEnd + 1;
+			seqEnd = std::find(seqBegin, end, delim);
+			m_submissionUrl.assign(seqBegin, seqEnd);
 
 			logDebug("[LastfmScrobbler] The user is authenticated...");
 			m_authenticated = true;
@@ -477,7 +478,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		} else {
 			// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
 			fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
-					string(start, end).c_str());
+					string(seqBegin, seqEnd).c_str());
 			return false;
 		}
 	} else {
