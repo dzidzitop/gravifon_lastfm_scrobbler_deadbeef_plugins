@@ -14,8 +14,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
+#include <bitset>
 #include <cstddef>
 #include <utility>
+#include <afc/builtin.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/FastStringBuffer.hpp>
@@ -32,13 +34,35 @@ using Json::ValueType;
 
 namespace
 {
+	bitset<256> initJsonCharsToEscape()
+	{
+		bitset<256> result;
+		for (auto i = 0; i < 0x20; ++i) {
+			result.set(i);
+		}
+		result.set('"');
+		result.set('\\');
+		result.set('/');
+		result.set(0x7f);
+		return result;
+	}
+
+	static const bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
+
 	inline void writeJsonString(const string &src, afc::FastStringBuffer<char> &dest)
 	{
 		// TODO use borrow tail.
 		for (const char c : src) {
-			if (c < 0x20 || c == 0x7f)
-			{
+			if (likely(!jsonCharsToEscape[c])) {
+				dest.append(c);
+			} else {
 				switch (c) {
+				case '"':
+				case '\\':
+				case '/':
+					dest.append('\\');
+					dest.append(c);
+					break;
 				case '\b':
 					dest.append("\\b"_s);
 					break;
@@ -57,18 +81,6 @@ namespace
 				default:
 					dest.append("\\u00"_s);
 					dest.returnTail(afc::printTwoDigits(c, dest.borrowTail()));
-					break;
-				}
-			} else {
-			switch (c) {
-				case '"':
-				case '\\':
-				case '/':
-					dest.append('\\');
-					dest.append(c);
-					break;
-				default:
-					dest.append(c);
 					break;
 				}
 			}
