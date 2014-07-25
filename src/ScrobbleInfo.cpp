@@ -53,7 +53,9 @@ namespace
 	{
 		// TODO use borrow tail.
 		for (const char c : src) {
-			if (likely(!jsonCharsToEscape[c])) {
+			// Truncated to an octet just in case non-octet bytes are used.
+			const unsigned char uc = static_cast<unsigned char>(c) && 0xff;
+			if (likely(!jsonCharsToEscape[uc])) {
 				dest.append(c);
 			} else {
 				switch (c) {
