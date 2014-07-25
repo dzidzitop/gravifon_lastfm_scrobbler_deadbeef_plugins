@@ -82,7 +82,7 @@ namespace
 					break;
 				default:
 					p = std::copy_n("\\u00", 4, p);
-					p = afc::printTwoDigits(c, p);
+					p = afc::octetToHex(c, p);
 					break;
 				}
 			}
