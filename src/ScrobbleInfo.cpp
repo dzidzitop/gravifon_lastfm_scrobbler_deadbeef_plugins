@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
+#include <algorithm>
 #include <bitset>
 #include <cstddef>
 #include <utility>
@@ -34,9 +35,9 @@ using Json::ValueType;
 
 namespace
 {
-	bitset<256> initJsonCharsToEscape()
+	std::bitset<256> initJsonCharsToEscape()
 	{
-		bitset<256> result;
+		std::bitset<256> result;
 		for (auto i = 0; i < 0x20; ++i) {
 			result.set(i);
 		}
@@ -47,7 +48,7 @@ namespace
 		return result;
 	}
 
-	static const bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
+	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
 	inline void writeJsonString(const string &src, afc::FastStringBuffer<char> &dest)
 	{
