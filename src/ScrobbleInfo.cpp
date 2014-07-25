@@ -51,42 +51,43 @@ namespace
 
 	inline void writeJsonString(const string &src, afc::FastStringBuffer<char> &dest)
 	{
-		// TODO use borrow tail.
+		register afc::FastStringBuffer<char>::Tail p = dest.borrowTail();
 		for (const char c : src) {
 			// Truncated to an octet just in case non-octet bytes are used.
-			const unsigned char uc = static_cast<unsigned char>(c) && 0xff;
+			const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
 			if (likely(!jsonCharsToEscape[uc])) {
-				dest.append(c);
+				*p++ = c;
 			} else {
 				switch (c) {
 				case '"':
 				case '\\':
 				case '/':
-					dest.append('\\');
-					dest.append(c);
+					*p++ = '\\';
+					*p++ = c;
 					break;
 				case '\b':
-					dest.append("\\b"_s);
+					p = std::copy_n("\\b", 2, p);
 					break;
 				case '\f':
-					dest.append("\\f"_s);
+					p = std::copy_n("\\f", 2, p);
 					break;
 				case '\n':
-					dest.append("\\n"_s);
+					p = std::copy_n("\\n", 2, p);
 					break;
 				case '\r':
-					dest.append("\\r"_s);
+					p = std::copy_n("\\r", 2, p);
 					break;
 				case '\t':
-					dest.append("\\t"_s);
+					p = std::copy_n("\\t", 2, p);
 					break;
 				default:
-					dest.append("\\u00"_s);
-					dest.returnTail(afc::printTwoDigits(c, dest.borrowTail()));
+					p = std::copy_n("\\u00", 4, p);
+					p = afc::printTwoDigits(c, p);
 					break;
 				}
 			}
 		}
+		dest.returnTail(p);
 	}
 
 	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, afc::FastStringBuffer<char> &dest)
