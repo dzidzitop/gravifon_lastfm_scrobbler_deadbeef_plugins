@@ -36,30 +36,41 @@ namespace
 	{
 		// TODO use borrow tail.
 		for (const char c : src) {
+			if (c < 0x20 || c == 0x7f)
+			{
+				switch (c) {
+				case '\b':
+					dest.append("\\b"_s);
+					break;
+				case '\f':
+					dest.append("\\f"_s);
+					break;
+				case '\n':
+					dest.append("\\n"_s);
+					break;
+				case '\r':
+					dest.append("\\r"_s);
+					break;
+				case '\t':
+					dest.append("\\t"_s);
+					break;
+				default:
+					dest.append("\\u00"_s);
+					dest.returnTail(afc::printTwoDigits(c, dest.borrowTail()));
+					break;
+				}
+			} else {
 			switch (c) {
-			case '"':
-			case '\\':
-				dest.append('\\');
-				dest.append(c);
-				break;
-			case '\b':
-				dest.append("\\b"_s);
-				break;
-			case '\f':
-				dest.append("\\f"_s);
-				break;
-			case '\n':
-				dest.append("\\n"_s);
-				break;
-			case '\r':
-				dest.append("\\r"_s);
-				break;
-			case '\t':
-				dest.append("\\t"_s);
-				break;
-			default:
-				dest.append(c);
-				break;
+				case '"':
+				case '\\':
+				case '/':
+					dest.append('\\');
+					dest.append(c);
+					break;
+				default:
+					dest.append(c);
+					break;
+				}
 			}
 		}
 	}
@@ -76,7 +87,11 @@ namespace
 		assert(track.hasTitle());
 		assert(track.hasArtist());
 
-		// Each free-text label can be escaped so it is doubled to cover the case when each character is escaped.
+		/* Each free-text label can be escaped so it is multiplied by six to cover the case
+		 * when each character is unicode-escaped.
+		 */
+		constexpr auto maxPrintedCharSize = 6;
+
 		std::size_t maxSize = 0;
 		maxSize += 2; // {}
 		maxSize += R"("scrobble_start_datetime":"")"_s.size() + afc::maxISODateTimeSize();
@@ -87,25 +102,25 @@ namespace
 				afc::maxPrintedSize<decltype(scrobbleInfo.scrobbleDuration), 10>();
 		maxSize += 1; // ,
 		maxSize += R"("track":{})"_s.size();
-		maxSize += R"("title":"")"_s.size() + 2 * track.getTitle().size();
+		maxSize += R"("title":"")"_s.size() + maxPrintedCharSize * track.getTitle().size();
 		maxSize += 1; // ,
 		maxSize += R"("artists":[]");
-		maxSize += R"({"name":""})"_s.size() * track.getArtists().size() - 1; // With commas.
+		maxSize += R"({"name":""},)"_s.size() * track.getArtists().size() - 1; // With commas; the last comma is removed.
 		// TODO move loop invariant.
 		for (const string &artist : track.getArtists()) {
-			maxSize += 2 * artist.size();
+			maxSize += maxPrintedCharSize * artist.size();
 		}
 		maxSize += 1; // ,
 		if (track.hasAlbumTitle()) {
 			maxSize += R"("album":{"title":""})"_s.size();
-			maxSize += 2 * track.getAlbumTitle().size();
+			maxSize += maxPrintedCharSize * track.getAlbumTitle().size();
 			if (track.hasAlbumArtist()) {
 				maxSize += 1; // ,
 				maxSize += R"("artists":[]")_s.size();
-				maxSize += R"({"name":""})"_s.size() * 2 * track.getArtists().size() - 1; // With commas.
+				maxSize += R"({"name":""},)"_s.size() * track.getArtists().size() - 1; // With commas; the last comma is removed.
 				// TODO move loop invariant.
 				for (const string &artist : track.getArtists()) {
-					maxSize += 2 * artist.size();
+					maxSize += maxPrintedCharSize * artist.size();
 				}
 			}
 			maxSize += 1; // ,
