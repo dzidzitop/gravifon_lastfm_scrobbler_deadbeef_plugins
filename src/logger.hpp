@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define LOGGER_HPP_
 
 #include <cstdio>
+#include <functional>
+#include <initializer_list>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -30,6 +32,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	// stdout is flushed so that the message logged becomes visible immediately.
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
+
+typedef std::function<bool (std::FILE *)> LogFunction;
+
+bool logInternal(const char *format, std::initializer_list<LogFunction> params, FILE *dest);
 
 inline bool logText(const char * const s, const std::size_t n, FILE * const dest) noexcept
 {
@@ -70,40 +76,19 @@ inline bool logErrorMsg(const T &message)
 	return logPrint(message, stderr) && std::fputc('\n', stderr) != EOF;
 }
 
-bool logError(const char *p);
+inline LogFunction logFunction(const LogFunction &val) noexcept { return val; }
+inline LogFunction logFunction(LogFunction &&val) noexcept { return std::move(val); }
 
-template<typename Arg, typename... Args>
-bool logError(const char *p, Arg&& arg, Args&&... args)
+template<typename T>
+inline LogFunction logFunction(const T &val) noexcept
 {
-	const char *start = p;
-	bool escape = false;
-	bool param = false;
-	while (*p != '\0') {
-		if (param) {
-			if (*p == '}') {
-				return logPrint(arg, stderr) && logError(p + 1, std::forward<Args>(args)...);
-			} else {
-				// Invalid pattern.
-				return false;
-			}
-		} else if (escape) {
-			start = p;
-			escape = false;
-		} else if (*p == '\\') {
-			if (!logText(start, p - start, stderr)) {
-				return false;
-			}
-			escape = true;
-		} else if (*p == '{') {
-			if (!logText(start, p - start, stderr)) {
-				return false;
-			}
-			param = true;
-		}
-		++p;
-	}
-	// There are too many arguments.
-	return false;
+	return [&](FILE * const dest) -> bool { return logPrint(val, dest); };
+}
+
+template<typename... Args>
+bool logError(const char *format, Args&&... args)
+{
+	return logInternal(format, {logFunction(std::forward<Args>(args))...}, stderr);
 }
 
 #endif /* LOGGER_HPP_ */

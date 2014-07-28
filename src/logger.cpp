@@ -15,26 +15,63 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "logger.hpp"
+#include <stdio.h>
 
-bool logError(const char *p)
+namespace
 {
-	const char *start = p;
+	class FileLock
+	{
+	public:
+		FileLock(std::FILE * const file) noexcept : m_file(file) { flockfile(file); }
+		~FileLock() { funlockfile(m_file); }
+	private:
+		std::FILE * const m_file;
+	};
+}
+
+bool logInternal(const char *format, std::initializer_list<LogFunction> params,
+		std::FILE * const dest)
+{ FileLock fileLock(dest);
+	auto paramPtr = params.begin();
+	const char *start = format;
 	bool escape = false;
-	while (*p != '\0') {
-		if (escape) {
-			start = p;
+	bool param = false;
+	bool success;
+	while (*format != '\0') {
+		if (param) {
+			if (*format == '}') {
+				if (paramPtr == params.end() || !(*paramPtr)(dest)) {
+					success = false;
+					goto finish;
+				}
+				start = format + 1;
+				++paramPtr;
+				param = false;
+			} else {
+				// Invalid pattern.
+				success = false;
+				goto finish;
+			}
+		} else if (escape) {
+			start = format;
 			escape = false;
-		}
-		if (*p == '\\') {
-			if (!logText(start, p - start, stderr)) {
-				return false;
+		} else if (*format == '\\') {
+			if (!logText(start, format - start, dest)) {
+				success = false;
+				goto finish;
 			}
 			escape = true;
+		} else if (*format == '{') {
+			if (!logText(start, format - start, dest)) {
+				success = false;
+				goto finish;
+			}
+			param = true;
 		}
-		if (*p == '{') {
-			return false;
-		}
-		++p;
+		++format;
 	}
-	return logText(start, p - start, stderr) &&  std::fputc('\n', stderr) != EOF;
+	// Flushing plain text data and checking if there are too many arguments.
+	success = logText(start, format - start, dest) && paramPtr == params.end();
+finish:
+	success &= (fputc('\n', dest) != EOF);
 }
