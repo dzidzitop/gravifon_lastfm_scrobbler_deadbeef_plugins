@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/utils.h>
+#include "deadbeef_util.hpp"
 
 using namespace std;
 using namespace afc;
@@ -307,10 +308,9 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
 	 * messages that are safe to be used without conversion with hope they are in ASCII, too.
 	 */
-	// TODO use FastStringBuffer.
-	std::string responseBody;
+	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response([&responseBody](const char * const data, const std::size_t n) { responseBody.append(data, n); });
+	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -356,12 +356,17 @@ std::size_t LastfmScrobbler::doScrobbling()
 	logDebug(string("[LastfmScrobbler] Submission response body: ") + responseBody.c_str());
 
 	if (response.statusCode == 200) {
-		const std::size_t end = responseBody.find('\n');
-		if (end == string::npos) {
+		/* Using find_if to tokenise response instead of find since the former
+		 * takes parameters by value which minimises memory reads.
+		 */
+		const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
+		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
+		if (unlikely(seqEnd == end)) {
 			fprintf(stderr, "[LastfmScrobbler] Invalid response body (missing line feed): '%s'.\n", responseBody.c_str());
 			return false;
 		}
-		if (end == 2 && responseBody[0] == 'O' && responseBody[1] == 'K') {
+		const std::size_t tokenSize = seqEnd - seqBegin;
+		if (tokenSize == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
 			logDebug("[LastfmScrobbler] The scrobbles are submitted successfully.");
 
 			// TODO use deque instead of list.
@@ -369,7 +374,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 			return submittedCount;
 		} else {
 			constexpr ConstStringRef badSession = "BADSESSION"_s;
-			if (end == badSession.size() && equal(badSession.begin(), badSession.end(), responseBody.begin())) {
+			if (tokenSize == badSession.size() && equal(badSession.begin(), badSession.end(), seqBegin)) {
 				logDebug("[LastfmScrobbler] The scrobbles are not submitted. "
 						"The user is not authenticated to Last.fm.");
 
@@ -379,7 +384,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 				// TODO think of counting hard failures, as the specification suggests.
 				// A hard failure or an unknown status is reported.
 				fprintf(stderr, "[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '%s'.\n",
-						string(0, end).c_str());
+						string(seqBegin, seqEnd).c_str());
 				return 0;
 			}
 		}
@@ -409,10 +414,9 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * and some reason messages that are safe to be used without conversion with hope
 	 * they are in ASCII, too.
 	 */
-	// TODO use FastStringBuffer.
-	std::string responseBody;
+	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response([&responseBody](const char * const data, const std::size_t n) { responseBody.append(data, n); });
+	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -443,7 +447,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	}
 
 	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
-	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);
+	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody.c_str());
 
 	if (unlikely(response.statusCode != 200)) {
 		fputs("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.", stderr);
@@ -453,7 +457,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	/* Using find_if to tokenise response instead of find since the former
 	 * takes parameters by value which minimises memory reads.
 	 */
-	string::const_iterator seqBegin = responseBody.cbegin(), seqEnd, end = responseBody.cend();
+	const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
