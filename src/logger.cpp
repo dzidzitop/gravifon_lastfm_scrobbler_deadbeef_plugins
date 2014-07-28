@@ -29,7 +29,7 @@ namespace
 	};
 }
 
-bool logInternal(const char *format, std::initializer_list<LogFunction> params,
+bool logInternal(const char *format, std::initializer_list<const Printer *> params,
 		std::FILE * const dest)
 { FileLock fileLock(dest);
 	auto paramPtr = params.begin();
@@ -40,7 +40,7 @@ bool logInternal(const char *format, std::initializer_list<LogFunction> params,
 	while (*format != '\0') {
 		if (param) {
 			if (*format == '}') {
-				if (paramPtr == params.end() || !(*paramPtr)(dest)) {
+				if (paramPtr == params.end() || !(**paramPtr)(dest)) {
 					success = false;
 					goto finish;
 				}
@@ -74,4 +74,5 @@ bool logInternal(const char *format, std::initializer_list<LogFunction> params,
 	success = logText(start, format - start, dest) && paramPtr == params.end();
 finish:
 	success &= (fputc('\n', dest) != EOF);
+	return success;
 }

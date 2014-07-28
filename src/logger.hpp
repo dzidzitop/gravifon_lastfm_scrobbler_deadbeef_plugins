@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define LOGGER_HPP_
 
 #include <cstdio>
-#include <functional>
 #include <initializer_list>
 #include <string>
 #include <type_traits>
@@ -32,10 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	// stdout is flushed so that the message logged becomes visible immediately.
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
-
-typedef std::function<bool (std::FILE *)> LogFunction;
-
-bool logInternal(const char *format, std::initializer_list<LogFunction> params, FILE *dest);
 
 inline bool logText(const char * const s, const std::size_t n, FILE * const dest) noexcept
 {
@@ -76,19 +71,46 @@ inline bool logErrorMsg(const T &message)
 	return logPrint(message, stderr) && std::fputc('\n', stderr) != EOF;
 }
 
-inline LogFunction logFunction(const LogFunction &val) noexcept { return val; }
-inline LogFunction logFunction(LogFunction &&val) noexcept { return std::move(val); }
+class Printer
+{
+public:
+	/* There is no need in the virtual destructor since each Printer instances
+	 * are allocated only on the stack.
+	 */
+	virtual bool operator()(std::FILE *dest) const = 0;
+};
 
 template<typename T>
-inline LogFunction logFunction(const T &val) noexcept
+class LogPrinter : public Printer
 {
-	return [&](FILE * const dest) -> bool { return logPrint(val, dest); };
+public:
+	LogPrinter(const T &value) noexcept : m_value(value) {}
+
+	bool operator()(std::FILE *dest) const { return logPrint(m_value, dest); }
+
+	LogPrinter *address() noexcept { return this; }
+private:
+	// TODO think how to avoid copying here.
+	const T m_value;
+};
+
+template<typename T>
+inline LogPrinter<typename std::decay<const T>::type> logPrinter(const T &val) noexcept
+{
+	return LogPrinter<typename std::decay<const T>::type>(val);
 }
+
+bool logInternal(const char *format, std::initializer_list<const Printer *> params, FILE *dest);
 
 template<typename... Args>
 bool logError(const char *format, Args&&... args)
 {
-	return logInternal(format, {logFunction(std::forward<Args>(args))...}, stderr);
+	/* Passing polymorphic instances of Printer to logInternal.
+	 *
+	 * All the temporary objects live until logInternal returns so all pointers to
+	 * local objects passed to logInternal are valid.
+	 */
+	return logInternal(format, {logPrinter(std::forward<Args>(args)).address()...}, stderr);
 }
 
 #endif /* LOGGER_HPP_ */
