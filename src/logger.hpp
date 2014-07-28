@@ -18,6 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <cstdio>
 #include <string>
+#include <utility>
+
+#include <afc/StringRef.hpp>
 
 #ifdef NDEBUG
 	#define logDebug(msg) static_cast<void>(0)
@@ -26,6 +29,80 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
 
-inline void logError(const std::string &msg) { std::fprintf(stderr, "%s\n", msg.c_str()); std::fflush(stderr); }
+inline bool logText(const char * const s, const std::size_t n, FILE * const dest) noexcept
+{
+	return std::fwrite(s, sizeof(char), n, dest) == n;
+}
+
+inline bool logPrint(afc::ConstStringRef s, FILE * const dest) noexcept
+{
+	return logText(s.value(), s.size(), dest);
+}
+
+inline bool logPrint(const char * const s, FILE * const dest) noexcept
+{
+	return std::fputs(s, dest) >= 0;
+}
+
+inline bool logError(const char *p)
+{
+	const char *start = p;
+	bool escape = false;
+	while (*p != '\0') {
+		if (escape) {
+			start = p;
+			escape = false;
+		}
+		if (*p == '\\') {
+			if (!logText(start, p - start, stderr)) {
+				return false;
+			}
+			escape = true;
+		}
+		if (*p == '{') {
+			return false;
+		}
+		++p;
+	}
+	// success.
+	return logText(start, p - start, stderr);
+}
+
+
+template<typename Arg, typename... Args>
+inline bool logError(const char *p, Arg&& arg, Args&&... args)
+{
+	const char *start = p;
+	bool escape = false;
+	bool param = false;
+	while (*p != '\0') {
+		if (param) {
+			if (*p == '}') {
+				// TODO handle error.
+				return logPrint(arg, stderr) && logError(p + 1, std::forward<Args>(args)...);
+			} else {
+				// Invalid pattern.
+				return false;
+			}
+		} else if (escape) {
+			start = p;
+			escape = false;
+		} else if (*p == '\\') {
+			// TODO handle error.
+			if (!logText(start, p - start, stderr)) {
+				return false;
+			}
+			escape = true;
+		} else if (*p == '{') {
+			// TODO handle error.
+			if (!logText(start, p - start, stderr)) {
+				return false;
+			}
+			param = true;
+		}
+		++p;
+	}
+	return false;
+}
 
 #endif /* LOGGER_HPP_ */
