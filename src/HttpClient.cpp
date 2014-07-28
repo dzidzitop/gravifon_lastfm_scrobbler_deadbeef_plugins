@@ -83,7 +83,7 @@ namespace
 	size_t writeData(char * const data, const size_t size, const size_t nmemb, void * const userdata)
 	{
 		const size_t dataSize = size * nmemb;
-		const auto appenderPtr = reinterpret_cast<HttpResponseEntity::BodyAppender *>(userdata);
+		const auto appenderPtr = reinterpret_cast<HttpResponse::BodyAppender *>(userdata);
 
 		(*appenderPtr)(data, dataSize);
 
@@ -125,7 +125,7 @@ namespace
 }
 
 HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * const url,
-		const HttpRequestEntity &request, HttpResponseEntity &response,
+		const HttpRequest &request, HttpResponse &response,
 		const long connectionTimeoutMillis, const long socketTimeoutMillis,
 		const std::atomic<bool> &abortFlag)
 {

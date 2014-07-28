@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <vector>
 #include <utility>
 
-class HttpRequestEntity
+class HttpRequest
 {
 public:
 	void setBody(const char body[], const std::size_t n) noexcept { m_body = body; m_bodySize = n; }
@@ -39,14 +39,14 @@ public:
 	std::vector<const char *> headers;
 };
 
-class HttpResponseEntity
+class HttpResponse
 {
 	friend class HttpClient;
 public:
 	typedef std::function<void (const char *, std::size_t)> BodyAppender;
 
 	// TODO think how to avoid this moving.
-	HttpResponseEntity(BodyAppender &&bodyAppender) : m_bodyAppender(std::move(bodyAppender)), headers() {}
+	HttpResponse(BodyAppender &&bodyAppender) : m_bodyAppender(std::move(bodyAppender)), headers() {}
 private:
 	BodyAppender m_bodyAppender;
 // TODO make it private.
@@ -75,13 +75,13 @@ public:
 	HttpClient() = default;
 	~HttpClient() = default;
 
-	StatusCode get(const char * const url, const HttpRequestEntity &request, HttpResponseEntity &response,
+	StatusCode get(const char * const url, const HttpRequest &request, HttpResponse &response,
 			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
 	{
 		return send(HttpMethod::GET, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
 	}
 
-	StatusCode post(const char * const url, const HttpRequestEntity &request, HttpResponseEntity &response,
+	StatusCode post(const char * const url, const HttpRequest &request, HttpResponse &response,
 			const long connectionTimeoutMillis, const long socketTimeoutMillis, const std::atomic<bool> &abortFlag)
 	{
 		return send(HttpMethod::POST, url, request, response, connectionTimeoutMillis, socketTimeoutMillis, abortFlag);
@@ -89,8 +89,8 @@ public:
 private:
 	enum class HttpMethod {GET, POST};
 
-	StatusCode send(const HttpMethod method, const char * const url, const HttpRequestEntity &request,
-			HttpResponseEntity &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
+	StatusCode send(const HttpMethod method, const char * const url, const HttpRequest &request,
+			HttpResponse &response, const long connectionTimeoutMillis, const long socketTimeoutMillis,
 			const std::atomic<bool> &abortFlag);
 };
 

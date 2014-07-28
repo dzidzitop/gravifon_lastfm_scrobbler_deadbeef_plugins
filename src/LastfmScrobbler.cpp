@@ -294,7 +294,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		appendScrobbleInfo(builder, *chunkEnd, submittedCount);
 	}
 
-	HttpRequestEntity request;
+	HttpRequest request;
 	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
@@ -310,7 +310,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 */
 	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
+	HttpResponse response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -416,7 +416,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 */
 	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
+	HttpResponse response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -433,7 +433,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		logDebug(string("[LastfmScrobbler] Authentication URL: ") + string(url.c_str(), url.size()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
-		result = HttpClient().get(url.c_str(), HttpRequestEntity(), response,
+		result = HttpClient().get(url.c_str(), HttpRequest(), response,
 				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 

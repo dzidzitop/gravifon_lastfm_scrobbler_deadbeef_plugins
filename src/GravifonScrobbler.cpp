@@ -171,7 +171,7 @@ size_t GravifonScrobbler::doScrobbling()
 	body.pop_back(); // Removing the redundant comma.
 	body += u8"]";
 
-	HttpRequestEntity request;
+	HttpRequest request;
 	request.setBody(body.data(), body.size());
 	request.headers.reserve(4);
 	request.headers.push_back(m_authHeader.c_str());
@@ -189,7 +189,7 @@ size_t GravifonScrobbler::doScrobbling()
 
 	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
+	HttpResponse response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
