@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef DEADBEEF_UTIL_HPP_
 #define DEADBEEF_UTIL_HPP_
 
+#include <cstddef>
 #include <deadbeef.h>
 #include <memory>
 #include <string>
@@ -65,7 +66,7 @@ inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
 	addTagOp(start);
 }
 
-std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent,
+inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent,
 		DB_functions_t &deadbeef, const double scrobbleThreshold)
 { PlaylistLock lock(deadbeef);
 	using std::chrono::system_clock;
@@ -146,5 +147,19 @@ inline bool isAscii(const char * const str, const std::size_t n)
 	}
 	return true;
 }
+
+class FastStringBufferAppender
+{
+public:
+	FastStringBufferAppender(afc::FastStringBuffer<char> &dest) : m_dest(dest) {}
+
+	void operator()(const char * const data, const std::size_t n)
+	{
+		m_dest.reserve(m_dest.size() + n);
+		m_dest.append(data, n);
+	}
+private:
+	afc::FastStringBuffer<char> &m_dest;
+};
 
 #endif /* DEADBEEF_UTIL_HPP_ */

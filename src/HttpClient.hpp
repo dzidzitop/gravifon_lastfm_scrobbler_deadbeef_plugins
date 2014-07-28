@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define HTTPCLIENT_HPP_
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
 #include <atomic>
@@ -37,9 +38,17 @@ public:
 	std::vector<const char *> headers;
 };
 
-struct HttpResponseEntity
+class HttpResponseEntity
 {
-	std::string body;
+	friend class HttpClient;
+public:
+	typedef std::function<void (const char *, std::size_t)> BodyAppender;
+
+	HttpResponseEntity(BodyAppender bodyAppender) : m_bodyAppender(bodyAppender), headers() {}
+private:
+	BodyAppender m_bodyAppender;
+// TODO make it private.
+public:
 	// HttpResponseEntity does not own headers.
 	std::vector<const char *> headers;
 

@@ -82,10 +82,10 @@ namespace
 
 	size_t writeData(char * const data, const size_t size, const size_t nmemb, void * const userdata)
 	{
-		size_t dataSize = size * nmemb;
-		string * const dest = reinterpret_cast<string *>(userdata);
+		const size_t dataSize = size * nmemb;
+		const auto appenderPtr = reinterpret_cast<HttpResponseEntity::BodyAppender *>(userdata);
 
-		dest->append(data, dataSize);
+		(*appenderPtr)(data, dataSize);
 
 		return dataSize;
 	}
@@ -153,7 +153,7 @@ HttpClient::StatusCode HttpClient::send(const HttpMethod method, const char * co
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.getBody());
 	}
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, static_cast<curl_slist *>(headers));
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.body);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response.m_bodyAppender);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeData);
 
 	/* TODO this is a suboptimal implementation of interruptible I/O.

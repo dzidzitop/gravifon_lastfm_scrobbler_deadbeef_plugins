@@ -303,8 +303,14 @@ std::size_t LastfmScrobbler::doScrobbling()
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
 #endif
 
+	/* No conversion to the system encoding is used as the response body is assumed to be in
+	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
+	 * messages that are safe to be used without conversion with hope they are in ASCII, too.
+	 */
+	// TODO use FastStringBuffer.
+	std::string responseBody;
 	StatusCode result;
-	HttpResponseEntity response;
+	HttpResponseEntity response([&responseBody](const char * const data, const std::size_t n) { responseBody.append(data, n); });
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -346,14 +352,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	/* No conversion to the system encoding is used as the body is assumed to be in
-	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
-	 * messages that are safe to be used without conversion with hope they are in ASCII, too.
-	 */
-	const string &responseBody = response.body;
-
 	logDebug(string("[LastfmScrobbler] Submission response status code: ") + to_string(response.statusCode));
-	logDebug(string("[LastfmScrobbler] Submission response body: ") + responseBody);
+	logDebug(string("[LastfmScrobbler] Submission response body: ") + responseBody.c_str());
 
 	if (response.statusCode == 200) {
 		const std::size_t end = responseBody.find('\n');
@@ -404,8 +404,15 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	// TODO set real client ID and version.
 	const UrlBuilder url = buildAuthUrl(m_scrobblerUrl, m_username, m_password);
 
+	/* No conversion to the system encoding is used as the response body is assumed to be in
+	 * an ASCII-compatible encoding. It contains status codes, URLs (both are in ASCII),
+	 * and some reason messages that are safe to be used without conversion with hope
+	 * they are in ASCII, too.
+	 */
+	// TODO use FastStringBuffer.
+	std::string responseBody;
 	StatusCode result;
-	HttpResponseEntity response;
+	HttpResponseEntity response([&responseBody](const char * const data, const std::size_t n) { responseBody.append(data, n); });
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -434,13 +441,6 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		reportHttpClientError(result);
 		return false;
 	}
-
-	/* No conversion to the system encoding is used as the body is assumed to be in
-	 * an ASCII-compatible encoding. It contains status codes, URLs (both are in ASCII),
-	 * and some reason messages that are safe to be used without conversion with hope
-	 * they are in ASCII, too.
-	 */
-	string &responseBody = response.body;
 
 	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
 	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);

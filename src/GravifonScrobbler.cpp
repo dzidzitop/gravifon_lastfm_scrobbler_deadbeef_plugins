@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/FastStringBuffer.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/utils.h>
+#include "deadbeef_util.hpp"
 
 using namespace std;
 using namespace afc;
@@ -186,8 +187,9 @@ size_t GravifonScrobbler::doScrobbling()
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();
 #endif
 
+	afc::FastStringBuffer<char> responseBody;
 	StatusCode result;
-	HttpResponseEntity response;
+	HttpResponseEntity response{FastStringBufferAppender(responseBody)};
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish
@@ -229,10 +231,8 @@ size_t GravifonScrobbler::doScrobbling()
 
 	logDebug(string("[GravifonScrobbler] Response status code: ") + to_string(response.statusCode));
 
-	const string &responseBody = response.body;
-
 	Value rs;
-	if (!Json::Reader().parse(responseBody, rs, false)) {
+	if (!Json::Reader().parse(responseBody.data(), responseBody.data() + responseBody.size(), rs, false)) {
 		fprintf(stderr, "[GravifonScrobbler] Invalid response: '%s'.\n", responseBody.c_str());
 		return 0;
 	}
@@ -240,7 +240,7 @@ size_t GravifonScrobbler::doScrobbling()
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
-			fprintf(stderr, "[GravifonScrobbler] Invalid response: '%s'.\n", response.body.c_str());
+			fprintf(stderr, "[GravifonScrobbler] Invalid response: '%s'.\n", responseBody.c_str());
 			return 0;
 		}
 
@@ -285,7 +285,7 @@ size_t GravifonScrobbler::doScrobbling()
 		}
 
 		if (completedCount == submittedCount) {
-			logDebug(string("[GravifonScrobbler] Successful response: ") + responseBody);
+			logDebug(string("[GravifonScrobbler] Successful response: ") + responseBody.c_str());
 		}
 
 		return completedCount;
