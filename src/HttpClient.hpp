@@ -16,11 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef HTTPCLIENT_HPP_
 #define HTTPCLIENT_HPP_
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <string>
 #include <vector>
-#include <atomic>
+#include <utility>
 
 class HttpRequestEntity
 {
@@ -44,7 +45,8 @@ class HttpResponseEntity
 public:
 	typedef std::function<void (const char *, std::size_t)> BodyAppender;
 
-	HttpResponseEntity(BodyAppender bodyAppender) : m_bodyAppender(bodyAppender), headers() {}
+	// TODO think how to avoid this moving.
+	HttpResponseEntity(BodyAppender &&bodyAppender) : m_bodyAppender(std::move(bodyAppender)), headers() {}
 private:
 	BodyAppender m_bodyAppender;
 // TODO make it private.
