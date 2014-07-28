@@ -77,7 +77,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		logError("[GravifonScrobbler] Unable to send the scrobble message: '{}'\n", message);
+		logError("[GravifonScrobbler] Unable to send the scrobble message: '{}'.", message);
 	}
 
 	inline bool isRecoverableError(const unsigned long errorCode)
@@ -233,14 +233,14 @@ size_t GravifonScrobbler::doScrobbling()
 
 	Value rs;
 	if (!Json::Reader().parse(responseBody.data(), responseBody.data() + responseBody.size(), rs, false)) {
-		logError("[GravifonScrobbler] Invalid response: '{}'.\n", responseBody.c_str());
+		logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
 		return 0;
 	}
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
-			logError("[GravifonScrobbler] Invalid response: '{}'.\n", responseBody.c_str());
+			logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
 			return 0;
 		}
 
@@ -264,12 +264,12 @@ size_t GravifonScrobbler::doScrobbling()
 						afc::FastStringBuffer<char> scrobbleAsStr = serialiseAsJson(*it);
 						if (isRecoverableError(errorCode)) {
 							logError("[GravifonScrobbler] Scrobble '{}' is not processed. "
-									"Error: '{}' ({}). It will be re-submitted later.\n",
+									"Error: '{}' ({}). It will be re-submitted later.",
 									scrobbleAsStr.c_str(), errorDescription, errorCode);
 							++it;
 						} else {
 							logError("[GravifonScrobbler] Scrobble '{}' cannot be processed. "
-									"Error: '{}' ({}). It is removed as non-processable.\n",
+									"Error: '{}' ({}). It is removed as non-processable.",
 									scrobbleAsStr.c_str(), errorDescription, errorCode);
 							it = m_pendingScrobbles.erase(it);
 							++completedCount;
@@ -279,7 +279,7 @@ size_t GravifonScrobbler::doScrobbling()
 					// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
 					[&responseBody, &it]()
 					{
-						logError("[GravifonScrobbler] Invalid response: '{}'.\n", responseBody.c_str());
+						logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
 						++it;
 					});
 		}
@@ -295,21 +295,21 @@ size_t GravifonScrobbler::doScrobbling()
 				// Success status. It is not expected. Report an error and finish processing.
 				[&responseBody]()
 				{
-					logError("[GravifonScrobbler] Unexpected 'ok' global status response: '{}'.\n",
+					logError("[GravifonScrobbler] Unexpected 'ok' global status response: '{}'.",
 							responseBody.c_str());
 				},
 
 				// Error status: report an error and finish processing.
 				[&responseBody](const unsigned long errorCode, const string &errorDescription)
 				{
-					logError("[GravifonScrobbler] Error global status response: '{}'. Error: '{}' ({}).\n",
+					logError("[GravifonScrobbler] Error global status response: '{}'. Error: '{}' ({}).",
 							responseBody.c_str(), errorDescription, errorCode);
 				},
 
 				// Invalid status: report an error and finish processing.
 				[&responseBody]()
 				{
-					logError("[GravifonScrobbler] Invalid response: '{}'.\n", responseBody.c_str());
+					logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
 				});
 
 		return 0;

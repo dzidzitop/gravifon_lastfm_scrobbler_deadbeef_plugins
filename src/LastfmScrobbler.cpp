@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <cstdio>
 #include <limits>
+#include <utility>
 #include "HttpClient.hpp"
 #include "UrlBuilder.hpp"
 #include <afc/builtin.hpp>
@@ -201,7 +202,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		std::fprintf(stderr, "[LastfmScrobbler] Unable to send the request: %s\n", message);
+		logError("[LastfmScrobbler] Unable to send the request: '{}'.", message);
 	}
 
 	static constexpr auto lastfmResponseDelim = [](const char c) noexcept { return c == '\n'; };
@@ -258,7 +259,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assert(!m_pendingScrobbles.empty());
 
 	if (!m_configured) {
-		fputs("Scrobbler is not configured properly.", stderr);
+		logErrorMsg("Scrobbler is not configured properly.");
 		return 0;
 	}
 
@@ -268,7 +269,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		 * (see above) to be submitted (among other scrobbles) when the URL is configured
 		 * to point to a scrobbling server.
 		 */
-		fputs("URL to the scrobbling server is undefined.", stderr);
+		logErrorMsg("URL to the scrobbling server is undefined.");
 		return 0;
 	}
 
@@ -383,13 +384,13 @@ std::size_t LastfmScrobbler::doScrobbling()
 			} else {
 				// TODO think of counting hard failures, as the specification suggests.
 				// A hard failure or an unknown status is reported.
-				fprintf(stderr, "[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '%s'.\n",
-						string(seqBegin, seqEnd).c_str());
+				logError("[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '{}'.",
+						std::pair<const char *, const char *>(seqBegin, seqEnd));
 				return 0;
 			}
 		}
 	} else {
-		fputs("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm.", stderr);
+		logErrorMsg("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm.");
 		return false;
 	}
 
@@ -450,7 +451,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody.c_str());
 
 	if (unlikely(response.statusCode != 200)) {
-		fputs("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.", stderr);
+		logErrorMsg("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.");
 		return false;
 	}
 
@@ -463,15 +464,13 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 
 	if (unlikely(seqEnd == end)) {
-		fprintf(stderr, "[LastfmScrobbler] Invalid response body (missing line feed): '%s'.\n", responseBody.c_str());
+		logError("[LastfmScrobbler] Invalid response body (missing line feed): '{}'.", responseBody.c_str());
 		return false;
 	}
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-		asm("nop");
-		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
-				string(seqBegin, seqEnd).c_str());
-		asm("nop");
+		logError("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '{}'.",
+				std::pair<const char *, const char *>(seqBegin, seqEnd));
 		return false;
 	}
 
@@ -481,7 +480,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	m_sessionId.assign(seqBegin, seqEnd);
 
 	if (unlikely(seqEnd == end)) {
-		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
+		logError("[LastfmScrobbler] Invalid response body: '{}'.", responseBody.c_str());
 		return false;
 	}
 
@@ -489,7 +488,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
 
 	if (unlikely(seqEnd == end)) {
-		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
+		logError("[LastfmScrobbler] Invalid response body: '{}'.", responseBody.c_str());
 		return false;
 	}
 

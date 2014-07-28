@@ -227,7 +227,7 @@ void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool 
 			logDebug("[Scrobbler] The scrobble that has just been scrobbled "
 					"is stored (failure-safe scrobbling).");
 		} else {
-			logError("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling).");
+			logErrorMsg("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling).");
 		}
 	}
 }
@@ -373,7 +373,7 @@ bool Scrobbler<ScrobbleQueue>::stop()
 		stopExtra();
 
 		if (!storePendingScrobbles()) {
-			logError("[Scrobbler] Unable to store pending scrobbles. These scrobbles are lost.");
+			logErrorMsg("[Scrobbler] Unable to store pending scrobbles. These scrobbles are lost.");
 		}
 
 		/* TODO do not clear the list of pending scrobbles. Instead, report an error so that

@@ -59,10 +59,15 @@ inline bool logPrint(const char * const s, FILE * const dest) noexcept
 	return std::fputs(s, dest) >= 0;
 }
 
+inline bool logPrint(const std::pair<const char *, const char *> &s, FILE * const dest) noexcept
+{
+	return logText(s.first, std::size_t(s.second - s.first), dest);
+}
+
 template<typename T>
 inline bool logErrorMsg(const T &message)
 {
-	return logPrint(message, stderr);
+	return logPrint(message, stderr) && std::fputc('\n', stderr) != EOF;
 }
 
 bool logError(const char *p);

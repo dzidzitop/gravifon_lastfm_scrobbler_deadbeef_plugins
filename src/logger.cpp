@@ -36,5 +36,5 @@ bool logError(const char *p)
 		}
 		++p;
 	}
-	return logText(start, p - start, stderr);
+	return logText(start, p - start, stderr) &&  std::fputc('\n', stderr) != EOF;
 }

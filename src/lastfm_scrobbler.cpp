@@ -58,13 +58,13 @@ namespace
 		if (!enabled) {
 			if (clientStarted) {
 				if (!lastfmClient.stop()) {
-					logError("[lastfm_scrobbler] unable to stop Last.fm client.");
+					logErrorMsg("[lastfm_scrobbler] unable to stop Last.fm client.");
 				}
 			}
 			return false;
 		} else if (!clientStarted) {
 			if (!lastfmClient.start()) {
-				logError("[lastfm_scrobbler] unable to start Last.fm client.");
+				logErrorMsg("[lastfm_scrobbler] unable to start Last.fm client.");
 				return false;
 			}
 		}
@@ -76,7 +76,7 @@ namespace
 				"lastfmScrobbler.lastfmUrl", u8"http://post.audioscrobbler.com");
 		const std::size_t lastfmUrlSize = std::strlen(lastfmUrl);
 		if (!isAscii(lastfmUrl, lastfmUrlSize)) {
-			logError("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm.");
+			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm.");
 			lastfmClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;

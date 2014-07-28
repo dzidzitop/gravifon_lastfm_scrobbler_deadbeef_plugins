@@ -245,7 +245,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	Value object;
 
 	if (!jsonReader.parse(begin, end, object, false)) {
-		logError("[Scrobbler] Unable to parse the scrobble JSON object: {}",
+		logError("[Scrobbler] Unable to parse the scrobble JSON object: '{}'.",
 				jsonReader.getFormatedErrorMessages().c_str());
 		return false;
 	}
