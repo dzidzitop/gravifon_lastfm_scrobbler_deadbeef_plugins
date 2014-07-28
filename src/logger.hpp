@@ -44,33 +44,16 @@ inline bool logPrint(const char * const s, FILE * const dest) noexcept
 	return std::fputs(s, dest) >= 0;
 }
 
-inline bool logError(const char *p)
+template<typename T>
+inline bool logErrorMsg(const T &message)
 {
-	const char *start = p;
-	bool escape = false;
-	while (*p != '\0') {
-		if (escape) {
-			start = p;
-			escape = false;
-		}
-		if (*p == '\\') {
-			if (!logText(start, p - start, stderr)) {
-				return false;
-			}
-			escape = true;
-		}
-		if (*p == '{') {
-			return false;
-		}
-		++p;
-	}
-	// success.
-	return logText(start, p - start, stderr);
+	return logPrint(message, stderr);
 }
 
+bool logError(const char *p);
 
 template<typename Arg, typename... Args>
-inline bool logError(const char *p, Arg&& arg, Args&&... args)
+bool logError(const char *p, Arg&& arg, Args&&... args)
 {
 	const char *start = p;
 	bool escape = false;
@@ -78,7 +61,6 @@ inline bool logError(const char *p, Arg&& arg, Args&&... args)
 	while (*p != '\0') {
 		if (param) {
 			if (*p == '}') {
-				// TODO handle error.
 				return logPrint(arg, stderr) && logError(p + 1, std::forward<Args>(args)...);
 			} else {
 				// Invalid pattern.
@@ -88,13 +70,11 @@ inline bool logError(const char *p, Arg&& arg, Args&&... args)
 			start = p;
 			escape = false;
 		} else if (*p == '\\') {
-			// TODO handle error.
 			if (!logText(start, p - start, stderr)) {
 				return false;
 			}
 			escape = true;
 		} else if (*p == '{') {
-			// TODO handle error.
 			if (!logText(start, p - start, stderr)) {
 				return false;
 			}
@@ -102,6 +82,7 @@ inline bool logError(const char *p, Arg&& arg, Args&&... args)
 		}
 		++p;
 	}
+	// There are too many arguments.
 	return false;
 }
 
