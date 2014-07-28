@@ -83,10 +83,7 @@ namespace
 				m_value[0] = digitToChar(index);
 				m_longIndex = false;
 			} else {
-				const unsigned char highDigit = index / 10;
-				const unsigned char lowDigit = index - highDigit;
-				m_value[0] = digitToChar(highDigit);
-				m_value[1] = digitToChar(lowDigit);
+				afc::printTwoDigits(index, m_value);
 				m_longIndex = true;
 			}
 		}
