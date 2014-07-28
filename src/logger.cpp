@@ -17,18 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "logger.hpp"
 #include <stdio.h>
 
-namespace
-{
-	class FileLock
-	{
-	public:
-		FileLock(std::FILE * const file) noexcept : m_file(file) { flockfile(file); }
-		~FileLock() { funlockfile(m_file); }
-	private:
-		std::FILE * const m_file;
-	};
-}
-
 bool logInternal(const char *format, std::initializer_list<const Printer *> params,
 		std::FILE * const dest)
 { FileLock fileLock(dest);

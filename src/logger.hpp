@@ -32,6 +32,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
 #endif
 
+class FileLock
+{
+public:
+	FileLock(std::FILE * const file) noexcept : m_file(file) { flockfile(file); }
+	~FileLock() { funlockfile(m_file); }
+private:
+	std::FILE * const m_file;
+};
+
 inline bool logText(const char * const s, const std::size_t n, FILE * const dest) noexcept
 {
 	return std::fwrite(s, sizeof(char), n, dest) == n;
@@ -67,7 +76,7 @@ inline bool logPrint(const std::pair<const char *, const char *> &s, FILE * cons
 
 template<typename T>
 inline bool logErrorMsg(const T &message)
-{
+{ FileLock fileLock(stderr);
 	return logPrint(message, stderr) && std::fputc('\n', stderr) != EOF;
 }
 
