@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "logger.hpp"
-#include <stdio.h>
 
 bool logInternal(const char *format, std::initializer_list<const Printer *> params,
 		std::FILE * const dest)
