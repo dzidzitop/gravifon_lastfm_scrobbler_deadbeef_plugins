@@ -363,7 +363,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
 		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 		if (unlikely(seqEnd == end)) {
-			fprintf(stderr, "[LastfmScrobbler] Invalid response body (missing line feed): '%s'.\n", responseBody.c_str());
+			logError("[LastfmScrobbler] Invalid response body (missing line feed): '{}'.", responseBody.c_str());
 			return false;
 		}
 		const std::size_t tokenSize = seqEnd - seqBegin;
