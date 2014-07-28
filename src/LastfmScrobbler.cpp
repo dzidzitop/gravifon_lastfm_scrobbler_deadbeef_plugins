@@ -458,8 +458,14 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * takes parameters by value which minimises memory reads.
 	 */
 	const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
+
+	// Status.
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 
+	if (unlikely(seqEnd == end)) {
+		fprintf(stderr, "[LastfmScrobbler] Invalid response body (missing line feed): '%s'.\n", responseBody.c_str());
+		return false;
+	}
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
 		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
@@ -467,24 +473,25 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
-	if (unlikely(seqEnd == end)) { // Session ID.
-		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
-		return false;
-	}
+	// Session ID.
 	seqBegin = seqEnd + 1;
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 	m_sessionId.assign(seqBegin, seqEnd);
 
-	if (unlikely(seqEnd == end)) { // Now-playing URL. It is ignored for now.
+	if (unlikely(seqEnd == end)) {
 		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 		return false;
 	}
+
+	// Now-playing URL. It is ignored for now.
 	seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
 
-	if (unlikely(seqEnd == end)) { // Submission URL.
+	if (unlikely(seqEnd == end)) {
 		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
 		return false;
 	}
+
+	// Submission URL.
 	seqBegin = seqEnd + 1;
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 	m_submissionUrl.assign(seqBegin, seqEnd);
