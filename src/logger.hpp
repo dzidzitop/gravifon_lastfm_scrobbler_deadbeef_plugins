@@ -18,8 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <cstdio>
 #include <string>
+#include <type_traits>
 #include <utility>
 
+#include <afc/number.h>
 #include <afc/StringRef.hpp>
 
 #ifdef NDEBUG
@@ -34,9 +36,22 @@ inline bool logText(const char * const s, const std::size_t n, FILE * const dest
 	return std::fwrite(s, sizeof(char), n, dest) == n;
 }
 
+template<typename T>
+inline typename std::enable_if<std::is_integral<T>::value, bool>::type logPrint(T value, FILE * const dest) noexcept
+{
+	char buf[afc::maxPrintedSize<T, 10>()];
+	char *end = afc::printNumber<T, 10>(value, buf);
+	return logText(buf, end - buf, dest);
+}
+
 inline bool logPrint(afc::ConstStringRef s, FILE * const dest) noexcept
 {
 	return logText(s.value(), s.size(), dest);
+}
+
+inline bool logPrint(const std::string &s, FILE * const dest) noexcept
+{
+	return logText(s.data(), s.size(), dest);
 }
 
 inline bool logPrint(const char * const s, FILE * const dest) noexcept

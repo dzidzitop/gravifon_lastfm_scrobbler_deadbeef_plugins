@@ -468,8 +468,10 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	}
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
+		asm("nop");
 		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
 				string(seqBegin, seqEnd).c_str());
+		asm("nop");
 		return false;
 	}
 
