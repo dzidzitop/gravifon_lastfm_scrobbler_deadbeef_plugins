@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <limits>
 #include "HttpClient.hpp"
 #include "UrlBuilder.hpp"
+#include <afc/builtin.hpp>
 #include <afc/number.h>
 #include <afc/StringRef.hpp>
 #include "logger.hpp"
@@ -428,11 +429,11 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
 	}
 
-	if (result == StatusCode::ABORTED_BY_CLIENT) {
+	if (unlikely(result == StatusCode::ABORTED_BY_CLIENT)) {
 		logDebug("[LastfmScrobbler] An HTTP call is aborted.");
 		return false;
 	}
-	if (result != StatusCode::SUCCESS) {
+	if (unlikely(result != StatusCode::SUCCESS)) {
 		reportHttpClientError(result);
 		return false;
 	}
@@ -447,48 +448,49 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
 	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody);
 
-	if (response.statusCode == 200) {
-		/* Using find_if to tokenise response instead of find since the former
-		 * takes parameters by value which minimises memory reads.
-		 */
-		string::const_iterator seqBegin = responseBody.cbegin(), seqEnd, end = responseBody.cend();
-		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
-		if (seqEnd - seqBegin == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
-			if (seqEnd == end) { // Session ID.
-				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
-				return false;
-			}
-			seqBegin = seqEnd + 1;
-			seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
-			m_sessionId.assign(seqBegin, seqEnd);
-
-			if (seqEnd == end) { // Now-playing URL. It is ignored for now.
-				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
-				return false;
-			}
-			seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
-
-			if (seqEnd == end) { // Submission URL.
-				fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
-				return false;
-			}
-			seqBegin = seqEnd + 1;
-			seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
-			m_submissionUrl.assign(seqBegin, seqEnd);
-
-			logDebug("[LastfmScrobbler] The user is authenticated...");
-			m_authenticated = true;
-			return true;
-		} else {
-			// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-			fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
-					string(seqBegin, seqEnd).c_str());
-			return false;
-		}
-	} else {
+	if (unlikely(response.statusCode != 200)) {
 		fputs("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.", stderr);
 		return false;
 	}
+
+	/* Using find_if to tokenise response instead of find since the former
+	 * takes parameters by value which minimises memory reads.
+	 */
+	string::const_iterator seqBegin = responseBody.cbegin(), seqEnd, end = responseBody.cend();
+	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
+
+	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
+		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
+		fprintf(stderr, "[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '%s'.\n",
+				string(seqBegin, seqEnd).c_str());
+		return false;
+	}
+
+	if (unlikely(seqEnd == end)) { // Session ID.
+		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
+		return false;
+	}
+	seqBegin = seqEnd + 1;
+	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
+	m_sessionId.assign(seqBegin, seqEnd);
+
+	if (unlikely(seqEnd == end)) { // Now-playing URL. It is ignored for now.
+		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
+		return false;
+	}
+	seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
+
+	if (unlikely(seqEnd == end)) { // Submission URL.
+		fprintf(stderr, "[LastfmScrobbler] Invalid response body: '%s'.\n", responseBody.c_str());
+		return false;
+	}
+	seqBegin = seqEnd + 1;
+	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
+	m_submissionUrl.assign(seqBegin, seqEnd);
+
+	logDebug("[LastfmScrobbler] The user is authenticated...");
+	m_authenticated = true;
+	return true;
 }
 
 inline void LastfmScrobbler::deauthenticate() noexcept
