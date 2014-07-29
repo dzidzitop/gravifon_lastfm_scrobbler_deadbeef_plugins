@@ -58,7 +58,7 @@ bool logInternal(const char *format, std::initializer_list<const Printer *> para
 		++format;
 	}
 	// Flushing plain text data and checking if there are too many arguments.
-	success = logText(start, format - start, dest) && paramPtr == params.end();
+	success = !param && !escape && logText(start, format - start, dest) && paramPtr == params.end();
 finish:
 	success &= (fputc('\n', dest) != EOF);
 	return success;
