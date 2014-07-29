@@ -119,7 +119,7 @@ inline LogPrinter<typename std::decay<const T>::type> logPrinter(const T &val) n
 bool logInternal(const char *format, std::initializer_list<Printer *> params, FILE *dest);
 
 template<typename... Args>
-bool logError(const char *format, Args&&... args)
+inline bool logError(const char *format, Args&&... args)
 {
 	/* Passing polymorphic instances of Printer to logInternal.
 	 *
