@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <initializer_list>
 #include <string>
 #include <type_traits>
-#include <utility>
 
 // POSIX API.
 #include <stdio.h>
@@ -112,14 +111,14 @@ inline LogPrinter<typename std::decay<const T>::type> logPrinter(const T &val) n
 bool logInternal(const char *format, std::initializer_list<Printer *> params, FILE *dest);
 
 template<typename... Args>
-inline bool logToFile(std::FILE * const dest, const char *format, Args&&... args)
+inline bool logToFile(std::FILE * const dest, const char *format, const Args &...args)
 {
 	/* Passing polymorphic instances of Printer to logInternal.
 	 *
 	 * All the temporary objects live until logInternal returns so all pointers to
 	 * local objects passed to logInternal are valid.
 	 */
-	return logInternal(format, {logPrinter(std::forward<Args>(args)).address()...}, dest);
+	return logInternal(format, {logPrinter(args).address()...}, dest);
 }
 
 template<typename T>
