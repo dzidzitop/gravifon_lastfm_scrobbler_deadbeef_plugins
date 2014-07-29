@@ -29,13 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/number.h>
 #include <afc/StringRef.hpp>
 
-#ifdef NDEBUG
-	#define logDebug(msg) static_cast<void>(0)
-#else
-	// stdout is flushed so that the message logged becomes visible immediately.
-	#define logDebug(msg) std::printf("%s\n", static_cast<std::string>(msg).c_str()); std::fflush(stdout);
-#endif
-
 class FileLock
 {
 public:
@@ -58,6 +51,13 @@ inline typename std::enable_if<std::is_integral<T>::value, bool>::type logPrint(
 	return logText(buf, end - buf, dest);
 }
 
+template<typename T>
+inline typename std::enable_if<std::is_floating_point<T>::value, bool>::type logPrint(T value, FILE * const dest) noexcept
+{
+	// TODO improve performance.
+	return logPrint(std::to_string(value), dest);
+}
+
 inline bool logPrint(afc::ConstStringRef s, FILE * const dest) noexcept
 {
 	return logText(s.value(), s.size(), dest);
@@ -78,12 +78,6 @@ inline bool logPrint(const std::pair<const char *, const char *> &s, FILE * cons
 	return logText(s.first, std::size_t(s.second - s.first), dest);
 }
 
-template<typename T>
-inline bool logErrorMsg(const T &message)
-{ FileLock fileLock(stderr);
-	return logPrint(message, stderr) && std::fputc('\n', stderr) != EOF;
-}
-
 class Printer
 {
 public:
@@ -97,9 +91,8 @@ template<typename T>
 class LogPrinter : public Printer
 {
 	// The basic types are copied, non-basic are passed by reference.
-	typedef typename std::conditional<std::is_pointer<T>::value ||
-					std::is_arithmetic<T>::value, const T, const T &>::type
-			storage_type;
+	typedef typename std::conditional<std::is_pointer<T>::value || std::is_arithmetic<T>::value,
+			const T, const T &>::type storage_type;
 public:
 	LogPrinter(const T &value) noexcept : m_value(value) {}
 
@@ -119,14 +112,58 @@ inline LogPrinter<typename std::decay<const T>::type> logPrinter(const T &val) n
 bool logInternal(const char *format, std::initializer_list<Printer *> params, FILE *dest);
 
 template<typename... Args>
-inline bool logError(const char *format, Args&&... args)
+inline bool logToFile(std::FILE * const dest, const char *format, Args&&... args)
 {
 	/* Passing polymorphic instances of Printer to logInternal.
 	 *
 	 * All the temporary objects live until logInternal returns so all pointers to
 	 * local objects passed to logInternal are valid.
 	 */
-	return logInternal(format, {logPrinter(std::forward<Args>(args)).address()...}, stderr);
+	return logInternal(format, {logPrinter(std::forward<Args>(args)).address()...}, dest);
 }
+
+template<typename T>
+inline bool logToFileMsg(const T &message, std::FILE * const dest) noexcept
+{ FileLock fileLock(dest);
+	return logPrint(message, dest) && std::fputc('\n', dest) != EOF;
+}
+
+template<typename T>
+bool logDebugMsg(const T &message) noexcept;
+
+template<typename... Args>
+bool logDebug(const char *format, Args&&... args);
+
+#ifdef NDEBUG
+	template<typename T>
+	inline bool logDebugMsg(const T &message) noexcept { /* Nothing to do. */ return true; }
+
+	template<typename... Args>
+	inline bool logDebug(const char *format, Args&&... args) { /* Nothing to do. */ return true; }
+#else
+	template<typename T>
+	inline bool logDebugMsg(const T &message) noexcept
+	{
+		bool success = logToFileMsg(message, stdout);
+		// stdout is flushed so that the message logged becomes visible immediately.
+		success &= std::fflush(stdout) != EOF;
+		return success;
+	}
+
+	template<typename... Args>
+	inline bool logDebug(const char * const format, Args&&... args)
+	{
+		bool success = logToFile(stdout, format, args...);
+		// stdout is flushed so that the message logged becomes visible immediately.
+		success &= std::fflush(stdout);
+		return success;
+	}
+#endif
+
+template<typename T>
+inline bool logErrorMsg(const T &message) noexcept { return logToFileMsg(message, stderr); }
+
+template<typename... Args>
+inline bool logError(const char * const format, Args&&... args) { return logToFile(stderr, format, args...); }
 
 #endif /* LOGGER_HPP_ */

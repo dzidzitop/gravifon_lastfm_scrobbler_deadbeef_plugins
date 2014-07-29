@@ -275,8 +275,8 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 
 			if (idleScrobbleCount < m_scrobblesToWait) {
 				// Idling due to failed previous attempt to scrobble tracks.
-				logDebug(std::string("Idling is to last for ") + std::to_string(m_scrobblesToWait) +
-						" tracks scrobbled. Scrobbles passed: " + std::to_string(idleScrobbleCount));
+				logDebug("Idling is to last for {} tracks scrobbled. Scrobbles passed: {}.",
+						m_scrobblesToWait, idleScrobbleCount);
 
 				/* Idling is forced due to some last scrobble requests failed.
 				 * No scrobble request is submitted.
@@ -298,8 +298,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 			 */
 			m_scrobblesToWait = std::min(m_scrobblesToWait * 2, maxScrobblesToWait());
 
-			logDebug(std::string("Idling is to last now for ") + std::to_string(m_scrobblesToWait) +
-					" tracks scrobbled.");
+			logDebug("Idling is to last now for {} tracks scrobbled.", m_scrobblesToWait);
 		} else {
 			// If the attempt is (partially) successful then the timeout is reset.
 			m_scrobblesToWait = minScrobblesToWait();
@@ -324,7 +323,7 @@ bool Scrobbler<ScrobbleQueue>::start()
 
 	m_finishScrobblingFlag.store(false, std::memory_order_relaxed);
 
-	logDebug("[Scrobbler] Starting the background scrobbling thread...");
+	logDebugMsg("[Scrobbler] Starting the background scrobbling thread...");
 
 	m_scrobblingThread = std::thread([this]() { this->backgroundScrobbling(); });
 
@@ -364,7 +363,7 @@ bool Scrobbler<ScrobbleQueue>::stop()
 	 * scrobbles could be serialised safely.
 	 */
 	threadToStop.join();
-	logDebug("[Scrobbler] The scrobbling thread is stopped.");
+	logDebugMsg("[Scrobbler] The scrobbling thread is stopped.");
 
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		/* Invocation of stopExtra() must go after thread join and
@@ -507,7 +506,7 @@ finish:
 		result = false;
 	}
 
-	logDebug("[Scrobbler] Pending scrobbles loaded: " + std::to_string(m_pendingScrobbles.size()));
+	logDebug("[Scrobbler] Pending scrobbles loaded: {}.", m_pendingScrobbles.size());
 	return result;
 }
 
@@ -516,14 +515,14 @@ inline bool Scrobbler<ScrobbleQueue>::storePendingScrobbles()
 {
 	assertLocked();
 
-	logDebug("[Scrobbler] Storing pending scrobbles...");
+	logDebugMsg("[Scrobbler] Storing pending scrobbles...");
 
 	/* The assumption is that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
 	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), getDataFilePath(), "wb");
 
-	logDebug("[Scrobbler] Pending scrobbles stored: " + std::to_string(m_pendingScrobbles.size()));
+	logDebug("[Scrobbler] Pending scrobbles stored: {}.", m_pendingScrobbles.size());
 
 	return result;
 }

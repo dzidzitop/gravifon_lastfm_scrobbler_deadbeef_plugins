@@ -102,7 +102,7 @@ namespace
 
 	int lastfmScrobblerStart()
 	{ lock_guard<mutex> lock(pluginMutex);
-		logDebug("[lastfm_scrobbler] Starting...");
+		logDebugMsg("[lastfm_scrobbler] Starting...");
 
 		// TODO think of making it configurable.
 		string dataFilePath;
@@ -125,7 +125,7 @@ namespace
 
 	int lastfmScrobblerStop()
 	{
-		logDebug("[lastfm_scrobbler] Stopping...");
+		logDebugMsg("[lastfm_scrobbler] Stopping...");
 		return lastfmClient.stop() ? 0 : 1;
 	}
 

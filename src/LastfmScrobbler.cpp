@@ -329,9 +329,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug(string("[LastfmScrobbler] Submission URL: ") + submissionUrlCopy);
-		logDebug(string("[LastfmScrobbler] Submission request body: ") +
-				string(request.getBody(), request.getBodySize()));
+		logDebug("[LastfmScrobbler] Submission URL: '{}'.", submissionUrlCopy);
+		logDebug("[LastfmScrobbler] Submission request body: '{}'.", request.getBody());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,
@@ -345,7 +344,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebug("[LastfmScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted.");
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
@@ -353,8 +352,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug(string("[LastfmScrobbler] Submission response status code: ") + to_string(response.statusCode));
-	logDebug(string("[LastfmScrobbler] Submission response body: ") + responseBody.c_str());
+	logDebug("[LastfmScrobbler] Submission response status code: '{}'.", response.statusCode);
+	logDebug("[LastfmScrobbler] Submission response body: {}", responseBody.c_str());
 
 	if (response.statusCode == 200) {
 		/* Using find_if to tokenise response instead of find since the former
@@ -431,7 +430,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug(string("[LastfmScrobbler] Authentication URL: ") + string(url.c_str(), url.size()));
+		logDebug("[LastfmScrobbler] Authentication URL: '{}'.", url.c_str());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().get(url.c_str(), HttpRequest(), response,
@@ -439,7 +438,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	}
 
 	if (unlikely(result == StatusCode::ABORTED_BY_CLIENT)) {
-		logDebug("[LastfmScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted.");
 		return false;
 	}
 	if (unlikely(result != StatusCode::SUCCESS)) {
@@ -447,8 +446,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
-	logDebug(string("[LastfmScrobbler] Authentication response status code: ") + to_string(response.statusCode));
-	logDebug(string("[LastfmScrobbler] Authentication response body: ") + responseBody.c_str());
+	logDebug("[LastfmScrobbler] Authentication response status code: '{}'.", response.statusCode);
+	logDebug("[LastfmScrobbler] Authentication response body: {}", responseBody.c_str());
 
 	if (unlikely(response.statusCode != 200)) {
 		logErrorMsg("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.");

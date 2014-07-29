@@ -207,7 +207,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug(string("[GravifonScrobbler] Request body: ") + string(request.getBody(), request.getBodySize()));
+		logDebug("[GravifonScrobbler] Request body: {}", request.getBody());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,
@@ -221,7 +221,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebug("[GravifonScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[GravifonScrobbler] An HTTP call is aborted.");
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
@@ -229,7 +229,7 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug(string("[GravifonScrobbler] Response status code: ") + to_string(response.statusCode));
+	logDebug("[GravifonScrobbler] Response status code: '{}'.", response.statusCode);
 
 	Value rs;
 	if (!Json::Reader().parse(responseBody.data(), responseBody.data() + responseBody.size(), rs, false)) {
@@ -285,7 +285,7 @@ size_t GravifonScrobbler::doScrobbling()
 		}
 
 		if (completedCount == submittedCount) {
-			logDebug(string("[GravifonScrobbler] Successful response: ") + responseBody.c_str());
+			logDebug("[GravifonScrobbler] Successful response: {}", responseBody.c_str());
 		}
 
 		return completedCount;

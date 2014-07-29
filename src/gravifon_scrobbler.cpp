@@ -119,7 +119,7 @@ namespace
 
 	int gravifonScrobblerStart()
 	{ lock_guard<mutex> lock(pluginMutex);
-		logDebug("[gravifon_scrobbler] Starting...");
+		logDebugMsg("[gravifon_scrobbler] Starting...");
 
 		// TODO think of making it configurable.
 		string dataFilePath;
@@ -142,7 +142,7 @@ namespace
 
 	int gravifonScrobblerStop()
 	{
-		logDebug("[gravifon_scrobbler] Stopping...");
+		logDebugMsg("[gravifon_scrobbler] Stopping...");
 		return gravifonClient.stop() ? 0 : 1;
 	}
 
