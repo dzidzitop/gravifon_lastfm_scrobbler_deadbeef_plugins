@@ -259,7 +259,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assert(!m_pendingScrobbles.empty());
 
 	if (!m_configured) {
-		logErrorMsg("Scrobbler is not configured properly.");
+		logErrorMsg("Scrobbler is not configured properly."_s);
 		return 0;
 	}
 
@@ -269,7 +269,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		 * (see above) to be submitted (among other scrobbles) when the URL is configured
 		 * to point to a scrobbling server.
 		 */
-		logErrorMsg("URL to the scrobbling server is undefined.");
+		logErrorMsg("URL to the scrobbling server is undefined."_s);
 		return 0;
 	}
 
@@ -346,7 +346,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted."_s);
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
@@ -369,15 +369,15 @@ std::size_t LastfmScrobbler::doScrobbling()
 		}
 		const std::size_t tokenSize = seqEnd - seqBegin;
 		if (tokenSize == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
-			logDebug("[LastfmScrobbler] The scrobbles are submitted successfully.");
+			logDebugMsg("[LastfmScrobbler] The scrobbles are submitted successfully."_s);
 
 			m_pendingScrobbles.erase(m_pendingScrobbles.begin(), chunkEnd);
 			return submittedCount;
 		} else {
 			constexpr ConstStringRef badSession = "BADSESSION"_s;
 			if (tokenSize == badSession.size() && equal(badSession.begin(), badSession.end(), seqBegin)) {
-				logDebug("[LastfmScrobbler] The scrobbles are not submitted. "
-						"The user is not authenticated to Last.fm.");
+				logDebugMsg("[LastfmScrobbler] The scrobbles are not submitted. "
+						"The user is not authenticated to Last.fm."_s);
 
 				deauthenticate();
 				return 0;
@@ -390,7 +390,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 			}
 		}
 	} else {
-		logErrorMsg("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm.");
+		logErrorMsg("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm."_s);
 		return false;
 	}
 
@@ -405,7 +405,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return true;
 	}
 
-	logDebug("[LastfmScrobbler] Authenticating the user...");
+	logDebugMsg("[LastfmScrobbler] Authenticating the user..."_s);
 
 	// TODO set real client ID and version.
 	const UrlBuilder url = buildAuthUrl(m_scrobblerUrl, m_username, m_password);
@@ -440,7 +440,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	}
 
 	if (unlikely(result == StatusCode::ABORTED_BY_CLIENT)) {
-		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted."_s);
 		return false;
 	}
 	if (unlikely(result != StatusCode::SUCCESS)) {
@@ -452,7 +452,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebug("[LastfmScrobbler] Authentication response body: #", responseBody.c_str());
 
 	if (unlikely(response.statusCode != 200)) {
-		logErrorMsg("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm.");
+		logErrorMsg("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm."_s);
 		return false;
 	}
 
@@ -498,7 +498,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 	m_submissionUrl.assign(seqBegin, seqEnd);
 
-	logDebug("[LastfmScrobbler] The user is authenticated...");
+	logDebugMsg("[LastfmScrobbler] The user is authenticated..."_s);
 	m_authenticated = true;
 	return true;
 }
