@@ -90,7 +90,7 @@ public:
 	/* There is no need in the virtual destructor since each Printer instances
 	 * are allocated only on the stack.
 	 */
-	virtual bool operator()(std::FILE *dest) const = 0;
+	virtual bool operator()(std::FILE *dest) = 0;
 };
 
 template<typename T>
@@ -103,7 +103,7 @@ class LogPrinter : public Printer
 public:
 	LogPrinter(const T &value) noexcept : m_value(value) {}
 
-	bool operator()(std::FILE *dest) const { return logPrint(m_value, dest); }
+	bool operator()(std::FILE *dest) { return logPrint(m_value, dest); }
 
 	LogPrinter *address() noexcept { return this; }
 private:
