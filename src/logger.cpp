@@ -37,6 +37,7 @@ bool logInternal(const char *format, std::initializer_list<Printer *> params, st
 				success = false;
 				goto finish;
 			}
+			++paramPtr;
 			start = format + 1;
 		} else if (unlikely(*format == '\\')) { // Two chars are processed at once.
 			if (unlikely(!logText(start, format - start, dest))) {
