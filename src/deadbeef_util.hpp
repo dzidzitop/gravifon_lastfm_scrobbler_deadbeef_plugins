@@ -87,7 +87,7 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 
 	if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 		// The track was not played long enough to be scrobbled or its duration is zero or negative.
-		logDebug("The track is played not long enough to be scrobbled (play duration: {}s; track duration: {}s).",
+		logDebug("The track is played not long enough to be scrobbled (play duration: #s; track duration: #s).",
 				trackPlayDuration, trackDuration);
 		return nullptr;
 	}

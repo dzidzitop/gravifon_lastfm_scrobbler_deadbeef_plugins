@@ -23,59 +23,42 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 bool logInternal(const char *format, std::initializer_list<Printer *> params, std::FILE * const dest)
 { FileLock fileLock(dest);
-	typedef std::uint_fast8_t state_t;
-	constexpr state_t STATE_TEXT = 0;
-	constexpr state_t STATE_PARAM = 1;
-	constexpr state_t STATE_ESCAPE = 2;
-
-	state_t state = STATE_TEXT;
 	auto paramPtr = params.begin();
 	const char *start = format;
 
 	bool success;
-	while (*format != '\0') {
-		if (likely(state == STATE_TEXT)) {
-			if (*format == '{') {
-				if (!logText(start, format - start, dest)) {
-					success = false;
-					goto finish;
-				}
-				state = STATE_PARAM;
-			} else if (*format == '\\') {
-				if (!logText(start, format - start, dest)) {
-					success = false;
-					goto finish;
-				}
-				state = STATE_ESCAPE;
-			} else {
-				// Nothing to do, the end of the text sequence is incremented in the end of the loop.
-			}
-		} else if (state == STATE_PARAM) {
-			if (*format == '}') {
-				if (paramPtr == params.end() || !(**paramPtr)(dest)) {
-					success = false;
-					goto finish;
-				}
-				start = format + 1;
-				++paramPtr;
-				state = STATE_TEXT;
-			} else {
-				// Invalid pattern.
+	while (likely(*format != '\0')) {
+		if (unlikely(*format == '#')) {
+			if (!logText(start, format - start, dest)) {
 				success = false;
 				goto finish;
 			}
-		} else {
-			assert(state == STATE_ESCAPE);
-
+			if (unlikely(paramPtr == params.end() || !(**paramPtr)(dest))) {
+				success = false;
+				goto finish;
+			}
+			start = format + 1;
+		} else if (unlikely(*format == '\\')) { // Two chars are processed at once.
+			if (unlikely(!logText(start, format - start, dest))) {
+				success = false;
+				goto finish;
+			}
+			++format;
+			if (unlikely(*format == '\0')) {
+				// Premature end of sequence.
+				success = false;
+				goto finish;
+			}
 			// The character escaped becomes the first character of the new text sequence.
 			start = format;
-			state = STATE_TEXT;
+		} else {
+			// Nothing to do, the end of the text sequence is incremented in the end of the loop.
 		}
 
 		++format;
 	}
 	// Flushing plain text data and checking if there are too many arguments.
-	success = state == STATE_TEXT && logText(start, format - start, dest) && paramPtr == params.end();
+	success = likely(logText(start, format - start, dest) && paramPtr == params.end());
 finish:
 	success &= (fputc('\n', dest) != EOF);
 	return success;

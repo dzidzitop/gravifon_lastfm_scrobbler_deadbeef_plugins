@@ -77,7 +77,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		logError("[GravifonScrobbler] Unable to send the scrobble message: '{}'.", message);
+		logError("[GravifonScrobbler] Unable to send the scrobble message: '#'.", message);
 	}
 
 	inline bool isRecoverableError(const unsigned long errorCode)
@@ -207,7 +207,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[GravifonScrobbler] Request body: {}", request.getBody());
+		logDebug("[GravifonScrobbler] Request body: #", request.getBody());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,
@@ -229,18 +229,18 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug("[GravifonScrobbler] Response status code: '{}'.", response.statusCode);
+	logDebug("[GravifonScrobbler] Response status code: '#'.", response.statusCode);
 
 	Value rs;
 	if (!Json::Reader().parse(responseBody.data(), responseBody.data() + responseBody.size(), rs, false)) {
-		logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
+		logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
 		return 0;
 	}
 
 	if (response.statusCode == 200) {
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
-			logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
+			logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
 			return 0;
 		}
 
@@ -263,13 +263,13 @@ size_t GravifonScrobbler::doScrobbling()
 					{
 						afc::FastStringBuffer<char> scrobbleAsStr = serialiseAsJson(*it);
 						if (isRecoverableError(errorCode)) {
-							logError("[GravifonScrobbler] Scrobble '{}' is not processed. "
-									"Error: '{}' ({}). It will be re-submitted later.",
+							logError("[GravifonScrobbler] Scrobble '#' is not processed. "
+									"Error: '#' (#). It will be re-submitted later.",
 									scrobbleAsStr.c_str(), errorDescription, errorCode);
 							++it;
 						} else {
-							logError("[GravifonScrobbler] Scrobble '{}' cannot be processed. "
-									"Error: '{}' ({}). It is removed as non-processable.",
+							logError("[GravifonScrobbler] Scrobble '#' cannot be processed. "
+									"Error: '#' (#). It is removed as non-processable.",
 									scrobbleAsStr.c_str(), errorDescription, errorCode);
 							it = m_pendingScrobbles.erase(it);
 							++completedCount;
@@ -279,13 +279,13 @@ size_t GravifonScrobbler::doScrobbling()
 					// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
 					[&responseBody, &it]()
 					{
-						logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
+						logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
 						++it;
 					});
 		}
 
 		if (completedCount == submittedCount) {
-			logDebug("[GravifonScrobbler] Successful response: {}", responseBody.c_str());
+			logDebug("[GravifonScrobbler] Successful response: #", responseBody.c_str());
 		}
 
 		return completedCount;
@@ -295,21 +295,21 @@ size_t GravifonScrobbler::doScrobbling()
 				// Success status. It is not expected. Report an error and finish processing.
 				[&responseBody]()
 				{
-					logError("[GravifonScrobbler] Unexpected 'ok' global status response: '{}'.",
+					logError("[GravifonScrobbler] Unexpected 'ok' global status response: '#'.",
 							responseBody.c_str());
 				},
 
 				// Error status: report an error and finish processing.
 				[&responseBody](const unsigned long errorCode, const string &errorDescription)
 				{
-					logError("[GravifonScrobbler] Error global status response: '{}'. Error: '{}' ({}).",
+					logError("[GravifonScrobbler] Error global status response: '#'. Error: '#' (#).",
 							responseBody.c_str(), errorDescription, errorCode);
 				},
 
 				// Invalid status: report an error and finish processing.
 				[&responseBody]()
 				{
-					logError("[GravifonScrobbler] Invalid response: '{}'.", responseBody.c_str());
+					logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
 				});
 
 		return 0;
