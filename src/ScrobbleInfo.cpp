@@ -22,14 +22,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/logger.hpp>
 #include <afc/number.h>
 #include <afc/StringRef.hpp>
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
 #include "jsonutil.hpp"
 
-using afc::operator"" _s;
 using namespace std;
+
+using afc::operator"" _s;
+
 using Json::Value;
 using Json::ValueType;
 
@@ -245,7 +248,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	Value object;
 
 	if (!jsonReader.parse(begin, end, object, false)) {
-		logError("[Scrobbler] Unable to parse the scrobble JSON object: '#'.",
+		afc::logger::logError("[Scrobbler] Unable to parse the scrobble JSON object: '#'.",
 				jsonReader.getFormatedErrorMessages().c_str());
 		return false;
 	}

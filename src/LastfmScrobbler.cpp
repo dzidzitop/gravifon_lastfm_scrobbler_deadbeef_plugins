@@ -24,9 +24,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "HttpClient.hpp"
 #include "UrlBuilder.hpp"
 #include <afc/builtin.hpp>
+#include <afc/logger.hpp>
 #include <afc/number.h>
 #include <afc/StringRef.hpp>
-#include "logger.hpp"
 #include <afc/md5.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
@@ -36,6 +36,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 using namespace std;
 using namespace afc;
 using StatusCode = HttpClient::StatusCode;
+
+using afc::logger::logDebug;
+using afc::logger::logDebugMsg;
+using afc::logger::logError;
+using afc::logger::logErrorMsg;
 
 namespace
 {

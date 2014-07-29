@@ -18,15 +18,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <memory>
 #include <mutex>
 #include <utility>
+
+#include <afc/logger.hpp>
 #include <deadbeef.h>
+
 #include "ScrobbleInfo.hpp"
 #include "Scrobbler.hpp"
 #include "LastfmScrobbler.hpp"
-#include "logger.hpp"
 #include "pathutil.hpp"
 #include "deadbeef_util.hpp"
 
 using namespace std;
+
+using afc::operator"" _s;
+using afc::logger::logDebug;
+using afc::logger::logDebugMsg;
+using afc::logger::logError;
+using afc::logger::logErrorMsg;
 
 namespace
 {
@@ -58,13 +66,13 @@ namespace
 		if (!enabled) {
 			if (clientStarted) {
 				if (!lastfmClient.stop()) {
-					logErrorMsg("[lastfm_scrobbler] unable to stop Last.fm client.");
+					logErrorMsg("[lastfm_scrobbler] unable to stop Last.fm client."_s);
 				}
 			}
 			return false;
 		} else if (!clientStarted) {
 			if (!lastfmClient.start()) {
-				logErrorMsg("[lastfm_scrobbler] unable to start Last.fm client.");
+				logErrorMsg("[lastfm_scrobbler] unable to start Last.fm client."_s);
 				return false;
 			}
 		}
@@ -76,7 +84,7 @@ namespace
 				"lastfmScrobbler.lastfmUrl", u8"http://post.audioscrobbler.com");
 		const std::size_t lastfmUrlSize = std::strlen(lastfmUrl);
 		if (!isAscii(lastfmUrl, lastfmUrlSize)) {
-			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm.");
+			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm."_s);
 			lastfmClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
@@ -102,7 +110,7 @@ namespace
 
 	int lastfmScrobblerStart()
 	{ lock_guard<mutex> lock(pluginMutex);
-		logDebugMsg("[lastfm_scrobbler] Starting...");
+		logDebugMsg("[lastfm_scrobbler] Starting..."_s);
 
 		// TODO think of making it configurable.
 		string dataFilePath;
@@ -125,7 +133,7 @@ namespace
 
 	int lastfmScrobblerStop()
 	{
-		logDebugMsg("[lastfm_scrobbler] Stopping...");
+		logDebugMsg("[lastfm_scrobbler] Stopping..."_s);
 		return lastfmClient.stop() ? 0 : 1;
 	}
 

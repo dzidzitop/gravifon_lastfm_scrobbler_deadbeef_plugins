@@ -25,9 +25,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <string>
 #include <utility>
 
+#include <afc/logger.hpp>
+
 #include "HttpClient.hpp"
 #include "Scrobbler.hpp"
-#include "logger.hpp"
 
 // The character 'Line Feed' in UTF-8.
 static const char UTF8_LF = 0x0a;
@@ -89,7 +90,8 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 
 	if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 		// The track was not played long enough to be scrobbled or its duration is zero or negative.
-		logDebug("The track is played not long enough to be scrobbled (play duration: #s; track duration: #s).",
+		afc::logger::logDebug(
+				"The track is played not long enough to be scrobbled (play duration: #s; track duration: #s).",
 				trackPlayDuration, trackDuration);
 		return nullptr;
 	}

@@ -29,9 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <thread>
 #include <type_traits>
 #include <utility>
+
 #include <afc/FastStringBuffer.hpp>
+#include <afc/logger.hpp>
+#include <afc/StringRef.hpp>
 #include <sys/stat.h>
-#include "logger.hpp"
 #include "ScrobbleInfo.hpp"
 
 // TODO make logging tag configurable.
@@ -209,6 +211,8 @@ finish:
 template<typename ScrobbleQueue>
 void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool safeScrobbling)
 { std::lock_guard<std::mutex> lock(m_mutex);
+	using afc::operator"" _s;
+
 	if (!m_started) {
 		// This Scrobbler is not started or is already stopped or is disabled.
 		return;
@@ -224,10 +228,10 @@ void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool 
 		 */
 		auto end = m_pendingScrobbles.cend();
 		if (storeScrobbles(std::prev(end), end, getDataFilePath(), "ab")) {
-			logDebug("[Scrobbler] The scrobble that has just been scrobbled "
+			afc::logger::logDebug("[Scrobbler] The scrobble that has just been scrobbled "
 					"is stored (failure-safe scrobbling).");
 		} else {
-			logErrorMsg("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling).");
+			afc::logger::logErrorMsg("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling)."_s);
 		}
 	}
 }
@@ -235,7 +239,9 @@ void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool 
 template<typename ScrobbleQueue>
 void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 { std::unique_lock<std::mutex> lock(m_mutex);
-	logDebug("[Scrobbler] The background scrobbling thread has started.");
+	using afc::operator"" _s;
+
+	afc::logger::logDebugMsg("[Scrobbler] The background scrobbling thread has started."_s);
 
 	bool lastAttemptFailed = false;
 	std::size_t prevScrobbleCount = m_pendingScrobbles.size();
@@ -255,7 +261,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 
 			if (m_finishScrobblingFlag.load(std::memory_order_relaxed)) {
 				// Finishing the background scrobbling thread since this Scrobbler is stopped.
-				logDebug("[Scrobbler] The background scrobbling thread is going to be stopped...");
+				afc::logger::logDebugMsg("[Scrobbler] The background scrobbling thread is going to be stopped..."_s);
 				return;
 			}
 		}
@@ -275,7 +281,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 
 			if (idleScrobbleCount < m_scrobblesToWait) {
 				// Idling due to failed previous attempt to scrobble tracks.
-				logDebug("Idling is to last for # tracks scrobbled. Scrobbles passed: #.",
+				afc::logger::logDebug("Idling is to last for # tracks scrobbled. Scrobbles passed: #.",
 						m_scrobblesToWait, idleScrobbleCount);
 
 				/* Idling is forced due to some last scrobble requests failed.
@@ -298,7 +304,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 			 */
 			m_scrobblesToWait = std::min(m_scrobblesToWait * 2, maxScrobblesToWait());
 
-			logDebug("Idling is to last now for # tracks scrobbled.", m_scrobblesToWait);
+			afc::logger::logDebug("Idling is to last now for # tracks scrobbled.", m_scrobblesToWait);
 		} else {
 			// If the attempt is (partially) successful then the timeout is reset.
 			m_scrobblesToWait = minScrobblesToWait();
@@ -312,6 +318,8 @@ template<typename ScrobbleQueue>
 bool Scrobbler<ScrobbleQueue>::start()
 // m_startStopMutex must be locked first to co-operate with ::stop() properly.
 { std::lock_guard<std::mutex> startStopLock(m_startStopMutex); std::lock_guard<std::mutex> lock(m_mutex);
+	using afc::operator"" _s;
+
 	if (m_started) {
 		// This Scrobbler is already started.
 		return false;
@@ -323,7 +331,7 @@ bool Scrobbler<ScrobbleQueue>::start()
 
 	m_finishScrobblingFlag.store(false, std::memory_order_relaxed);
 
-	logDebugMsg("[Scrobbler] Starting the background scrobbling thread...");
+	afc::logger::logDebugMsg("[Scrobbler] Starting the background scrobbling thread..."_s);
 
 	m_scrobblingThread = std::thread([this]() { this->backgroundScrobbling(); });
 
@@ -337,6 +345,8 @@ template<typename ScrobbleQueue>
 bool Scrobbler<ScrobbleQueue>::stop()
 // m_startStopMutex must be locked first to co-operate with ::start() properly.
 { std::lock_guard<std::mutex> startStopLock(m_startStopMutex);
+	using afc::operator"" _s;
+
 	std::thread threadToStop;
 
 	{ std::lock_guard<std::mutex> lock(m_mutex);
@@ -352,7 +362,7 @@ bool Scrobbler<ScrobbleQueue>::stop()
 
 		m_finishScrobblingFlag.store(true, std::memory_order_relaxed);
 
-		logDebug("[Scrobbler] The scrobbling thread is being stopped...");
+		afc::logger::logDebugMsg("[Scrobbler] The scrobbling thread is being stopped..."_s);
 
 		// Waking up the scrobbing thread to let it finish quickly.
 		m_cv.notify_one();
@@ -363,7 +373,7 @@ bool Scrobbler<ScrobbleQueue>::stop()
 	 * scrobbles could be serialised safely.
 	 */
 	threadToStop.join();
-	logDebugMsg("[Scrobbler] The scrobbling thread is stopped.");
+	afc::logger::logDebugMsg("[Scrobbler] The scrobbling thread is stopped."_s);
 
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		/* Invocation of stopExtra() must go after thread join and
@@ -372,7 +382,7 @@ bool Scrobbler<ScrobbleQueue>::stop()
 		stopExtra();
 
 		if (!storePendingScrobbles()) {
-			logErrorMsg("[Scrobbler] Unable to store pending scrobbles. These scrobbles are lost.");
+			afc::logger::logErrorMsg("[Scrobbler] Unable to store pending scrobbles. These scrobbles are lost."_s);
 		}
 
 		/* TODO do not clear the list of pending scrobbles. Instead, report an error so that
@@ -454,9 +464,11 @@ Scrobbler<ScrobbleQueue>::openDataFile(const std::string &path, const char * con
 template<typename ScrobbleQueue>
 inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 {
+	using afc::operator"" _s;
+
 	assertLocked();
 
-	logDebug("[Scrobbler] Loading pending scrobbles...");
+	afc::logger::logDebugMsg("[Scrobbler] Loading pending scrobbles..."_s);
 
 	std::FILE *dataFile; // initialised by openDataFile();
 	const OpenResult openResult = openDataFile(getDataFilePath(), "rb", false, dataFile);
@@ -506,23 +518,25 @@ finish:
 		result = false;
 	}
 
-	logDebug("[Scrobbler] Pending scrobbles loaded: #.", m_pendingScrobbles.size());
+	afc::logger::logDebug("[Scrobbler] Pending scrobbles loaded: #.", m_pendingScrobbles.size());
 	return result;
 }
 
 template<typename ScrobbleQueue>
 inline bool Scrobbler<ScrobbleQueue>::storePendingScrobbles()
 {
+	using afc::operator"" _s;
+
 	assertLocked();
 
-	logDebugMsg("[Scrobbler] Storing pending scrobbles...");
+	afc::logger::logDebugMsg("[Scrobbler] Storing pending scrobbles..."_s);
 
 	/* The assumption is that all tracks are loaded into the list of pending scrobbles
 	 * so that the file could be overwritten with the remaining pending scrobbles.
 	 */
 	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), getDataFilePath(), "wb");
 
-	logDebug("[Scrobbler] Pending scrobbles stored: #.", m_pendingScrobbles.size());
+	afc::logger::logDebug("[Scrobbler] Pending scrobbles stored: #.", m_pendingScrobbles.size());
 
 	return result;
 }

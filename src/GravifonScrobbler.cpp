@@ -19,17 +19,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "HttpClient.hpp"
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
-#include "logger.hpp"
 #include <utility>
 #include "jsonutil.hpp"
 #include "pathutil.hpp"
 #include <afc/FastStringBuffer.hpp>
 #include <afc/ensure_ascii.hpp>
+#include <afc/logger.hpp>
+#include <afc/StringRef.hpp>
 #include <afc/utils.h>
 #include "deadbeef_util.hpp"
 
 using namespace std;
 using namespace afc;
+
+using afc::operator"" _s;
+using afc::logger::logDebug;
+using afc::logger::logDebugMsg;
+using afc::logger::logError;
+using afc::logger::logErrorMsg;
+
 using Json::Value;
 using StatusCode = HttpClient::StatusCode;
 
@@ -139,7 +147,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assert(!m_pendingScrobbles.empty());
 
 	if (!m_configured) {
-		logErrorMsg("Scrobbler is not configured properly.");
+		logErrorMsg("Scrobbler is not configured properly."_s);
 		return 0;
 	}
 
@@ -149,7 +157,7 @@ size_t GravifonScrobbler::doScrobbling()
 		 * pending scrobbles (see above) to be submitted (among other scrobbles) when
 		 * the URL is configured to point to a scrobbling server.
 		 */
-		logErrorMsg("URL to the scrobbling server is undefined.");
+		logErrorMsg("URL to the scrobbling server is undefined."_s);
 		return 0;
 	}
 
@@ -223,7 +231,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebugMsg("[GravifonScrobbler] An HTTP call is aborted.");
+		logDebugMsg("[GravifonScrobbler] An HTTP call is aborted."_s);
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
