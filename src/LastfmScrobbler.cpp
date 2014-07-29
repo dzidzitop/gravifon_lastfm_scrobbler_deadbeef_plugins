@@ -371,7 +371,6 @@ std::size_t LastfmScrobbler::doScrobbling()
 		if (tokenSize == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
 			logDebug("[LastfmScrobbler] The scrobbles are submitted successfully.");
 
-			// TODO use deque instead of list.
 			m_pendingScrobbles.erase(m_pendingScrobbles.begin(), chunkEnd);
 			return submittedCount;
 		} else {
