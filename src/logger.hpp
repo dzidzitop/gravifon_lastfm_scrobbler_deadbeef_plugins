@@ -96,6 +96,10 @@ public:
 template<typename T>
 class LogPrinter : public Printer
 {
+	// The basic types are copied, non-basic are passed by reference.
+	typedef typename std::conditional<std::is_pointer<T>::value ||
+					std::is_arithmetic<T>::value, const T, const T &>::type
+			storage_type;
 public:
 	LogPrinter(const T &value) noexcept : m_value(value) {}
 
@@ -103,8 +107,7 @@ public:
 
 	LogPrinter *address() noexcept { return this; }
 private:
-	// TODO think how to avoid copying here.
-	const T m_value;
+	storage_type m_value;
 };
 
 template<typename T>
