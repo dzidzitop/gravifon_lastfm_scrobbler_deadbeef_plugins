@@ -16,16 +16,41 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "logger.hpp"
 
-bool logInternal(const char *format, std::initializer_list<const Printer *> params,
-		std::FILE * const dest)
+#include <cassert>
+#include <cstdint>
+
+#include <afc/builtin.hpp>
+
+bool logInternal(const char *format, std::initializer_list<Printer *> params, std::FILE * const dest)
 { FileLock fileLock(dest);
+	typedef std::uint_fast8_t state_t;
+	constexpr state_t STATE_TEXT = 0;
+	constexpr state_t STATE_PARAM = 1;
+	constexpr state_t STATE_ESCAPE = 2;
+
+	state_t state = STATE_TEXT;
 	auto paramPtr = params.begin();
 	const char *start = format;
-	bool escape = false;
-	bool param = false;
+
 	bool success;
 	while (*format != '\0') {
-		if (param) {
+		if (likely(state == STATE_TEXT)) {
+			if (*format == '{') {
+				if (!logText(start, format - start, dest)) {
+					success = false;
+					goto finish;
+				}
+				state = STATE_PARAM;
+			} else if (*format == '\\') {
+				if (!logText(start, format - start, dest)) {
+					success = false;
+					goto finish;
+				}
+				state = STATE_ESCAPE;
+			} else {
+				// Nothing to do, the end of the text sequence is incremented in the end of the loop.
+			}
+		} else if (state == STATE_PARAM) {
 			if (*format == '}') {
 				if (paramPtr == params.end() || !(**paramPtr)(dest)) {
 					success = false;
@@ -33,32 +58,24 @@ bool logInternal(const char *format, std::initializer_list<const Printer *> para
 				}
 				start = format + 1;
 				++paramPtr;
-				param = false;
+				state = STATE_TEXT;
 			} else {
 				// Invalid pattern.
 				success = false;
 				goto finish;
 			}
-		} else if (escape) {
+		} else {
+			assert(state == STATE_ESCAPE);
+
+			// The character escaped becomes the first character of the new text sequence.
 			start = format;
-			escape = false;
-		} else if (*format == '\\') {
-			if (!logText(start, format - start, dest)) {
-				success = false;
-				goto finish;
-			}
-			escape = true;
-		} else if (*format == '{') {
-			if (!logText(start, format - start, dest)) {
-				success = false;
-				goto finish;
-			}
-			param = true;
+			state = STATE_TEXT;
 		}
+
 		++format;
 	}
 	// Flushing plain text data and checking if there are too many arguments.
-	success = !param && !escape && logText(start, format - start, dest) && paramPtr == params.end();
+	success = state == STATE_TEXT && logText(start, format - start, dest) && paramPtr == params.end();
 finish:
 	success &= (fputc('\n', dest) != EOF);
 	return success;

@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 // POSIX API.
 #include <stdio.h>
 
+#include <afc/ensure_ascii.hpp> // needed to ensure that '\n' != EOF.
 #include <afc/number.h>
 #include <afc/StringRef.hpp>
 
@@ -112,7 +113,7 @@ inline LogPrinter<typename std::decay<const T>::type> logPrinter(const T &val) n
 	return LogPrinter<typename std::decay<const T>::type>(val);
 }
 
-bool logInternal(const char *format, std::initializer_list<const Printer *> params, FILE *dest);
+bool logInternal(const char *format, std::initializer_list<Printer *> params, FILE *dest);
 
 template<typename... Args>
 bool logError(const char *format, Args&&... args)
