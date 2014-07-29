@@ -43,12 +43,16 @@ class HttpResponse
 {
 	friend class HttpClient;
 public:
-	typedef std::function<void (const char *, std::size_t)> BodyAppender;
+	struct BodyAppender
+	{
+		virtual ~BodyAppender() = default;
 
-	// TODO think how to avoid this moving.
-	HttpResponse(BodyAppender &&bodyAppender) : m_bodyAppender(std::move(bodyAppender)), headers() {}
+		virtual void operator()(const char *dataChunk, std::size_t n) = 0;
+	};
+
+	HttpResponse(BodyAppender &bodyAppender) : m_bodyAppender(bodyAppender), headers() {}
 private:
-	BodyAppender m_bodyAppender;
+	BodyAppender &m_bodyAppender;
 // TODO make it private.
 public:
 	// HttpResponseEntity does not own headers.

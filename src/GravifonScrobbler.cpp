@@ -188,8 +188,9 @@ size_t GravifonScrobbler::doScrobbling()
 #endif
 
 	afc::FastStringBuffer<char> responseBody;
+	FastStringBufferAppender responseBodyAppender(responseBody);
 	StatusCode result;
-	HttpResponse response{FastStringBufferAppender(responseBody)};
+	HttpResponse response(responseBodyAppender);
 
 	/* Each HTTP call is performed outside the critical section so that other threads can:
 	 * - add scrobbles without waiting for this call to finish

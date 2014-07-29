@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstring>
 #include <string>
 #include <utility>
+
+#include "HttpClient.hpp"
 #include "Scrobbler.hpp"
 #include "logger.hpp"
 
@@ -148,12 +150,16 @@ inline bool isAscii(const char * const str, const std::size_t n)
 	return true;
 }
 
-class FastStringBufferAppender
+class FastStringBufferAppender : public HttpResponse::BodyAppender
 {
+	FastStringBufferAppender(const FastStringBufferAppender &) = delete;
+	FastStringBufferAppender(FastStringBufferAppender &&) = delete;
+	FastStringBufferAppender &operator=(const FastStringBufferAppender &) = delete;
+	FastStringBufferAppender &operator=(FastStringBufferAppender &&) = delete;
 public:
 	FastStringBufferAppender(afc::FastStringBuffer<char> &dest) : m_dest(dest) {}
 
-	void operator()(const char * const data, const std::size_t n)
+	void operator()(const char * const data, const std::size_t n) override
 	{
 		m_dest.reserve(m_dest.size() + n);
 		m_dest.append(data, n);
