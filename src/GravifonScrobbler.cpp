@@ -208,7 +208,8 @@ size_t GravifonScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[GravifonScrobbler] Request body: #", request.getBody());
+		logDebug("[LastfmScrobbler] Request body: #",
+				std::pair<const char *, const char *>(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(scrobblerUrlCopy.c_str(), request, response,

@@ -331,7 +331,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
 		logDebug("[LastfmScrobbler] Submission URL: '#'.", submissionUrlCopy);
-		logDebug("[LastfmScrobbler] Submission request body: '#'.", request.getBody());
+		logDebug("[LastfmScrobbler] Submission request body: '#'.",
+				std::pair<const char *, const char *>(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,
