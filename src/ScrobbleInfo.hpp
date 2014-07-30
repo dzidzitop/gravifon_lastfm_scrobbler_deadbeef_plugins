@@ -44,11 +44,13 @@ public:
 	bool hasTitle() const noexcept { return m_titleSet; }
 
 	void addArtist(std::string &&artist) { m_artists.emplace_back(std::move(artist)); }
+	void addArtist(const char * const artist) { m_artists.emplace_back(artist); }
 	std::vector<std::string> &getArtists() noexcept { return m_artists; }
 	const std::vector<std::string> &getArtists() const noexcept { return m_artists; }
 	bool hasArtist() const noexcept { return !m_artists.empty(); }
 
 	void addAlbumArtist(const std::string &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
+	void addAlbumArtist(const char * const artist) { m_albumArtists.emplace_back(artist); }
 	std::vector<std::string> &getAlbumArtists() noexcept { return m_albumArtists; }
 	const std::vector<std::string> &getAlbumArtists() const noexcept { return m_albumArtists; }
 	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }

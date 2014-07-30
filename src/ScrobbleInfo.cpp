@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <algorithm>
 #include <bitset>
 #include <cstddef>
-#include <utility>
 #include <afc/builtin.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
@@ -205,7 +204,8 @@ namespace
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
 	{
-		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asCString(), dest);
+		return likely(isType(dateTimeObject, stringValue)) &&
+				likely(parseISODateTime(dateTimeObject.asCString(), dest));
 	}
 
 	inline bool parseDuration(const Value &durationObject, long &dest)
@@ -238,14 +238,14 @@ namespace
 		}
 		for (auto i = 0u, n = artists.size(); i < n; ++i) {
 			const Value &artist = artists[i];
-			if (!isType(artist, objectValue)) {
+			if (unlikely(!isType(artist, objectValue))) {
 				return false;
 			}
 			const Value &artistName = artist["name"];
-			if (!isType(artistName, stringValue)) {
+			if (unlikely(!isType(artistName, stringValue))) {
 				return false;
 			}
-			addArtistOp(std::move(artistName.asString()));
+			addArtistOp(artistName.asCString());
 		}
 		return true;
 	}
@@ -295,7 +295,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 		track.setAlbumTitle(trackAlbumTitle.asCString());
 
 		if (unlikely(!parseArtists(trackAlbum["artists"], false,
-				[&](string &&artistName) { track.addAlbumArtist(std::move(artistName)); }))) {
+				[&](const char * const artistName) { track.addAlbumArtist(artistName); }))) {
 			return false;
 		}
 	}
@@ -307,7 +307,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	track.setDurationMillis(trackDuration);
 
 	if (unlikely(!parseArtists(trackObject["artists"], true,
-			[&](string &&artistName) { track.addArtist(std::move(artistName)); }))) {
+			[&](const char * const artistName) { track.addArtist(artistName); }))) {
 		return false;
 	}
 
