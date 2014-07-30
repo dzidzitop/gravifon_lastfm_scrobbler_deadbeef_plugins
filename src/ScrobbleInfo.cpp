@@ -272,7 +272,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 
 	Track &track = dest.track;
 
-	const Value trackObject = getField(object, "track");
+	const Value &trackObject = getField(object, "track");
 	if (unlikely(!isType(trackObject, objectValue))) {
 		return false;
 	}
