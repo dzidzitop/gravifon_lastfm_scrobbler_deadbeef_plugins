@@ -30,4 +30,17 @@ inline bool isType(const Json::Value &val, const Json::ValueType type)
 	return val.type() == type;
 }
 
+inline const Json::Value &getField(const Json::Value &o, const char *fieldName)
+{
+	/* Forcing the object to be const to:
+	 * 1) keep the object unmodified;
+	 * 2) avoid redundant copying of the fieldName value.
+	 *
+	 * Value::operator[const StaticString &] modifies the object,
+	 * Value::operator[const char *] (non-const) modifies the object and
+	 * leads to redundant copying.
+	 */
+	return o[fieldName];
+}
+
 #endif /* JSONUTIL_HPP_ */

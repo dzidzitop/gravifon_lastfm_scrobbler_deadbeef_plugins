@@ -208,19 +208,6 @@ namespace
 				likely(parseISODateTime(dateTimeObject.asCString(), dest));
 	}
 
-	inline const Value &getField(const Value &o, const char *fieldName)
-	{
-		/* Forcing the object to be const to:
-		 * 1) keep the object unmodified;
-		 * 2) avoid redundant copying of the fieldName value.
-		 *
-		 * Value::operator[const StaticString &] modifies the object,
-		 * Value::operator[const char *] (non-const) modifies the object and
-		 * leads to redundant copying.
-		 */
-		return o[fieldName];
-	}
-
 	inline bool parseDuration(const Value &durationObject, long &dest)
 	{
 		if (unlikely(!isType(durationObject, objectValue))) {
