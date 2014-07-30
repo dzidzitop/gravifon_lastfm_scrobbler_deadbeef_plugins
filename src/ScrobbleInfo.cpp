@@ -205,7 +205,7 @@ namespace
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
 	{
-		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asString(), dest);
+		return isType(dateTimeObject, stringValue) && parseISODateTime(dateTimeObject.asCString(), dest);
 	}
 
 	inline bool parseDuration(const Value &durationObject, long &dest)
@@ -256,28 +256,28 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	Json::Reader jsonReader;
 	Value object;
 
-	if (!jsonReader.parse(begin, end, object, false)) {
+	if (unlikely(!jsonReader.parse(begin, end, object, false))) {
 		afc::logger::logError("[Scrobbler] Unable to parse the scrobble JSON object: '#'.",
 				jsonReader.getFormatedErrorMessages().c_str());
 		return false;
 	}
-	if (!isType(object, objectValue)) {
+	if (unlikely(!isType(object, objectValue))) {
 		return false;
 	}
-	if (!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp) ||
-			!parseDateTime(object["scrobble_end_datetime"], dest.scrobbleEndTimestamp) ||
-			!parseDuration(object["scrobble_duration"], dest.scrobbleDuration)) {
+	if (unlikely(!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp)) ||
+			unlikely(!parseDateTime(object["scrobble_end_datetime"], dest.scrobbleEndTimestamp)) ||
+			unlikely(!parseDuration(object["scrobble_duration"], dest.scrobbleDuration))) {
 		return false;
 	}
 
 	Track &track = dest.track;
 
 	const Value trackObject = object["track"];
-	if (!isType(trackObject, objectValue)) {
+	if (unlikely(!isType(trackObject, objectValue))) {
 		return false;
 	}
 	const Value &trackTitle = trackObject["title"];
-	if (!isType(trackTitle, stringValue)) {
+	if (unlikely(!isType(trackTitle, stringValue))) {
 		return false;
 	}
 	track.setTitle(trackTitle.asCString());
@@ -285,29 +285,29 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	const Value &trackAlbum = trackObject["album"];
 	const ValueType trackAlbumObjType = trackAlbum.type();
 	if (trackAlbumObjType != nullValue) {
-		if (trackAlbumObjType != objectValue) {
+		if (unlikely(trackAlbumObjType != objectValue)) {
 			return false;
 		}
 		const Value &trackAlbumTitle = trackAlbum["title"];
-		if (!isType(trackAlbumTitle, stringValue)) {
+		if (unlikely(!isType(trackAlbumTitle, stringValue))) {
 			return false;
 		}
 		track.setAlbumTitle(trackAlbumTitle.asCString());
 
-		if (!parseArtists(trackAlbum["artists"], false,
-				[&](string &&artistName) { track.addAlbumArtist(std::move(artistName)); })) {
+		if (unlikely(!parseArtists(trackAlbum["artists"], false,
+				[&](string &&artistName) { track.addAlbumArtist(std::move(artistName)); }))) {
 			return false;
 		}
 	}
 
 	long trackDuration;
-	if (!parseDuration(trackObject["length"], trackDuration)) {
+	if (unlikely(!parseDuration(trackObject["length"], trackDuration))) {
 		return false;
 	}
 	track.setDurationMillis(trackDuration);
 
-	if (!parseArtists(trackObject["artists"], true,
-			[&](string &&artistName) { track.addArtist(std::move(artistName)); })) {
+	if (unlikely(!parseArtists(trackObject["artists"], true,
+			[&](string &&artistName) { track.addArtist(std::move(artistName)); }))) {
 		return false;
 	}
 
