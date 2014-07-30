@@ -235,8 +235,12 @@ namespace
 	{
 		typedef decltype(Value::size()) artistSize_t;
 
-		artistSize_t artistCount;
-		if (!isType(artists, arrayValue) || (artistCount = artists.size()) == 0) {
+		const ValueType valueType = artists.type();
+		if (unlikely(valueType != nullValue && valueType != arrayValue)) {
+			return false;
+		}
+		const artistSize_t artistCount = artists.size();
+		if (artistCount == 0) {
 			return !artistsRequired;
 		}
 
