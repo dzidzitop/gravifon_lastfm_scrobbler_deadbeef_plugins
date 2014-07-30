@@ -233,10 +233,15 @@ namespace
 	template<typename AddArtistOp>
 	inline bool parseArtists(const Value &artists, const bool artistsRequired, AddArtistOp addArtistOp)
 	{
-		if (!isType(artists, arrayValue) || artists.empty()) {
+		typedef decltype(Value::size()) artistSize_t;
+
+		artistSize_t artistCount;
+		if (!isType(artists, arrayValue) || (artistCount = artists.size()) == 0) {
 			return !artistsRequired;
 		}
-		for (auto i = 0u, n = artists.size(); i < n; ++i) {
+
+		artistSize_t i = 0;
+		do {
 			const Value &artist = artists[i];
 			if (unlikely(!isType(artist, objectValue))) {
 				return false;
@@ -246,7 +251,8 @@ namespace
 				return false;
 			}
 			addArtistOp(artistName.asCString());
-		}
+		} while (++i < artistCount);
+
 		return true;
 	}
 }
