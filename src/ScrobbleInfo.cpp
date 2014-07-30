@@ -208,14 +208,27 @@ namespace
 				likely(parseISODateTime(dateTimeObject.asCString(), dest));
 	}
 
+	inline const Value &getField(const Value &o, const char *fieldName)
+	{
+		/* Forcing the object to be const to:
+		 * 1) keep the object unmodified;
+		 * 2) avoid redundant copying of the fieldName value.
+		 *
+		 * Value::operator[const StaticString &] modifies the object,
+		 * Value::operator[const char *] (non-const) modifies the object and
+		 * leads to redundant copying.
+		 */
+		return o[fieldName];
+	}
+
 	inline bool parseDuration(const Value &durationObject, long &dest)
 	{
 		if (unlikely(!isType(durationObject, objectValue))) {
 			return false;
 		}
-		const Value &amount = durationObject["amount"];
-		const Value &unit = durationObject["unit"];
-		if (unlikely(!isType(amount, intValue) || !isType(unit, stringValue))) {
+		const Value &amount = getField(durationObject, "amount");
+		const Value &unit = getField(durationObject, "unit");
+		if (unlikely(!isType(amount, intValue)) || unlikely(!isType(unit, stringValue))) {
 			return false;
 		}
 		const long val = amount.asInt();
@@ -241,7 +254,7 @@ namespace
 			if (unlikely(!isType(artist, objectValue))) {
 				return false;
 			}
-			const Value &artistName = artist["name"];
+			const Value &artistName = getField(artist, "name");
 			if (unlikely(!isType(artistName, stringValue))) {
 				return false;
 			}
@@ -264,49 +277,49 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	if (unlikely(!isType(object, objectValue))) {
 		return false;
 	}
-	if (unlikely(!parseDateTime(object["scrobble_start_datetime"], dest.scrobbleStartTimestamp)) ||
-			unlikely(!parseDateTime(object["scrobble_end_datetime"], dest.scrobbleEndTimestamp)) ||
-			unlikely(!parseDuration(object["scrobble_duration"], dest.scrobbleDuration))) {
+	if (unlikely(!parseDateTime(getField(object, "scrobble_start_datetime"), dest.scrobbleStartTimestamp)) ||
+			unlikely(!parseDateTime(getField(object, "scrobble_end_datetime"), dest.scrobbleEndTimestamp)) ||
+			unlikely(!parseDuration(getField(object, "scrobble_duration"), dest.scrobbleDuration))) {
 		return false;
 	}
 
 	Track &track = dest.track;
 
-	const Value trackObject = object["track"];
+	const Value trackObject = getField(object, "track");
 	if (unlikely(!isType(trackObject, objectValue))) {
 		return false;
 	}
-	const Value &trackTitle = trackObject["title"];
+	const Value &trackTitle = getField(trackObject, "title");
 	if (unlikely(!isType(trackTitle, stringValue))) {
 		return false;
 	}
 	track.setTitle(trackTitle.asCString());
 
-	const Value &trackAlbum = trackObject["album"];
+	const Value &trackAlbum = getField(trackObject, "album");
 	const ValueType trackAlbumObjType = trackAlbum.type();
 	if (trackAlbumObjType != nullValue) {
 		if (unlikely(trackAlbumObjType != objectValue)) {
 			return false;
 		}
-		const Value &trackAlbumTitle = trackAlbum["title"];
+		const Value &trackAlbumTitle = getField(trackAlbum, "title");
 		if (unlikely(!isType(trackAlbumTitle, stringValue))) {
 			return false;
 		}
 		track.setAlbumTitle(trackAlbumTitle.asCString());
 
-		if (unlikely(!parseArtists(trackAlbum["artists"], false,
+		if (unlikely(!parseArtists(getField(trackAlbum, "artists"), false,
 				[&](const char * const artistName) { track.addAlbumArtist(artistName); }))) {
 			return false;
 		}
 	}
 
 	long trackDuration;
-	if (unlikely(!parseDuration(trackObject["length"], trackDuration))) {
+	if (unlikely(!parseDuration(getField(trackObject, "length"), trackDuration))) {
 		return false;
 	}
 	track.setDurationMillis(trackDuration);
 
-	if (unlikely(!parseArtists(trackObject["artists"], true,
+	if (unlikely(!parseArtists(getField(trackObject, "artists"), true,
 			[&](const char * const artistName) { track.addArtist(artistName); }))) {
 		return false;
 	}
