@@ -133,12 +133,13 @@ namespace
 		maxSize += R"("title":"")"_s.size() + maxPrintedCharSize * track.getTitle().size();
 		maxSize += 1; // ,
 
-		maxSize += R"("artists":[])"_s.size();
-		const std::vector<std::string> &artists = track.getArtists();
-		std::size_t artistCount = artists.size();
-		maxSize += R"({"name":""},)"_s.size() * artistCount - 1; // With commas; the last comma is removed.
-		maxSize += maxPrintedCharSize * totalStringSize(artists);
-		maxSize += 1; // ,
+		{ // artists
+			maxSize += R"("artists":[])"_s.size();
+			const std::vector<std::string> &artists = track.getArtists();
+			maxSize += R"({"name":""},)"_s.size() * artists.size() - 1; // With commas; the last comma is removed.
+			maxSize += maxPrintedCharSize * totalStringSize(artists);
+			maxSize += 1; // ,
+		}
 
 		if (track.hasAlbumTitle()) {
 			maxSize += R"("album":{"title":""})"_s.size();
@@ -146,8 +147,9 @@ namespace
 			if (track.hasAlbumArtist()) {
 				maxSize += 1; // ,
 				maxSize += R"("artists":[])"_s.size();
-				maxSize += R"({"name":""},)"_s.size() * track.getArtists().size() - 1; // With commas; the last comma is removed.
-				maxSize += maxPrintedCharSize * totalStringSize(artists);
+				const std::vector<std::string> &albumArtists = track.getAlbumArtists();
+				maxSize += R"({"name":""},)"_s.size() * albumArtists.size() - 1; // With commas; the last comma is removed.
+				maxSize += maxPrintedCharSize * totalStringSize(albumArtists);
 			}
 			maxSize += 1; // ,
 		}
