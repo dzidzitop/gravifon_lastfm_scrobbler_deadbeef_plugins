@@ -70,22 +70,22 @@ namespace
 					*dest++ = c;
 					break;
 				case '\b':
-					dest = std::copy_n("\\b", 2, dest);
+					dest = afc::copy("\\b"_s, dest);
 					break;
 				case '\f':
-					dest = std::copy_n("\\f", 2, dest);
+					dest = afc::copy("\\f"_s, dest);
 					break;
 				case '\n':
-					dest = std::copy_n("\\n", 2, dest);
+					dest = afc::copy("\\n"_s, dest);
 					break;
 				case '\r':
-					dest = std::copy_n("\\r", 2, dest);
+					dest = afc::copy("\\r"_s, dest);
 					break;
 				case '\t':
-					dest = std::copy_n("\\t", 2, dest);
+					dest = afc::copy("\\t"_s, dest);
 					break;
 				default:
-					dest = std::copy_n("\\u00", 4, dest);
+					dest = afc::copy("\\u00"_s, dest);
 					dest = afc::octetToHex(c, dest);
 					break;
 				}
