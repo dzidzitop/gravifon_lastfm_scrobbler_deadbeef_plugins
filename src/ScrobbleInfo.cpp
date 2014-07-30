@@ -99,6 +99,15 @@ namespace
 		dest.returnTail(afc::formatISODateTime(timestamp, dest.borrowTail()));
 	}
 
+	inline std::size_t totalStringSize(const std::vector<std::string> &strings) noexcept
+	{
+		std::size_t totalSize = 0;
+		for (const string &s : strings) {
+			totalSize += s.size();
+		}
+		return totalSize;
+	}
+
 	inline std::size_t maxJsonSize(const ScrobbleInfo &scrobbleInfo) noexcept
 	{
 		const Track &track = scrobbleInfo.track;
@@ -123,27 +132,26 @@ namespace
 		maxSize += R"("track":{})"_s.size();
 		maxSize += R"("title":"")"_s.size() + maxPrintedCharSize * track.getTitle().size();
 		maxSize += 1; // ,
-		maxSize += R"("artists":[]");
-		maxSize += R"({"name":""},)"_s.size() * track.getArtists().size() - 1; // With commas; the last comma is removed.
-		// TODO move loop invariant.
-		for (const string &artist : track.getArtists()) {
-			maxSize += maxPrintedCharSize * artist.size();
-		}
+
+		maxSize += R"("artists":[])"_s.size();
+		const std::vector<std::string> &artists = track.getArtists();
+		std::size_t artistCount = artists.size();
+		maxSize += R"({"name":""},)"_s.size() * artistCount - 1; // With commas; the last comma is removed.
+		maxSize += maxPrintedCharSize * totalStringSize(artists);
 		maxSize += 1; // ,
+
 		if (track.hasAlbumTitle()) {
 			maxSize += R"("album":{"title":""})"_s.size();
 			maxSize += maxPrintedCharSize * track.getAlbumTitle().size();
 			if (track.hasAlbumArtist()) {
 				maxSize += 1; // ,
-				maxSize += R"("artists":[]")_s.size();
+				maxSize += R"("artists":[])"_s.size();
 				maxSize += R"({"name":""},)"_s.size() * track.getArtists().size() - 1; // With commas; the last comma is removed.
-				// TODO move loop invariant.
-				for (const string &artist : track.getArtists()) {
-					maxSize += maxPrintedCharSize * artist.size();
-				}
+				maxSize += maxPrintedCharSize * totalStringSize(artists);
 			}
 			maxSize += 1; // ,
 		}
+
 		maxSize += R"("length":{"amount":,"unit":"ms"})"_s.size() +
 				afc::maxPrintedSize<decltype(track.getDurationMillis()), 10>();
 
