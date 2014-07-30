@@ -337,7 +337,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	{ UnlockGuard unlockGuard(m_mutex);
 		logDebug("[LastfmScrobbler] Submission URL: '#'.", submissionUrlCopy);
 		logDebug("[LastfmScrobbler] Submission request body: '#'.",
-				std::pair<const char *, const char *>(request.getBody(), request.getBody() + request.getBodySize()));
+				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,
@@ -390,7 +390,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 				// TODO think of counting hard failures, as the specification suggests.
 				// A hard failure or an unknown status is reported.
 				logError("[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '#'.",
-						std::pair<const char *, const char *>(seqBegin, seqEnd));
+						std::make_pair(seqBegin, seqEnd));
 				return 0;
 			}
 		}
@@ -476,7 +476,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
 		logError("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '#'.",
-				std::pair<const char *, const char *>(seqBegin, seqEnd));
+				std::make_pair(seqBegin, seqEnd));
 		return false;
 	}
 
