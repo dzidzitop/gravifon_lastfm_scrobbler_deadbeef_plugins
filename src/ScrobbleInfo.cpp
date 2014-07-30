@@ -53,50 +53,45 @@ namespace
 
 	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
-	inline void writeJsonString(const string &src, afc::FastStringBuffer<char> &dest)
+	template<typename Iterator>
+	inline Iterator writeJsonString(const string &src, register Iterator dest)
 	{
-		register afc::FastStringBuffer<char>::Tail p = dest.borrowTail();
 		for (const char c : src) {
 			// Truncated to an octet just in case non-octet bytes are used.
 			const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
 			if (likely(!jsonCharsToEscape[uc])) {
-				*p++ = c;
+				*dest++ = c;
 			} else {
 				switch (c) {
 				case '"':
 				case '\\':
 				case '/':
-					*p++ = '\\';
-					*p++ = c;
+					*dest++ = '\\';
+					*dest++ = c;
 					break;
 				case '\b':
-					p = std::copy_n("\\b", 2, p);
+					dest = std::copy_n("\\b", 2, dest);
 					break;
 				case '\f':
-					p = std::copy_n("\\f", 2, p);
+					dest = std::copy_n("\\f", 2, dest);
 					break;
 				case '\n':
-					p = std::copy_n("\\n", 2, p);
+					dest = std::copy_n("\\n", 2, dest);
 					break;
 				case '\r':
-					p = std::copy_n("\\r", 2, p);
+					dest = std::copy_n("\\r", 2, dest);
 					break;
 				case '\t':
-					p = std::copy_n("\\t", 2, p);
+					dest = std::copy_n("\\t", 2, dest);
 					break;
 				default:
-					p = std::copy_n("\\u00", 4, p);
-					p = afc::octetToHex(c, p);
+					dest = std::copy_n("\\u00", 4, dest);
+					dest = afc::octetToHex(c, dest);
 					break;
 				}
 			}
 		}
-		dest.returnTail(p);
-	}
-
-	inline void writeJsonTimestamp(const afc::TimestampTZ &timestamp, afc::FastStringBuffer<char> &dest)
-	{
-		dest.returnTail(afc::formatISODateTime(timestamp, dest.borrowTail()));
+		return dest;
 	}
 
 	inline std::size_t totalStringSize(const std::vector<std::string> &strings) noexcept
@@ -164,44 +159,48 @@ namespace
 	{
 		const Track &track = scrobbleInfo.track;
 
-		buf.append(R"({"scrobble_start_datetime":")"_s);
-		writeJsonTimestamp(scrobbleInfo.scrobbleStartTimestamp, buf);
-		buf.append(R"(","scrobble_end_datetime":")"_s);
-		writeJsonTimestamp(scrobbleInfo.scrobbleEndTimestamp, buf);
-		buf.append(R"(","scrobble_duration":{"amount":)"_s);
-		buf.returnTail(afc::printNumber<long, 10>(scrobbleInfo.scrobbleDuration, buf.borrowTail()));
-		buf.append(R"(,"unit":"ms"},"track":{"title":")"_s);
-		writeJsonString(track.getTitle(), buf);
+		register afc::FastStringBuffer<char>::Tail p = buf.borrowTail();
+
+		p = afc::copy(R"({"scrobble_start_datetime":")"_s, p);
+		p = afc::formatISODateTime(scrobbleInfo.scrobbleStartTimestamp, p);
+		p = afc::copy(R"(","scrobble_end_datetime":")"_s, p);
+		p = afc::formatISODateTime(scrobbleInfo.scrobbleEndTimestamp, p);
+		p = afc::copy(R"(","scrobble_duration":{"amount":)"_s, p);
+		p = afc::printNumber<long, 10>(scrobbleInfo.scrobbleDuration, p);
+		p = afc::copy(R"(,"unit":"ms"},"track":{"title":")"_s, p);
+		p = writeJsonString(track.getTitle(), p);
 		// At least single artist is expected.
-		buf.append(R"(","artists":[)"_s);
+		p = afc::copy(R"(","artists":[)"_s, p);
 		for (const string &artist : track.getArtists()) {
 			// TODO improve performance by merging appends.
-			buf.append(R"({"name":")"_s);
-			writeJsonString(artist, buf);
-			buf.append(R"("},)"_s);
+			p = afc::copy(R"({"name":")"_s, p);
+			p = writeJsonString(artist, p);
+			p = afc::copy(R"("},)"_s, p);
 		}
-		buf.returnTail(buf.borrowTail() - 1); // removing the last redundant comma.
+		--p; // removing the last redundant comma.
 		if (track.hasAlbumTitle()) {
-			buf.append(R"(],"album":{"title":")"_s);
-			writeJsonString(track.getAlbumTitle(), buf);
+			p = afc::copy(R"(],"album":{"title":")"_s, p);
+			p = writeJsonString(track.getAlbumTitle(), p);
 			if (track.hasAlbumArtist()) {
-				buf.append(R"(","artists":[)"_s);
+				p = afc::copy(R"(","artists":[)"_s, p);
 				for (const string &albumArtist : track.getAlbumArtists()) {
 					// TODO improve performance by merging appends.
-					buf.append(R"({"name":")"_s);
-					writeJsonString(albumArtist, buf);
-					buf.append(R"("},)"_s);
+					p = afc::copy(R"({"name":")"_s, p);
+					p = writeJsonString(albumArtist, p);
+					p = afc::copy(R"("},)"_s, p);
 				}
-				buf.returnTail(buf.borrowTail() - 1); // removing the last redundant comma.
-				buf.append(R"(]},"length":{"amount":)"_s);
+				--p; // removing the last redundant comma.
+				p = afc::copy(R"(]},"length":{"amount":)"_s, p);
 			} else {
-				buf.append(R"("},"length":{"amount":)"_s);
+				p = afc::copy(R"("},"length":{"amount":)"_s, p);
 			}
 		} else {
-			buf.append(R"(],"length":{"amount":)"_s);
+			p = afc::copy(R"(],"length":{"amount":)"_s, p);
 		}
-		buf.returnTail(afc::printNumber<long, 10>(track.getDurationMillis(), buf.borrowTail()));
-		buf.append(R"(,"unit":"ms"}}})"_s);
+		p = afc::printNumber<long, 10>(track.getDurationMillis(), p);
+		p = afc::copy(R"(,"unit":"ms"}}})"_s, p);
+
+		buf.returnTail(p);
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
