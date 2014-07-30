@@ -210,20 +210,20 @@ namespace
 
 	inline bool parseDuration(const Value &durationObject, long &dest)
 	{
-		if (!isType(durationObject, objectValue)) {
+		if (unlikely(!isType(durationObject, objectValue))) {
 			return false;
 		}
 		const Value &amount = durationObject["amount"];
 		const Value &unit = durationObject["unit"];
-		if (!isType(amount, intValue) || !isType(unit, stringValue)) {
+		if (unlikely(!isType(amount, intValue) || !isType(unit, stringValue))) {
 			return false;
 		}
 		const long val = amount.asInt();
-		const string unitValue = unit.asString();
-		if (unitValue == "ms") {
+		const char * const unitValue = unit.asCString();
+		if (unitValue[0] == 'm' && likely(unitValue[1] == 's' && unitValue[2] == '\0')) { // == "ms"
 			dest = val;
 			return true;
-		} else if (unitValue == "s") {
+		} else if (unitValue[0] == 's' && likely(unitValue[1] == '\0')) { // == "s"
 			dest = val * 1000;
 			return true;
 		}
