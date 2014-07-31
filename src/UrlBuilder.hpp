@@ -98,13 +98,11 @@ public:
 	// TODO set query-only mode properly or remove this constructor.
 	UrlBuilder(QueryOnly) : m_buf(minBufCapacity()), m_hasQuery(false) {}
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(const char * const urlBase, QueryString &&query)
 			: UrlBuilder(urlBase, std::strlen(urlBase), query) {}
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(const char * const urlBase, const std::size_t n, QueryString &&query)
 			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, QueryString>(query)))
 	{
@@ -113,18 +111,15 @@ public:
 		appendQueryString<urlFirst, QueryString>(std::forward<QueryString>(query));
 	}
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(const afc::ConstStringRef urlBase, QueryString &&query)
 			: UrlBuilder(urlBase.value(), urlBase.size(), query) {}
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(const std::string &urlBase, QueryString &&query)
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), query) {}
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(QueryOnly, QueryString &&paramParts)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, QueryString>(query)))
 	{
@@ -171,8 +166,7 @@ public:
 
 	UrlBuilder &operator=(UrlBuilder &&) = default;
 
-	template<typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	bool query(QueryString &&queryPart)
 	{
 		if (m_hasQuery) {
@@ -228,7 +222,7 @@ private:
 	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
 
 	template<ParamMode mode, typename QueryString,
-			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+			typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	bool appendQueryString(QueryString &&queryPart)
 	{
 		static_assert(mode != notFirst, "Mode 'notFirst' is not applicable for query strings in the plain format.");
