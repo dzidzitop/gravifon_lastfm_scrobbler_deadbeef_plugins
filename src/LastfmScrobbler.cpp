@@ -44,7 +44,7 @@ using afc::logger::logErrorMsg;
 
 namespace
 {
-	inline UrlBuilder buildAuthUrl(const string &scrobblerUrl, const string &username, const string &password)
+	inline UrlBuilder<> buildAuthUrl(const string &scrobblerUrl, const string &username, const string &password)
 	{
 		constexpr size_t maxTimestampSize = afc::maxPrintedSize<long, 10>();
 
@@ -63,7 +63,7 @@ namespace
 		md5String(reinterpret_cast<const unsigned char *>(tmp), timestampEnd - tmp, authToken);
 
 		// TODO set real client ID and version.
-		return UrlBuilder(scrobblerUrl,
+		return UrlBuilder<>(scrobblerUrl,
 				UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
 				UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
 				UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
@@ -142,7 +142,7 @@ namespace
 		const Number m_number;
 	};
 
-	void appendScrobbleInfo(UrlBuilder &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
+	void appendScrobbleInfo(UrlBuilder<> &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
 	{
 		assert(index < 50); // max amount of scrobbles per request.
 
@@ -286,7 +286,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	constexpr unsigned maxScrobblesPerRequest = 50;
 
 	// Adding up to maxScrobblesPerRequest scrobbles to the request.
-	UrlBuilder builder(queryOnly,
+	UrlBuilder<> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId));
 
@@ -413,7 +413,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	logDebugMsg("[LastfmScrobbler] Authenticating the user..."_s);
 
 	// TODO set real client ID and version.
-	const UrlBuilder url = buildAuthUrl(m_scrobblerUrl, m_username, m_password);
+	const UrlBuilder<> url = buildAuthUrl(m_scrobblerUrl, m_username, m_password);
 
 	/* No conversion to the system encoding is used as the response body is assumed to be in
 	 * an ASCII-compatible encoding. It contains status codes, URLs (both are in ASCII),

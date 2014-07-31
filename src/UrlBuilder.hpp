@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <afc/ensure_ascii.hpp>
 #include <cstddef>
@@ -31,6 +32,12 @@ struct QueryOnly {} static const queryOnly;
 
 template<typename Iterator>
 Iterator appendUrlEncoded(const char *src, std::size_t n, Iterator dest);
+
+enum QueryFormat
+{
+	plain,
+	webForm
+};
 
 enum UrlPartType
 {
@@ -76,40 +83,86 @@ template<>
 template<typename Iterator>
 inline Iterator UrlPart<raw>::appendTo(Iterator dest) const noexcept { return std::copy_n(m_value, m_size, dest); };
 
+template<QueryFormat queryFormat = webForm>
 class UrlBuilder
 {
 private:
 	UrlBuilder(const UrlBuilder &) = delete;
 	UrlBuilder &operator=(const UrlBuilder &) = delete;
 public:
-	template<typename... Parts>
-	UrlBuilder(const char * const urlBase, Parts&&... paramParts)
-			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
+	UrlBuilder(const char * const urlBase) : UrlBuilder(urlBase, std::strlen(urlBase)) {}
+	UrlBuilder(const char * const urlBase, const std::size_t n)
+			: m_buf(std::max(minBufCapacity(), n)), m_hasQuery(false) { m_buf.append(urlBase, n); }
+	UrlBuilder(const afc::ConstStringRef urlBase) : UrlBuilder(urlBase.value(), urlBase.size()) {}
+	UrlBuilder(const std::string &urlBase) : UrlBuilder(urlBase.c_str(), urlBase.size(), query) {}
+	// TODO set query-only mode properly or remove this constructor.
+	UrlBuilder(QueryOnly) : m_buf(minBufCapacity()), m_hasQuery(false) {}
 
-	template<typename... Parts>
-	UrlBuilder(const char * const urlBase, const std::size_t n, Parts&&... paramParts)
-			: m_buf(std::max(minBufCapacity(),
-					n + maxEncodedSize<urlFirst, Parts...>(std::forward<Parts>(paramParts)...))),
-			m_hasParams(false)
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	UrlBuilder(const char * const urlBase, QueryString &&query)
+			: UrlBuilder(urlBase, std::strlen(urlBase), query) {}
+
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	UrlBuilder(const char * const urlBase, const std::size_t n, QueryString &&query)
+			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, QueryString>(query)))
 	{
 		m_buf.append(urlBase, n);
+		// m_hasQuery is initialised here.
+		appendQueryString<urlFirst, QueryString>(std::forward<QueryString>(query));
+	}
+
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	UrlBuilder(const afc::ConstStringRef urlBase, QueryString &&query)
+			: UrlBuilder(urlBase.value(), urlBase.size(), query) {}
+
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	UrlBuilder(const std::string &urlBase, QueryString &&query)
+			: UrlBuilder(urlBase.c_str(), urlBase.size(), query) {}
+
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	UrlBuilder(QueryOnly, QueryString &&paramParts)
+			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, QueryString>(query)))
+	{
+		// m_hasQuery is initialised here.
+		appendQueryString<queryString, QueryString>(std::forward<QueryString>(query));
+	}
+
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	UrlBuilder(const char * const urlBase, Parts &&...paramParts)
+			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
+
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	UrlBuilder(const char * const urlBase, const std::size_t n, Parts &&...paramParts)
+			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, Parts...>(paramParts...)))
+	{
+		m_buf.append(urlBase, n);
+		// m_hasQuery is initialised here.
 		appendParams<urlFirst, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
-	template<typename... Parts>
-	UrlBuilder(const afc::ConstStringRef urlBase, Parts&&... paramParts)
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	UrlBuilder(const afc::ConstStringRef urlBase, Parts &&...paramParts)
 			: UrlBuilder(urlBase.value(), urlBase.size(), paramParts...) {}
 
-	template<typename... Parts>
-	UrlBuilder(const std::string &urlBase, Parts&&... paramParts)
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	UrlBuilder(const std::string &urlBase, Parts &&...paramParts)
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
-	template<typename... Parts>
-	UrlBuilder(QueryOnly, Parts&&... paramParts)
-			: m_buf(std::max(minBufCapacity(),
-					maxEncodedSize<queryString, Parts...>(std::forward<Parts>(paramParts)...))),
-			m_hasParams(false)
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	UrlBuilder(QueryOnly, Parts &&...paramParts)
+			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, Parts...>(paramParts...)))
 	{
+		// m_hasQuery is initialised here.
 		appendParams<queryString, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
@@ -118,11 +171,21 @@ public:
 
 	UrlBuilder &operator=(UrlBuilder &&) = default;
 
-	template<typename... Parts>
-	inline void params(Parts&&... parts)
+	template<typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	bool query(QueryString &&queryPart)
 	{
-		const std::size_t estimatedEncodedSize = sizeof...(parts) * 2 +
-				maxEncodedSize<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
+		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, QueryString>(queryPart);
+		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
+
+		return appendQueryString<urlUnknown, QueryString>(std::forward<QueryString>(queryPart));
+	}
+
+	template<typename... Parts>
+	typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type
+	params(Parts &&...parts)
+	{
+		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, Parts...>(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
 		appendParams<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
@@ -147,11 +210,11 @@ private:
 	};
 
 	template<ParamMode mode, typename Part, typename... Parts>
-	static constexpr std::size_t maxEncodedSize(Part &&part, Parts&&... parts) noexcept
+	static constexpr std::size_t maxEncodedSize(const Part &part, const Parts &...parts) noexcept
 	{
 		// One of {'?', '&', '='} is counted for all non-first and first non-query param elements.
 		return (mode == queryString ? part.maxEncodedSize() : part.maxEncodedSize() + 1) +
-				maxEncodedSize<notFirst, Parts...>(std::forward<Parts>(parts)...);
+				maxEncodedSize<notFirst, Parts...>(parts...);
 	}
 
 	/* Terminates the maxEncodedSize() template recusion.
@@ -160,30 +223,48 @@ private:
 	template<ParamMode mode>
 	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
 
-	template<ParamMode mode, typename... Parts>
-	void appendParams(Parts&&... parts) noexcept
+	template<ParamMode mode, typename QueryString,
+			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
+	bool appendQueryString(QueryString &&queryPart)
 	{
-		static_assert((sizeof...(parts) % 2) == 0, "Number of URL parts must be even.");
+		static_assert(mode != notFirst, "Mode 'notFirst' is not applicable for query strings in the plain format.");
+
+		register afc::FastStringBuffer<char>::Tail p = m_buf.borrowTail();
+		if (mode != queryString) {
+			*p++ = '?';
+		}
+		p = queryPart.appendTo(p);
+		m_buf.returnTail(p);
+		m_hasQuery = true;
+		return true;
+	}
+
+	template<ParamMode mode, typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+	void appendParams(Parts &&...parts) noexcept
+	{
+		static_assert((sizeof...(parts) % 2) == 0,
+				"The number of URL parts must be one for the free query string or even for the web-form query f.");
 
 		appendParamName<mode, Parts...>(std::forward<Parts>(parts)...);
 	}
 
 	template<ParamMode mode, typename ParamName, typename... Parts>
-	void appendParamName(ParamName &&name, Parts&&... parts) noexcept
+	void appendParamName(ParamName &&name, Parts &&...parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		switch (mode) {
 		case urlFirst:
 			m_buf.append('?');
-			m_hasParams = true;
+			m_hasQuery = true;
 			break;
 		case urlUnknown:
-			m_buf.append(m_hasParams ? '&' : '?');
-			// Has params is assigned in either case to produce less jumps.
-			m_hasParams = true;
+			m_buf.append(m_hasQuery ? '&' : '?');
+			// m_hasQuery is assigned in either case to produce less jumps.
+			m_hasQuery = true;
 			break;
 		case queryString:
-			m_hasParams = true;
+			m_hasQuery = true;
 			break;
 		case notFirst:
 			m_buf.append('&');
@@ -202,7 +283,7 @@ private:
 	void appendParamName() noexcept {}
 
 	template<typename ParamValue, typename... Parts>
-	void appendParamValue(ParamValue &&value, Parts&&... parts) noexcept
+	void appendParamValue(ParamValue &&value, Parts &&...parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		m_buf.append('=');
@@ -226,7 +307,7 @@ private:
 	static constexpr std::size_t minBufCapacity() { return 64; };
 
 	afc::FastStringBuffer<char> m_buf;
-	bool m_hasParams;
+	bool m_hasQuery;
 };
 
 template<typename Iterator>
