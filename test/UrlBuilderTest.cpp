@@ -132,6 +132,46 @@ void UrlBuilderTest::testUrlWithQuery_FreeFormatCustom()
 	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
 }
 
+void UrlBuilderTest::testUrlWithQuery_ConstructoBuilding_FreeFormatNoEscaping()
+{
+	UrlBuilder<plain> builder("http://hello/world", UrlPart<>("foo"));
+
+	const string result(builder.c_str());
+
+	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
+void UrlBuilderTest::testUrlWithQuery_ConstructoBuilding_FreeFormatEscaped()
+{
+	UrlBuilder<plain> builder("http://hello/world", UrlPart<>("foo+++///"));
+
+	const string result(builder.c_str());
+
+	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo%2b%2b%2b%2f%2f%2f"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
+void UrlBuilderTest::testUrlWithQuery_ConstructoBuilding_FreeFormatRaw()
+{
+	UrlBuilder<plain> builder("http://hello/world", UrlPart<raw>("foo+++///"));
+
+	const string result(builder.c_str());
+
+	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo+++///"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
+void UrlBuilderTest::testUrlWithQuery_ConstructoBuilding_FreeFormatCustom()
+{
+	UrlBuilder<plain> builder("http://hello/world", CustomUrlPart());
+
+	const string result(builder.c_str());
+
+	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo+++///"), result);
+	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_NoParams()
 {
 	UrlBuilder<> builder(queryOnly);
