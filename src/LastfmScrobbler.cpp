@@ -105,13 +105,13 @@ namespace
 
 			*dest++ = namePrefixes[m_step++];
 			// Writing URL-encoded '['.
-			dest = std::copy_n("%5b", 3, dest);
+			dest = afc::copy("%5b"_s, dest);
 			*dest++ = m_value[0];
 			if (m_longIndex) {
 				*dest++ = m_value[1];
 			}
 			// Writing URL-encoded ']'.
-			dest = std::copy_n("%5d", 3, dest);
+			dest = afc::copy("%5d"_s, dest);
 			return dest;
 		}
 	private:
