@@ -175,6 +175,10 @@ public:
 			typename = typename std::enable_if<queryFormat == plain && sizeof(QueryString) >= 1, void>::type>
 	bool query(QueryString &&queryPart)
 	{
+		if (m_hasQuery) {
+			return false;
+		}
+
 		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, QueryString>(queryPart);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
@@ -243,8 +247,9 @@ private:
 			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
 	void appendParams(Parts &&...parts) noexcept
 	{
+		static_assert(sizeof...(parts) > 0, "No parameters are defined.");
 		static_assert((sizeof...(parts) % 2) == 0,
-				"The number of URL parts must be one for the free query string or even for the web-form query f.");
+				"The number of URL parameter parts must be even for the web-form query.");
 
 		appendParamName<mode, Parts...>(std::forward<Parts>(parts)...);
 	}
