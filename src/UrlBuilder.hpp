@@ -128,12 +128,12 @@ public:
 	}
 
 	template<typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	UrlBuilder(const char * const urlBase, Parts &&...paramParts)
 			: UrlBuilder(urlBase, std::strlen(urlBase), paramParts...) {}
 
 	template<typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	UrlBuilder(const char * const urlBase, const std::size_t n, Parts &&...paramParts)
 			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, Parts...>(paramParts...)))
 	{
@@ -143,17 +143,17 @@ public:
 	}
 
 	template<typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	UrlBuilder(const afc::ConstStringRef urlBase, Parts &&...paramParts)
 			: UrlBuilder(urlBase.value(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	UrlBuilder(const std::string &urlBase, Parts &&...paramParts)
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), paramParts...) {}
 
 	template<typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	UrlBuilder(QueryOnly, Parts &&...paramParts)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, Parts...>(paramParts...)))
 	{
@@ -179,9 +179,9 @@ public:
 		return appendQueryString<urlUnknown, QueryString>(std::forward<QueryString>(queryPart));
 	}
 
-	template<typename... Parts>
-	typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type
-	params(Parts &&...parts)
+	template<typename... Parts,
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
+	void params(Parts &&...parts)
 	{
 		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, Parts...>(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
@@ -238,7 +238,7 @@ private:
 	}
 
 	template<ParamMode mode, typename... Parts,
-			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
+			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	void appendParams(Parts &&...parts) noexcept
 	{
 		static_assert(sizeof...(Parts) > 0, "No parameters are defined.");
