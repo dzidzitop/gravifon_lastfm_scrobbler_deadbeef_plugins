@@ -247,8 +247,8 @@ private:
 			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0, void>::type>
 	void appendParams(Parts &&...parts) noexcept
 	{
-		static_assert(sizeof...(parts) > 0, "No parameters are defined.");
-		static_assert((sizeof...(parts) % 2) == 0,
+		static_assert(sizeof...(Parts) > 0, "No parameters are defined.");
+		static_assert((sizeof...(Parts) % 2) == 0,
 				"The number of URL parameter parts must be even for the web-form query.");
 
 		appendParamName<mode, Parts...>(std::forward<Parts>(parts)...);
