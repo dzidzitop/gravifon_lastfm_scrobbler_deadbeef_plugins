@@ -15,22 +15,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "LastfmScrobbler.hpp"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <limits>
 #include <utility>
+
 #include "HttpClient.hpp"
-#include "UrlBuilder.hpp"
+
 #include <afc/builtin.hpp>
-#include <afc/logger.hpp>
-#include <afc/number.h>
-#include <afc/StringRef.hpp>
-#include <afc/md5.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
+#include <afc/logger.hpp>
+#include <afc/number.h>
+#include <afc/md5.hpp>
+#include <afc/StringRef.hpp>
+#include <afc/UrlBuilder.hpp>
 #include <afc/utils.h>
+
 #include "deadbeef_util.hpp"
 
 using namespace std;
@@ -41,6 +45,7 @@ using afc::logger::logDebug;
 using afc::logger::logDebugMsg;
 using afc::logger::logError;
 using afc::logger::logErrorMsg;
+using namespace afc::url;
 
 namespace
 {
