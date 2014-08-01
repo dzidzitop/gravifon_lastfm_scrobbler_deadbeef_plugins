@@ -13,11 +13,13 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+
 #include "UrlBuilderTest.hpp"
 
 CPPUNIT_TEST_SUITE_REGISTRATION(UrlBuilderTest);
 
 #include <UrlBuilder.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <string>
@@ -78,6 +80,19 @@ void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
 
 	CPPUNIT_ASSERT_EQUAL(string("http://hello/world?foo=ba%2br&ba%26%5ez=%3d%3dquu_x&foo=123"), result);
 	CPPUNIT_ASSERT_EQUAL(builder.size(), result.size());
+}
+
+void UrlBuilderTest::testQueryOnly_WithRawParams()
+{
+	UrlBuilder<webForm> builder(queryOnly);
+	builder.params(UrlPart<raw>("foo"), UrlPart<raw>("bar"),
+			UrlPart<raw>("baz"), UrlPart<raw>("quux"));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("foo=bar&baz=quux"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(16), builder.size());
 }
 
 void UrlBuilderTest::testUrlWithQuery_FreeFormatNoEscaping()

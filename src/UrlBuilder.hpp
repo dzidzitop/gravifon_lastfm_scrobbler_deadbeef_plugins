@@ -92,11 +92,11 @@ private:
 public:
 	UrlBuilder(const char * const urlBase) : UrlBuilder(urlBase, std::strlen(urlBase)) {}
 	UrlBuilder(const char * const urlBase, const std::size_t n)
-			: m_buf(std::max(minBufCapacity(), n)), m_hasQuery(false) { m_buf.append(urlBase, n); }
+			: m_buf(std::max(minBufCapacity(), n)), m_queryState(queryEmptyUrl) { m_buf.append(urlBase, n); }
 	UrlBuilder(const afc::ConstStringRef urlBase) : UrlBuilder(urlBase.value(), urlBase.size()) {}
 	UrlBuilder(const std::string &urlBase) : UrlBuilder(urlBase.c_str(), urlBase.size(), query) {}
 	// TODO set query-only mode properly or remove this constructor.
-	UrlBuilder(QueryOnly) : m_buf(minBufCapacity()), m_hasQuery(false) {}
+	UrlBuilder(QueryOnly) : m_buf(minBufCapacity()), m_queryState(queryEmptyQueryString) {}
 
 	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	UrlBuilder(const char * const urlBase, QueryString &&query)
@@ -107,7 +107,7 @@ public:
 			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, QueryString>(query)))
 	{
 		m_buf.append(urlBase, n);
-		// m_hasQuery is initialised here.
+		// m_queryState is initialised here.
 		appendQueryString<urlFirst, QueryString>(std::forward<QueryString>(query));
 	}
 
@@ -120,10 +120,10 @@ public:
 			: UrlBuilder(urlBase.c_str(), urlBase.size(), query) {}
 
 	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
-	UrlBuilder(QueryOnly, QueryString &&paramParts)
+	UrlBuilder(QueryOnly, QueryString &&query)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, QueryString>(query)))
 	{
-		// m_hasQuery is initialised here.
+		// m_queryState is initialised here.
 		appendQueryString<queryString, QueryString>(std::forward<QueryString>(query));
 	}
 
@@ -138,7 +138,7 @@ public:
 			: m_buf(std::max(minBufCapacity(), n + maxEncodedSize<urlFirst, Parts...>(paramParts...)))
 	{
 		m_buf.append(urlBase, n);
-		// m_hasQuery is initialised here.
+		// m_queryState is initialised here.
 		appendParams<urlFirst, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
@@ -157,7 +157,7 @@ public:
 	UrlBuilder(QueryOnly, Parts &&...paramParts)
 			: m_buf(std::max(minBufCapacity(), maxEncodedSize<queryString, Parts...>(paramParts...)))
 	{
-		// m_hasQuery is initialised here.
+		// m_queryState is initialised here.
 		appendParams<queryString, Parts...>(std::forward<Parts>(paramParts)...);
 	}
 
@@ -169,7 +169,7 @@ public:
 	template<typename QueryString, typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	bool query(QueryString &&queryPart)
 	{
-		if (m_hasQuery) {
+		if (m_queryState == queryNonEmpty) {
 			return false;
 		}
 
@@ -193,21 +193,21 @@ public:
 	const char *c_str() const noexcept { return m_buf.c_str(); }
 	const std::size_t size() const noexcept { return m_buf.size(); }
 private:
-	enum ParamMode
+	enum QueryAppendMode
 	{
-		// A URL is being built; the next parameter is known to be first.
+		// A URL is being built; no query exists.
 		urlFirst,
-		/* A URL is being built or a query string is appended with additional parameters;
-		 * it is unknown if the next parameter is first.
+		/* A URL is being built or a query string is appended;
+		 * it is unknown if the append to the query is first.
 		 */
 		urlUnknown,
 		// A query string is being built.
 		queryString,
-		// The next parameter is known to be not first.
+		// The append to query is known to be not first.
 		notFirst
 	};
 
-	template<ParamMode mode, typename Part, typename... Parts>
+	template<QueryAppendMode mode, typename Part, typename... Parts>
 	static constexpr std::size_t maxEncodedSize(const Part &part, const Parts &...parts) noexcept
 	{
 		// One of {'?', '&', '='} is counted for all non-first and first non-query param elements.
@@ -218,10 +218,10 @@ private:
 	/* Terminates the maxEncodedSize() template recusion.
 	 * No '?' is appended even if there are no parameters at all.
 	 */
-	template<ParamMode mode>
+	template<QueryAppendMode mode>
 	static constexpr std::size_t maxEncodedSize() noexcept { return 0; }
 
-	template<ParamMode mode, typename QueryString,
+	template<QueryAppendMode mode, typename QueryString,
 			typename = typename std::enable_if<queryFormat == plain, QueryString>::type>
 	bool appendQueryString(QueryString &&queryPart)
 	{
@@ -233,11 +233,11 @@ private:
 		}
 		p = queryPart.appendTo(p);
 		m_buf.returnTail(p);
-		m_hasQuery = true;
+		m_queryState = queryNonEmpty;
 		return true;
 	}
 
-	template<ParamMode mode, typename... Parts,
+	template<QueryAppendMode mode, typename... Parts,
 			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	void appendParams(Parts &&...parts) noexcept
 	{
@@ -248,22 +248,24 @@ private:
 		appendParamName<mode, Parts...>(std::forward<Parts>(parts)...);
 	}
 
-	template<ParamMode mode, typename ParamName, typename... Parts>
+	template<QueryAppendMode mode, typename ParamName, typename... Parts>
 	void appendParamName(ParamName &&name, Parts &&...parts) noexcept
 	{
 		// It is guaranteed that there is enough capacity for all the parameters.
 		switch (mode) {
 		case urlFirst:
 			m_buf.append('?');
-			m_hasQuery = true;
+			m_queryState = queryNonEmpty;
 			break;
 		case urlUnknown:
-			m_buf.append(m_hasQuery ? '&' : '?');
-			// m_hasQuery is assigned in either case to produce less jumps.
-			m_hasQuery = true;
+			if (m_queryState != queryEmptyQueryString) {
+				m_buf.append(m_queryState == queryNonEmpty ? '&' : '?');
+			}
+			// m_queryState is assigned in either case to produce less jumps.
+			m_queryState = queryNonEmpty;
 			break;
 		case queryString:
-			m_hasQuery = true;
+			m_queryState = queryNonEmpty;
 			break;
 		case notFirst:
 			m_buf.append('&');
@@ -278,7 +280,7 @@ private:
 	/* Terminates the appendParamName() template recursion.
 	 * No '?' is appended even if there are no parameters at all.
 	 */
-	template<ParamMode mode>
+	template<QueryAppendMode mode>
 	void appendParamName() noexcept {}
 
 	template<typename ParamValue, typename... Parts>
@@ -298,6 +300,13 @@ private:
 		m_buf.returnTail(q);
 	}
 
+	enum QueryState
+	{
+		queryNonEmpty = 0, // Assigned to zero since it is he most active state.
+		queryEmptyUrl = 1,
+		queryEmptyQueryString = 2
+	};
+
 	/* Many short urls have length less than 64 characters. Setting this value
 	 * as the minimal capacity to minimise re-allocations.
 	 *
@@ -306,7 +315,7 @@ private:
 	static constexpr std::size_t minBufCapacity() { return 64; };
 
 	afc::FastStringBuffer<char> m_buf;
-	bool m_hasQuery;
+	QueryState m_queryState;
 };
 
 template<typename Iterator>

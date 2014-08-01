@@ -30,6 +30,8 @@ class UrlBuilderTest : public CppUnit::TestFixture
 
 	CPPUNIT_TEST(testUrlWithQuery_MultipleParams_RepeatedNames);
 
+	CPPUNIT_TEST(testQueryOnly_WithRawParams);
+
 	CPPUNIT_TEST(testUrlWithQuery_FreeFormatNoEscaping);
 	CPPUNIT_TEST(testUrlWithQuery_FreeFormatEscaped);
 	CPPUNIT_TEST(testUrlWithQuery_FreeFormatRaw);
@@ -63,6 +65,8 @@ public:
 	void testUrlWithQuery_SingleParam_ValueEscaped();
 
 	void testUrlWithQuery_MultipleParams_RepeatedNames();
+
+	void testQueryOnly_WithRawParams();
 
 	void testUrlWithQuery_FreeFormatNoEscaping();
 	void testUrlWithQuery_FreeFormatEscaped();
