@@ -83,7 +83,7 @@ template<>
 template<typename Iterator>
 inline Iterator UrlPart<raw>::appendTo(Iterator dest) const noexcept { return std::copy_n(m_value, m_size, dest); };
 
-template<QueryFormat queryFormat = webForm>
+template<QueryFormat queryFormat>
 class UrlBuilder
 {
 private:

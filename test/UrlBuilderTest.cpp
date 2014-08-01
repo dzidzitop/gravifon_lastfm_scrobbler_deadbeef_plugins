@@ -26,7 +26,7 @@ using namespace std;
 
 void UrlBuilderTest::testUrlWithNoQuery()
 {
-	UrlBuilder<> builder("http://hello/world");
+	UrlBuilder<webForm> builder("http://hello/world");
 
 	const string result(builder.c_str());
 
@@ -36,7 +36,7 @@ void UrlBuilderTest::testUrlWithNoQuery()
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
 {
-	UrlBuilder<> builder("http://hello/world");
+	UrlBuilder<webForm> builder("http://hello/world");
 	builder.params(UrlPart<>("foo"), UrlPart<>("bar"));
 
 	const string result(builder.c_str());
@@ -47,7 +47,7 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NoEscaping()
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
 {
-	UrlBuilder<> builder("http://hello/world");
+	UrlBuilder<webForm> builder("http://hello/world");
 	builder.params(UrlPart<>("fo o"), UrlPart<>("bar"));
 
 	const string result(builder.c_str());
@@ -58,7 +58,7 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_NameEscaped()
 
 void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
 {
-	UrlBuilder<> builder("http://hello/world");
+	UrlBuilder<webForm> builder("http://hello/world");
 	builder.params(UrlPart<>("foo"), UrlPart<>("ba+r"));
 
 	const string result(builder.c_str());
@@ -69,7 +69,7 @@ void UrlBuilderTest::testUrlWithQuery_SingleParam_ValueEscaped()
 
 void UrlBuilderTest::testUrlWithQuery_MultipleParams_RepeatedNames()
 {
-	UrlBuilder<> builder("http://hello/world");
+	UrlBuilder<webForm> builder("http://hello/world");
 	builder.params(UrlPart<>("foo"), UrlPart<>("ba+r"),
 			UrlPart<>("ba&^z"), UrlPart<>("==quu_x"),
 			UrlPart<>("foo"), UrlPart<>("123"));
@@ -174,7 +174,7 @@ void UrlBuilderTest::testUrlWithQuery_ConstructoBuilding_FreeFormatCustom()
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_NoParams()
 {
-	UrlBuilder<> builder(queryOnly);
+	UrlBuilder<webForm> builder(queryOnly);
 
 	const char * const result = builder.c_str();
 
@@ -185,7 +185,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_NoParams()
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_NoEscaping()
 {
-	UrlBuilder<> builder(queryOnly, UrlPart<>("hello"), UrlPart<>("world"));
+	UrlBuilder<webForm> builder(queryOnly, UrlPart<>("hello"), UrlPart<>("world"));
 
 	const char * const result = builder.c_str();
 
@@ -196,7 +196,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_NoEscaping()
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEscaped()
 {
-	UrlBuilder<> builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<>("world"));
+	UrlBuilder<webForm> builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<>("world"));
 
 	const char * const result = builder.c_str();
 
@@ -207,7 +207,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamNameEsca
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEscaped()
 {
-	UrlBuilder<> builder(queryOnly, UrlPart<>("hello"), UrlPart<>("**w*rld  "));
+	UrlBuilder<webForm> builder(queryOnly, UrlPart<>("hello"), UrlPart<>("**w*rld  "));
 
 	const char * const result = builder.c_str();
 
@@ -218,7 +218,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_ParamValueEsc
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamName()
 {
-	UrlBuilder<> builder(queryOnly, UrlPart<raw>("he ll,o~"), UrlPart<ordinary>("**w*rld  "));
+	UrlBuilder<webForm> builder(queryOnly, UrlPart<raw>("he ll,o~"), UrlPart<ordinary>("**w*rld  "));
 
 	const char * const result = builder.c_str();
 
@@ -229,7 +229,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamName(
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue()
 {
-	UrlBuilder<> builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<raw>("**w*rld  "));
+	UrlBuilder<webForm> builder(queryOnly, UrlPart<>("he ll,o~"), UrlPart<raw>("**w*rld  "));
 
 	const char * const result = builder.c_str();
 
@@ -240,7 +240,7 @@ void UrlBuilderTest::testQueryOnly_ConstructorBuilding_SingleParam_RawParamValue
 
 void UrlBuilderTest::testQueryOnly_ConstructorBuilding_MultipleParams()
 {
-	UrlBuilder<> builder(queryOnly,
+	UrlBuilder<webForm> builder(queryOnly,
 			UrlPart<>("abc"), UrlPart<>("c e"),
 			UrlPart<>("f*hijk"), UrlPart<>(""),
 			UrlPart<raw>("l+no"), UrlPart<ordinary>("p%*rs"),
@@ -260,7 +260,7 @@ void UrlBuilderTest::testCapacityComputation_QueryOnly_OrdinaryParams_NoEscaping
 	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
 	 * while the size of param parts is less than 127.
 	 */
-	UrlBuilder<> builder(queryOnly,
+	UrlBuilder<webForm> builder(queryOnly,
 			UrlPart<>(string(21, 'a')), UrlPart<>(string(10, 'b')),
 			UrlPart<>(string(6, 'c')), UrlPart<>(string(5, 'd')));
 
@@ -278,7 +278,7 @@ void UrlBuilderTest::testCapacityComputation_QueryOnly_OrdinaryParams_AllEscaped
 	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
 	 * while the size of param parts is less than 127.
 	 */
-	UrlBuilder<> builder(queryOnly,
+	UrlBuilder<webForm> builder(queryOnly,
 			UrlPart<>(string(21, '+')), UrlPart<>(string(10, '$')),
 			UrlPart<>(string(6, '#')), UrlPart<>(string(5, '@')));
 
@@ -311,7 +311,7 @@ void UrlBuilderTest::testCapacityComputation_QueryOnly_RawParams()
 	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
 	 * while the size of param parts is less than 127.
 	 */
-	UrlBuilder<> builder(queryOnly,
+	UrlBuilder<webForm> builder(queryOnly,
 			UrlPart<raw>(string(40, 'a')), UrlPart<raw>(string(40, 'b')),
 			UrlPart<raw>(string(20, 'c')), UrlPart<raw>(string(5, 'd')),
 			UrlPart<raw>(string(10, 'e')), UrlPart<raw>(string(10, 'f')));
@@ -331,7 +331,7 @@ void UrlBuilderTest::testCapacityComputation_UrlWithQuery()
 	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
 	 * while the size of param parts is less than 127.
 	 */
-	UrlBuilder<> builder("abcde",
+	UrlBuilder<webForm> builder("abcde",
 			UrlPart<>(string(19, 'a')), UrlPart<>(string(10, 'b')),
 			UrlPart<>(string(6, 'c')), UrlPart<>(string(5, 'd')));
 
@@ -350,7 +350,7 @@ void UrlBuilderTest::testCapacityComputation_ParamsAppended()
 	/* Total size exceeds 127 (another capacity growth step for the internal buffer)
 	 * while the size of param parts is less than 127.
 	 */
-	UrlBuilder<> builder(queryOnly,
+	UrlBuilder<webForm> builder(queryOnly,
 			UrlPart<raw>(string(40, 'a')), UrlPart<raw>(string(40, 'b')));
 	builder.params(
 			UrlPart<raw>(string(20, 'c')), UrlPart<raw>(string(5, 'd')),
