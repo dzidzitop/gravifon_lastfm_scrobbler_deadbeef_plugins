@@ -95,10 +95,22 @@ void UrlBuilderTest::testQueryOnly_WithRawParams()
 	CPPUNIT_ASSERT_EQUAL(size_t(16), builder.size());
 }
 
+void UrlBuilderTest::testQueryOnly_FreeFormatRaw()
+{
+	UrlBuilder<plain> builder(queryOnly);
+	CPPUNIT_ASSERT(builder.query(UrlPart<raw>("Hello, world!")));
+
+	const char * const result = builder.c_str();
+
+	CPPUNIT_ASSERT(result != nullptr);
+	CPPUNIT_ASSERT_EQUAL(string("Hello, world!"), string(result));
+	CPPUNIT_ASSERT_EQUAL(size_t(13), builder.size());
+}
+
 void UrlBuilderTest::testUrlWithQuery_FreeFormatNoEscaping()
 {
 	UrlBuilder<plain> builder("http://hello/world");
-	builder.query(UrlPart<>("foo"));
+	CPPUNIT_ASSERT(builder.query(UrlPart<>("foo")));
 
 	const string result(builder.c_str());
 
@@ -109,7 +121,7 @@ void UrlBuilderTest::testUrlWithQuery_FreeFormatNoEscaping()
 void UrlBuilderTest::testUrlWithQuery_FreeFormatEscaped()
 {
 	UrlBuilder<plain> builder("http://hello/world");
-	builder.query(UrlPart<>("foo+++///"));
+	CPPUNIT_ASSERT(builder.query(UrlPart<>("foo+++///")));
 
 	const string result(builder.c_str());
 
@@ -120,7 +132,7 @@ void UrlBuilderTest::testUrlWithQuery_FreeFormatEscaped()
 void UrlBuilderTest::testUrlWithQuery_FreeFormatRaw()
 {
 	UrlBuilder<plain> builder("http://hello/world");
-	builder.query(UrlPart<raw>("foo+++///"));
+	CPPUNIT_ASSERT(builder.query(UrlPart<raw>("foo+++///")));
 
 	const string result(builder.c_str());
 
@@ -139,7 +151,7 @@ struct CustomUrlPart
 void UrlBuilderTest::testUrlWithQuery_FreeFormatCustom()
 {
 	UrlBuilder<plain> builder("http://hello/world");
-	builder.query(CustomUrlPart());
+	CPPUNIT_ASSERT(builder.query(CustomUrlPart()));
 
 	const string result(builder.c_str());
 

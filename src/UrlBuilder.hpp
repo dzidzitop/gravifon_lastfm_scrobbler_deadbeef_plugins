@@ -173,20 +173,20 @@ public:
 			return false;
 		}
 
-		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, QueryString>(queryPart);
+		const std::size_t estimatedEncodedSize = maxEncodedSize<unknown, QueryString>(queryPart);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
-		return appendQueryString<urlUnknown, QueryString>(std::forward<QueryString>(queryPart));
+		return appendQueryString<unknown, QueryString>(std::forward<QueryString>(queryPart));
 	}
 
 	template<typename... Parts,
 			typename = typename std::enable_if<queryFormat == webForm && sizeof...(Parts) >= 0>::type>
 	void params(Parts &&...parts)
 	{
-		const std::size_t estimatedEncodedSize = maxEncodedSize<urlUnknown, Parts...>(parts...);
+		const std::size_t estimatedEncodedSize = maxEncodedSize<unknown, Parts...>(parts...);
 		m_buf.reserve(m_buf.size() + estimatedEncodedSize);
 
-		appendParams<urlUnknown, Parts...>(std::forward<Parts>(parts)...);
+		appendParams<unknown, Parts...>(std::forward<Parts>(parts)...);
 	}
 
 	const char *data() const noexcept { return m_buf.data(); }
@@ -200,7 +200,7 @@ private:
 		/* A URL is being built or a query string is appended;
 		 * it is unknown if the append to the query is first.
 		 */
-		urlUnknown,
+		unknown,
 		// A query string is being built.
 		queryString,
 		// The append to query is known to be not first.
@@ -228,7 +228,7 @@ private:
 		static_assert(mode != notFirst, "Mode 'notFirst' is not applicable for query strings in the plain format.");
 
 		register afc::FastStringBuffer<char>::Tail p = m_buf.borrowTail();
-		if (mode != queryString) {
+		if (mode == urlFirst || (mode == unknown && m_queryState == queryEmptyUrl)) {
 			*p++ = '?';
 		}
 		p = queryPart.appendTo(p);
@@ -257,7 +257,7 @@ private:
 			m_buf.append('?');
 			m_queryState = queryNonEmpty;
 			break;
-		case urlUnknown:
+		case unknown:
 			if (m_queryState != queryEmptyQueryString) {
 				m_buf.append(m_queryState == queryNonEmpty ? '&' : '?');
 			}
