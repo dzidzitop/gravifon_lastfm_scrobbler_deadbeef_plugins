@@ -165,7 +165,7 @@ namespace
 		p = afc::copy(R"(","scrobble_end_datetime":")"_s, p);
 		p = afc::formatISODateTime(scrobbleInfo.scrobbleEndTimestamp, p);
 		p = afc::copy(R"(","scrobble_duration":{"amount":)"_s, p);
-		p = afc::printNumber<long, 10>(scrobbleInfo.scrobbleDuration, p);
+		p = afc::printNumber<10>(scrobbleInfo.scrobbleDuration, p);
 		p = afc::copy(R"(,"unit":"ms"},"track":{"title":")"_s, p);
 		p = writeJsonString(track.getTitle(), p);
 		// At least single artist is expected.
@@ -196,7 +196,7 @@ namespace
 		} else {
 			p = afc::copy(R"(],"length":{"amount":)"_s, p);
 		}
-		p = afc::printNumber<long, 10>(track.getDurationMillis(), p);
+		p = afc::printNumber<10>(track.getDurationMillis(), p);
 		p = afc::copy(R"(,"unit":"ms"}}})"_s, p);
 
 		buf.returnTail(p);

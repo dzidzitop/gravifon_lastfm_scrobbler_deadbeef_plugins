@@ -62,7 +62,7 @@ namespace
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
 		char * const timestampStart = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
 		// md5(password) + timestamp
-		char * const timestampEnd = printNumber<long, 10>(now().millis() / 1000, timestampStart);
+		char * const timestampEnd = printNumber<10>(now().millis() / 1000, timestampStart);
 		// Finally, generating authToken.
 		char authToken[digestSize];
 		md5String(reinterpret_cast<const unsigned char *>(tmp), timestampEnd - tmp, authToken);
@@ -92,7 +92,7 @@ namespace
 			assert(index < 100); // one or two digits are expected and supported.
 
 			if (index < 10) {
-				m_value[0] = digitToChar<unsigned char, 10>(index);
+				m_value[0] = digitToChar<10>(index);
 				m_longIndex = false;
 			} else {
 				afc::printTwoDigits(index, m_value);
@@ -142,7 +142,7 @@ namespace
 		constexpr std::size_t maxEncodedSize() const noexcept { return afc::maxPrintedSize<Number, 10>(); }
 
 		template<typename Iterator>
-		Iterator appendTo(Iterator dest) const { return afc::printNumber<Number, 10>(m_number, dest); }
+		Iterator appendTo(Iterator dest) const { return afc::printNumber<10>(m_number, dest); }
 	private:
 		const Number m_number;
 	};
