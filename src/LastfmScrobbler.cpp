@@ -92,7 +92,7 @@ namespace
 			assert(index < 100); // one or two digits are expected and supported.
 
 			if (index < 10) {
-				m_value[0] = digitToChar(index);
+				m_value[0] = digitToChar<unsigned char, 10>(index);
 				m_longIndex = false;
 			} else {
 				afc::printTwoDigits(index, m_value);
