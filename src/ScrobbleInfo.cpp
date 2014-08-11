@@ -53,12 +53,12 @@ namespace
 	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
 	template<typename Iterator>
-	inline Iterator writeJsonString(const string &src, register Iterator dest)
+	Iterator writeJsonString(const string &src, register Iterator dest)
 	{
 		for (const char c : src) {
 			// Truncated to an octet just in case non-octet bytes are used.
 			const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
-			if (likely(!jsonCharsToEscape[uc])) {
+			if (!jsonCharsToEscape[uc]) {
 				*dest++ = c;
 			} else {
 				switch (c) {
