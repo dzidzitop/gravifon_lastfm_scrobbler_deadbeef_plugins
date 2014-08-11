@@ -109,7 +109,7 @@ public:
 };
 
 // Writes this ScrobbleInfo in the JSON format to a buffer and returns the latter.
-afc::FastStringBuffer<char> serialiseAsJson(const ScrobbleInfo &scrobbleInfo);
+afc::FastStringBuffer<char, afc::AllocMode::accurate> serialiseAsJson(const ScrobbleInfo &scrobbleInfo);
 void appendAsJson(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> &dest);
 
 #endif /* SCROBBLER_INFO_HPP_ */

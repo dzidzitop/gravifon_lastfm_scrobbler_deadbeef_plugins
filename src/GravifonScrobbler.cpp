@@ -271,7 +271,7 @@ size_t GravifonScrobbler::doScrobbling()
 					[&responseBody, &it, &completedCount, this](
 							const unsigned long errorCode, const string &errorDescription)
 					{
-						afc::FastStringBuffer<char> scrobbleAsStr = serialiseAsJson(*it);
+						afc::FastStringBuffer<char, afc::AllocMode::accurate> scrobbleAsStr = serialiseAsJson(*it);
 						if (isRecoverableError(errorCode)) {
 							logError("[GravifonScrobbler] Scrobble '#' is not processed. "
 									"Error: '#' (#). It will be re-submitted later.",

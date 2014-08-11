@@ -154,52 +154,51 @@ namespace
 		return maxSize;
 	}
 
-	inline void appendAsJsonImpl(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> &buf) noexcept
+	template<typename Iterator>
+	inline Iterator appendAsJsonImpl(const ScrobbleInfo &scrobbleInfo, register Iterator dest) noexcept
 	{
 		const Track &track = scrobbleInfo.track;
 
-		register afc::FastStringBuffer<char>::Tail p = buf.borrowTail();
-
-		p = afc::copy(R"({"scrobble_start_datetime":")"_s, p);
-		p = afc::formatISODateTime(scrobbleInfo.scrobbleStartTimestamp, p);
-		p = afc::copy(R"(","scrobble_end_datetime":")"_s, p);
-		p = afc::formatISODateTime(scrobbleInfo.scrobbleEndTimestamp, p);
-		p = afc::copy(R"(","scrobble_duration":{"amount":)"_s, p);
-		p = afc::printNumber<10>(scrobbleInfo.scrobbleDuration, p);
-		p = afc::copy(R"(,"unit":"ms"},"track":{"title":")"_s, p);
-		p = writeJsonString(track.getTitle(), p);
+		dest = afc::copy(R"({"scrobble_start_datetime":")"_s, dest);
+		dest = afc::formatISODateTime(scrobbleInfo.scrobbleStartTimestamp, dest);
+		dest = afc::copy(R"(","scrobble_end_datetime":")"_s, dest);
+		dest = afc::formatISODateTime(scrobbleInfo.scrobbleEndTimestamp, dest);
+		dest = afc::copy(R"(","scrobble_duration":{"amount":)"_s, dest);
+		dest = afc::printNumber<10>(scrobbleInfo.scrobbleDuration, dest);
+		dest = afc::copy(R"(,"unit":"ms"},"track":{"title":")"_s, dest);
+		dest = writeJsonString(track.getTitle(), dest);
 		// At least single artist is expected.
-		p = afc::copy(R"(","artists":[)"_s, p);
+		dest = afc::copy(R"(","artists":[)"_s, dest);
 		for (const string &artist : track.getArtists()) {
 			// TODO improve performance by merging appends.
-			p = afc::copy(R"({"name":")"_s, p);
-			p = writeJsonString(artist, p);
-			p = afc::copy(R"("},)"_s, p);
+			dest = afc::copy(R"({"name":")"_s, dest);
+			dest = writeJsonString(artist, dest);
+			dest = afc::copy(R"("},)"_s, dest);
 		}
-		--p; // removing the last redundant comma.
+		--dest; // removing the last redundant comma.
 		if (track.hasAlbumTitle()) {
-			p = afc::copy(R"(],"album":{"title":")"_s, p);
-			p = writeJsonString(track.getAlbumTitle(), p);
+			dest = afc::copy(R"(],"album":{"title":")"_s, dest);
+			dest = writeJsonString(track.getAlbumTitle(), dest);
 			if (track.hasAlbumArtist()) {
-				p = afc::copy(R"(","artists":[)"_s, p);
+				dest = afc::copy(R"(","artists":[)"_s, dest);
 				for (const string &albumArtist : track.getAlbumArtists()) {
 					// TODO improve performance by merging appends.
-					p = afc::copy(R"({"name":")"_s, p);
-					p = writeJsonString(albumArtist, p);
-					p = afc::copy(R"("},)"_s, p);
+					dest = afc::copy(R"({"name":")"_s, dest);
+					dest = writeJsonString(albumArtist, dest);
+					dest = afc::copy(R"("},)"_s, dest);
 				}
-				--p; // removing the last redundant comma.
-				p = afc::copy(R"(]},"length":{"amount":)"_s, p);
+				--dest; // removing the last redundant comma.
+				dest = afc::copy(R"(]},"length":{"amount":)"_s, dest);
 			} else {
-				p = afc::copy(R"("},"length":{"amount":)"_s, p);
+				dest = afc::copy(R"("},"length":{"amount":)"_s, dest);
 			}
 		} else {
-			p = afc::copy(R"(],"length":{"amount":)"_s, p);
+			dest = afc::copy(R"(],"length":{"amount":)"_s, dest);
 		}
-		p = afc::printNumber<10>(track.getDurationMillis(), p);
-		p = afc::copy(R"(,"unit":"ms"}}})"_s, p);
+		dest = afc::printNumber<10>(track.getDurationMillis(), dest);
+		dest = afc::copy(R"(,"unit":"ms"}}})"_s, dest);
 
-		buf.returnTail(p);
+		return dest;
 	}
 
 	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
@@ -324,12 +323,14 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	return true;
 }
 
-afc::FastStringBuffer<char> serialiseAsJson(const ScrobbleInfo &scrobbleInfo)
+afc::FastStringBuffer<char, afc::AllocMode::accurate> serialiseAsJson(const ScrobbleInfo &scrobbleInfo)
 {
 	const std::size_t maxSize = maxJsonSize(scrobbleInfo);
-	afc::FastStringBuffer<char> buf(maxSize);
+	asm("nop");
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(maxSize);
+	asm("nop");
 
-	appendAsJsonImpl(scrobbleInfo, buf);
+	buf.returnTail(appendAsJsonImpl(scrobbleInfo, buf.borrowTail()));
 
 	return buf;
 }
@@ -339,5 +340,5 @@ void appendAsJson(const ScrobbleInfo &scrobbleInfo, afc::FastStringBuffer<char> 
 	const std::size_t maxSize = maxJsonSize(scrobbleInfo);
 	dest.reserve(dest.size() + maxSize);
 
-	appendAsJsonImpl(scrobbleInfo, dest);
+	dest.returnTail(appendAsJsonImpl(scrobbleInfo, dest.borrowTail()));
 }
