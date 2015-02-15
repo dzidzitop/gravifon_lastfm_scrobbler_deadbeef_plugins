@@ -227,7 +227,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 
 	logDebug("[LastfmScrobbler] Trying to submit the now-playing notification to the scrobbling server.");
 
-	if (!m_configured) {
+	if (unlikely(!m_configured)) {
 		logErrorMsg("[LastfmScrobbler] Scrobbler is not configured properly."_s);
 		return;
 	}
@@ -399,7 +399,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	assertLocked();
 	assert(!m_pendingScrobbles.empty());
 
-	if (!m_configured) {
+	if (unlikely(!m_configured)) {
 		logErrorMsg("Scrobbler is not configured properly."_s);
 		return 0;
 	}
@@ -506,7 +506,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 		if (unlikely(seqEnd == end)) {
 			logError("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
-			return false;
+			return 0;
 		}
 		const std::size_t tokenSize = seqEnd - seqBegin;
 		if (tokenSize == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
@@ -532,7 +532,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		}
 	} else {
 		logErrorMsg("[LastfmScrobbler] An error is encountered while submitting the scrobbles to Last.fm."_s);
-		return false;
+		return 0;
 	}
 
 	return 0;

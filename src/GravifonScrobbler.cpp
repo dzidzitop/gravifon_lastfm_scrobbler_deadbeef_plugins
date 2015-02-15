@@ -146,7 +146,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assertLocked();
 	assert(!m_pendingScrobbles.empty());
 
-	if (!m_configured) {
+	if (unlikely(!m_configured)) {
 		logErrorMsg("Scrobbler is not configured properly."_s);
 		return 0;
 	}
