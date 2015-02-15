@@ -69,6 +69,59 @@ inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
 	addTagOp(start);
 }
 
+inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
+{
+	if (track == nullptr) {
+		// No new track is started.
+		return nullptr;
+	}
+
+	// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
+	const char * const title = deadbeef.pl_find_meta(track, "title");
+	if (title == nullptr) {
+		// Track title is a required field.
+		return nullptr;
+	}
+
+	const char *albumArtist = deadbeef.pl_find_meta(track, "album artist");
+	if (albumArtist == nullptr) {
+		albumArtist = deadbeef.pl_find_meta(track, "albumartist");
+		if (albumArtist == nullptr) {
+			albumArtist = deadbeef.pl_find_meta(track, "band");
+		}
+	}
+
+	const char *artist = deadbeef.pl_find_meta(track, "artist");
+	if (artist == nullptr) {
+		artist = albumArtist;
+		if (artist == nullptr) {
+			// Track artist is a required field.
+			return nullptr;
+		}
+	}
+	const char * const album = deadbeef.pl_find_meta(track, "album");
+
+	std::unique_ptr<Track> trackInfo(new Track());
+	trackInfo->setTitle(title);
+	if (album != nullptr) {
+		trackInfo->setAlbumTitle(album);
+	}
+	/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
+	 * Moreover, if the track is played from start to end without rewinding
+	 * then the play time could be different from the track duration.
+	 */
+	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
+	trackInfo->setDurationMillis(toLongMillis(trackDuration));
+
+	addMultiTag(artist, [&](std::string &&artistName) { trackInfo->addArtist(std::move(artistName)); });
+
+	if (albumArtist != nullptr) {
+		addMultiTag(albumArtist, [&](std::string &&artistName) { trackInfo->addAlbumArtist(std::move(artistName)); });
+	}
+
+	return trackInfo;
+}
+
 inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent,
 		DB_functions_t &deadbeef, const double scrobbleThreshold)
 { PlaylistLock lock(deadbeef);
@@ -141,7 +194,7 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 	return scrobbleInfo;
 }
 
-inline bool isAscii(const char * const str, const std::size_t n)
+inline bool isAscii(const char * const str, const std::size_t n) noexcept
 {
 	for (std::size_t i = 0; i < n; ++i) {
 		const unsigned char c = static_cast<unsigned char>(str[i]);

@@ -33,7 +33,8 @@ class LastfmScrobbler : public Scrobbler<std::deque<ScrobbleInfo>>
 {
 public:
 	LastfmScrobbler() : Scrobbler(), m_scrobblerUrl(), m_username(), m_password(), m_dataFilePath(),
-			m_sessionId(), m_submissionUrl(), m_authenticated(false)
+			m_sessionId(), m_submissionUrl(), m_nowPlayingTrack(), m_authenticated(false),
+			m_hasNowPlayingTrack(false)
 	{ std::lock_guard<std::mutex> lock(m_mutex); // synchronising memory
 		/* This instance is partially initialised here. It will be initialised completely
 		 * when ::start() is invoked successfully.
@@ -44,6 +45,13 @@ public:
 	{
 		// Synchronising memory before destructing the member fields of this GravifonScrobbler.
 		std::lock_guard<std::mutex> lock(m_mutex);
+	}
+
+	void playStarted(Track &&track)
+	{ std::lock_guard<std::mutex> lock(m_mutex);
+		m_nowPlayingTrack = std::move(track);
+		m_hasNowPlayingTrack = true;
+		m_cv.notify_one();
 	}
 
 	// username and password should be in UTF-8; serverUrl must be in ASCII.
@@ -60,6 +68,14 @@ public:
 	}
 protected:
 	virtual std::size_t doScrobbling() override;
+	/* Since the worker thread can receive awaking events from ::scrobble() and ::playStarted()
+	 * the now-playing submission event can be submitted while the scrobbler is processing
+	 * scrobbles (outside the critical secion on m_mutex). To prevent the now-playing event lost
+	 * during this routine the scrobbler checks if there is the now-playing track reported
+	 * before and after the worker thread falls asleep.
+	 */
+	virtual void preSleep() override { submitNowPlayingTrack(); }
+	virtual void postSleep() override { submitNowPlayingTrack(); }
 
 	virtual const std::string &getDataFilePath() const override { return m_dataFilePath; }
 
@@ -68,6 +84,9 @@ private:
 	// All these functions must be invoked within the critical section upon Scrobbler::m_mutex.
 	bool ensureAuthenticated();
 	void deauthenticate() noexcept;
+	void notifyPlayStarted();
+
+	void submitNowPlayingTrack();
 
 	std::string m_scrobblerUrl;
 	std::string m_username;
@@ -77,8 +96,12 @@ private:
 
 	std::string m_sessionId;
 	std::string m_submissionUrl;
+	std::string m_nowPlayingUrl;
+
+	Track m_nowPlayingTrack;
 
 	bool m_authenticated;
+	bool m_hasNowPlayingTrack;
 };
 
 #endif /* LASTFMSCROBBLER_HPP_ */

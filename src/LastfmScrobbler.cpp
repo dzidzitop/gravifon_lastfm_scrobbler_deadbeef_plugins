@@ -81,6 +81,21 @@ namespace
 				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
+	inline UrlPart<> getAlbumTitleUrlPart(const Track &track) noexcept
+	{
+		const char *albumTitleData;
+		std::size_t albumTitleSize;
+		if (track.hasAlbumTitle()) {
+			const string &str = track.getAlbumTitle();
+			albumTitleData = str.data();
+			albumTitleSize = str.size();
+		} else {
+			albumTitleData = nullptr;
+			albumTitleSize = 0;
+		}
+		return UrlPart<>(albumTitleData, albumTitleSize);
+	}
+
 	class ScrobbleParamName
 	{
 		// The same instance must be used.
@@ -162,18 +177,6 @@ namespace
 		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
 		ScrobbleParamName scrobbleParamName(index);
 
-		const char *albumTitleData;
-		std::size_t albumTitleSize;
-		if (track.hasAlbumTitle()) {
-			const string &str = track.getAlbumTitle();
-			albumTitleData = str.data();
-			albumTitleSize = str.size();
-		} else {
-			albumTitleData = nullptr;
-			albumTitleSize = 0;
-		}
-		const UrlPart<> albumTitle(albumTitleData, albumTitleSize);
-
 		builder.params(
 				// The artist name. Required.
 				scrobbleParamName, UrlPart<>(track.getArtists()[0]),
@@ -189,7 +192,7 @@ namespace
 				// The length of the track in seconds. Required for 'Chosen by the user'.
 				scrobbleParamName, trackDurationSeconds,
 				// The album title, or an empty string if not known.
-				scrobbleParamName, albumTitle,
+				scrobbleParamName, getAlbumTitleUrlPart(track),
 				// TODO Support track numbers.
 				// The position of the track on the album, or an empty string if not known.
 				scrobbleParamName, UrlPart<>(""_s),
@@ -218,9 +221,137 @@ namespace
 	static constexpr auto lastfmResponseDelim = [](const char c) noexcept { return c == '\n'; };
 }
 
+void LastfmScrobbler::submitNowPlayingTrack()
+{
+	assertLocked();
+
+	logDebug("[LastfmScrobbler] Trying to submit the now-playing notification to the scrobbling server.");
+
+	if (!m_configured) {
+		logErrorMsg("[LastfmScrobbler] Scrobbler is not configured properly."_s);
+		return;
+	}
+
+	if (!m_hasNowPlayingTrack) {
+		logDebug("[LastfmScrobbler] There is no now-playing track to submit.");
+		return;
+	}
+
+	// Resetting the event despite of the result of the attempt to submit it to the scrobbling server.
+	m_hasNowPlayingTrack = false;
+
+	ensureAuthenticated();
+
+	const Track &track = m_nowPlayingTrack;
+
+	UrlBuilder<webForm> builder(queryOnly,
+			// TODO URL-encode session ID right after it is obtained during the authentication process.
+			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId),
+			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0]),
+			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle()),
+			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
+			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
+			// TODO Support track numbers.
+			// The position of the track on the album, or an empty string if not known.
+			UrlPart<raw>("n"_s), UrlPart<raw>(""_s),
+			// TODO Support MusicBrainz Track IDs.
+			// The MusicBrainz Track ID, or an empty string if not known.
+			UrlPart<raw>("m"_s), UrlPart<>(""_s));
+
+	HttpRequest request;
+	request.setBody(builder.data(), builder.size());
+
+	// Making a copy of shared data to pass outside the critical section.
+	const string nowPlayingUrlCopy(m_nowPlayingUrl);
+
+	/* No conversion to the system encoding is used as the response body is assumed to be in
+	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
+	 * messages that are safe to be used without conversion with hope they are in ASCII, too.
+	 */
+	afc::FastStringBuffer<char> responseBody;
+	FastStringBufferAppender responseBodyAppender(responseBody);
+	StatusCode result;
+	HttpResponse response(responseBodyAppender);
+
+	/* Each HTTP call is performed outside the critical section so that other threads can:
+	 * - add scrobbles without waiting for this call to finish
+	 * - stop this Scrobbler by invoking Scrobbler::stop(). In this case this HTTP call
+	 * is aborted and the scrobbles involved are left in the list of pending scrobbles
+	 * so that they can be stored to the data file and be completed later.
+	 *
+	 * It is safe to unlock the mutex because:
+	 * - no shared data is accessed outside the critical section
+	 * - other threads cannot delete scrobbles in the meantime (because the scrobbling thread
+	 * assumes that the scrobbles being submitted are the first {submittedCount} elements in
+	 * the list of pending scrobbles.
+	 *
+	 * In addition, it is safe to use m_finishScrobblingFlag outside the critical section
+	 * because it is atomic.
+	 */
+	{ UnlockGuard unlockGuard(m_mutex);
+		logDebug("[LastfmScrobbler] Now-playing URL: '#'.", nowPlayingUrlCopy);
+		logDebug("[LastfmScrobbler] Now-playing request body: '#'.",
+				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
+
+		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
+		result = HttpClient().post(nowPlayingUrlCopy.c_str(), request, response,
+				HttpClient::NO_TIMEOUT, HttpClient::NO_TIMEOUT, m_finishScrobblingFlag);
+	}
+
+	if (result == StatusCode::ABORTED_BY_CLIENT) {
+		logDebugMsg("[LastfmScrobbler] An HTTP call is aborted."_s);
+		return;
+	}
+	if (result != StatusCode::SUCCESS) {
+		reportHttpClientError(result);
+		return;
+	}
+
+	logDebug("[LastfmScrobbler] Now-playing response status code: '#'.", response.statusCode);
+	logDebug("[LastfmScrobbler] Now-playing response body: #", responseBody.c_str());
+
+	if (response.statusCode == 200) {
+		/* Using find_if to tokenise response instead of find since the former
+		 * takes parameters by value which minimises memory reads.
+		 */
+		const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
+		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
+		if (unlikely(seqEnd == end)) {
+			logError("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
+			return;
+		}
+		const std::size_t tokenSize = seqEnd - seqBegin;
+		if (tokenSize == 2 && *seqBegin == 'O' && *(seqBegin + 1) == 'K') {
+			logDebugMsg("[LastfmScrobbler] The now-playing track is submitted successfully."_s);
+			return;
+		} else {
+			constexpr ConstStringRef badSession = "BADSESSION"_s;
+			if (tokenSize == badSession.size() && equal(badSession.begin(), badSession.end(), seqBegin)) {
+				logDebugMsg("[LastfmScrobbler] The now-playing track is not submitted. "
+						"The user is not authenticated to Last.fm."_s);
+
+				deauthenticate();
+				return;
+			} else {
+				// TODO think of counting hard failures, as the specification suggests.
+				// A hard failure or an unknown status is reported.
+				logError("[LastfmScrobbler] Unable to submit the now-playing track to Last.fm. Reason: '#'.",
+						std::make_pair(seqBegin, seqEnd));
+				return;
+			}
+		}
+	} else {
+		logErrorMsg("[LastfmScrobbler] An error is encountered while submitting the now-playing track to Last.fm."_s);
+		return;
+	}
+}
+
 void LastfmScrobbler::stopExtra()
 {
+	m_sessionId.clear();
 	m_scrobblerUrl.clear();
+	m_nowPlayingUrl.clear();
+	m_hasNowPlayingTrack = false;
 }
 
 void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t serverUrlSize,
@@ -496,7 +627,9 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	}
 
 	// Now-playing URL. It is ignored for now.
+	seqBegin = seqEnd + 1;
 	seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
+	m_nowPlayingUrl.assign(seqBegin, seqEnd);
 
 	if (unlikely(seqEnd == end)) {
 		logError("[LastfmScrobbler] Invalid response body: '#'.", responseBody.c_str());

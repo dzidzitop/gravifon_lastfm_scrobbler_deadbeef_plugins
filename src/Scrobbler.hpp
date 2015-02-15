@@ -127,6 +127,19 @@ protected:
 	 */
 	virtual void stopExtra() { /* Nothing to do by default. */ }
 
+	/**
+	 * Invoked each time the worker thread falls asleep.
+	 *
+	 * It is executed within lock on m_mutex.
+	 */
+	virtual void preSleep() { /* Nothing to do by default. */ }
+	/**
+	 * Invoked each time the worker thread is awakened for some reason.
+	 *
+	 * It is executed within lock on m_mutex.
+	 */
+	virtual void postSleep() { /* Nothing to do by default. */ }
+
 	/* Ensures that this function is executed within the critical section against m_mutex.
 	 * Even though mutex::try_lock() has side effects it is fine to acquire the lock m_mutex
 	 * since the application is terminated immediately in this case.
@@ -142,8 +155,9 @@ protected:
 	mutable std::mutex m_mutex;
 private:
 	mutable std::thread m_scrobblingThread;
-	mutable std::condition_variable m_cv;
 protected:
+	mutable std::condition_variable m_cv;
+
 	/* Used to prevent parallel execution of the functions start() and stop().
 	 * This is needed for stop() to know that the scrobbling thread is stopped
 	 * at some time to store all pending scrobbles to the data file.
@@ -257,13 +271,16 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 		while (!(m_configured &&
 				(m_pendingScrobbles.size() != prevScrobbleCount ||
 						(!lastAttemptFailed && !m_pendingScrobbles.empty())))) {
+			preSleep();
+
 			m_cv.wait(lock);
 
 			if (m_finishScrobblingFlag.load(std::memory_order_relaxed)) {
 				// Finishing the background scrobbling thread since this Scrobbler is stopped.
-				afc::logger::logDebugMsg("[Scrobbler] The background scrobbling thread is going to be stopped..."_s);
 				return;
 			}
+
+			postSleep();
 		}
 
 		if (lastAttemptFailed) {
@@ -312,6 +329,8 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 
 		prevScrobbleCount = m_pendingScrobbles.size();
 	}
+
+	afc::logger::logDebugMsg("[Scrobbler] The background scrobbling thread is going to be stopped..."_s);
 }
 
 template<typename ScrobbleQueue>

@@ -152,11 +152,17 @@ namespace
 			}
 
 			ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
-			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
 
+			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
 			if (scrobbleInfo != nullptr) {
 				lastfmClient.scrobble(std::move(*scrobbleInfo), safeScrobbling);
 			}
+
+			const unique_ptr<Track> nowPlayingTrack = getTrackInfo(event->to, *deadbeef);
+			if (nowPlayingTrack != nullptr) {
+				lastfmClient.playStarted(std::move(*nowPlayingTrack));
+			}
+
 			return 0;
 		}
 	}
