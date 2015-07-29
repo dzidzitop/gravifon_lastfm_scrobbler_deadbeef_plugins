@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,11 +17,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define SCROBBLER_INFO_HPP_
 
 #include <cassert>
-#include <string>
 #include <utility>
 #include <vector>
 #include <afc/dateutil.hpp>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/SimpleString.hpp>
 
 // All strings are utf8-encoded.
 class Track
@@ -39,35 +39,35 @@ public:
 	Track &operator=(Track &&) = default;
 
 	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	std::string &getTitle() noexcept { assert(m_titleSet); return m_title; }
-	const std::string &getTitle() const noexcept { assert(m_titleSet); return m_title; }
+	afc::SimpleString &getTitle() noexcept { assert(m_titleSet); return m_title; }
+	const afc::SimpleString &getTitle() const noexcept { assert(m_titleSet); return m_title; }
 	bool hasTitle() const noexcept { return m_titleSet; }
 
-	void addArtist(std::string &&artist) { m_artists.emplace_back(std::move(artist)); }
+	void addArtist(afc::SimpleString &&artist) { m_artists.emplace_back(std::move(artist)); }
 	void addArtist(const char * const artist) { m_artists.emplace_back(artist); }
-	std::vector<std::string> &getArtists() noexcept { return m_artists; }
-	const std::vector<std::string> &getArtists() const noexcept { return m_artists; }
+	std::vector<afc::SimpleString> &getArtists() noexcept { return m_artists; }
+	const std::vector<afc::SimpleString> &getArtists() const noexcept { return m_artists; }
 	bool hasArtist() const noexcept { return !m_artists.empty(); }
 
-	void addAlbumArtist(const std::string &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
+	void addAlbumArtist(afc::SimpleString &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
 	void addAlbumArtist(const char * const artist) { m_albumArtists.emplace_back(artist); }
-	std::vector<std::string> &getAlbumArtists() noexcept { return m_albumArtists; }
-	const std::vector<std::string> &getAlbumArtists() const noexcept { return m_albumArtists; }
+	std::vector<afc::SimpleString> &getAlbumArtists() noexcept { return m_albumArtists; }
+	const std::vector<afc::SimpleString> &getAlbumArtists() const noexcept { return m_albumArtists; }
 	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
 
 	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
-	std::string &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
-	const std::string &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
+	afc::SimpleString &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
+	const afc::SimpleString &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
 	bool hasAlbumTitle() const noexcept { return m_albumSet; }
 
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
 private:
-	std::string m_title;
-	std::vector<std::string> m_artists;
-	std::vector<std::string> m_albumArtists;
-	std::string m_album;
+	afc::SimpleString m_title;
+	std::vector<afc::SimpleString> m_artists;
+	std::vector<afc::SimpleString> m_albumArtists;
+	afc::SimpleString m_album;
 	// Track duration in milliseconds.
 	long m_duration;
 	bool m_titleSet = false;

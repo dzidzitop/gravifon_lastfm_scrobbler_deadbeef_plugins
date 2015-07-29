@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <deadbeef.h>
 #include <memory>
-#include <string>
 #include <chrono>
 #include <cstring>
 #include <string>
 #include <utility>
 
 #include <afc/logger.hpp>
+#include <afc/SimpleString.hpp>
 
 #include "HttpClient.hpp"
 #include "Scrobbler.hpp"
@@ -62,11 +62,11 @@ inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
 	 */
 	const char *start = multiTag, *end;
 	while ((end = std::strchr(start, UTF8_LF)) != nullptr) {
-		addTagOp(std::string(start, end));
+		addTagOp(afc::SimpleString(start, end));
 		start = end + 1;
 	}
 	// Adding the last tag.
-	addTagOp(start);
+	addTagOp(afc::SimpleString(start));
 }
 
 inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
@@ -102,7 +102,9 @@ inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_funct
 	const char * const album = deadbeef.pl_find_meta(track, "album");
 
 	std::unique_ptr<Track> trackInfo(new Track());
+	asm("nop");
 	trackInfo->setTitle(title);
+	asm("nop");
 	if (album != nullptr) {
 		trackInfo->setAlbumTitle(album);
 	}
@@ -113,10 +115,10 @@ inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_funct
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
 	trackInfo->setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](std::string &&artistName) { trackInfo->addArtist(std::move(artistName)); });
+	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo->addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](std::string &&artistName) { trackInfo->addAlbumArtist(std::move(artistName)); });
+		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo->addAlbumArtist(std::move(artistName)); });
 	}
 
 	return trackInfo;
@@ -185,10 +187,10 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 	}
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](std::string &&artistName) { trackInfo.addArtist(std::move(artistName)); });
+	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo.addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](std::string &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
+		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
 	return scrobbleInfo;

@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/FastStringBuffer.hpp>
 #include <afc/logger.hpp>
 #include <afc/number.h>
+#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <jsoncpp/json/value.h>
 #include <jsoncpp/json/reader.h>
@@ -53,7 +54,7 @@ namespace
 	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
 	template<typename Iterator>
-	Iterator writeJsonString(const string &src, register Iterator dest)
+	Iterator writeJsonString(const afc::SimpleString &src, register Iterator dest)
 	{
 		for (const char c : src) {
 			// Truncated to an octet just in case non-octet bytes are used.
@@ -93,10 +94,10 @@ namespace
 		return dest;
 	}
 
-	inline std::size_t totalStringSize(const std::vector<std::string> &strings) noexcept
+	inline std::size_t totalStringSize(const std::vector<afc::SimpleString> &strings) noexcept
 	{
 		std::size_t totalSize = 0;
-		for (const string &s : strings) {
+		for (const afc::SimpleString &s : strings) {
 			totalSize += s.size();
 		}
 		return totalSize;
@@ -129,7 +130,7 @@ namespace
 
 		{ // artists
 			maxSize += R"("artists":[])"_s.size();
-			const std::vector<std::string> &artists = track.getArtists();
+			const std::vector<afc::SimpleString> &artists = track.getArtists();
 			maxSize += R"({"name":""},)"_s.size() * artists.size() - 1; // With commas; the last comma is removed.
 			maxSize += maxPrintedCharSize * totalStringSize(artists);
 			maxSize += 1; // ,
@@ -141,7 +142,7 @@ namespace
 			if (track.hasAlbumArtist()) {
 				maxSize += 1; // ,
 				maxSize += R"("artists":[])"_s.size();
-				const std::vector<std::string> &albumArtists = track.getAlbumArtists();
+				const std::vector<afc::SimpleString> &albumArtists = track.getAlbumArtists();
 				maxSize += R"({"name":""},)"_s.size() * albumArtists.size() - 1; // With commas; the last comma is removed.
 				maxSize += maxPrintedCharSize * totalStringSize(albumArtists);
 			}
@@ -169,7 +170,7 @@ namespace
 		dest = writeJsonString(track.getTitle(), dest);
 		// At least single artist is expected.
 		dest = afc::copy(R"(","artists":[)"_s, dest);
-		for (const string &artist : track.getArtists()) {
+		for (const afc::SimpleString &artist : track.getArtists()) {
 			// TODO improve performance by merging appends.
 			dest = afc::copy(R"({"name":")"_s, dest);
 			dest = writeJsonString(artist, dest);
@@ -181,7 +182,7 @@ namespace
 			dest = writeJsonString(track.getAlbumTitle(), dest);
 			if (track.hasAlbumArtist()) {
 				dest = afc::copy(R"(","artists":[)"_s, dest);
-				for (const string &albumArtist : track.getAlbumArtists()) {
+				for (const afc::SimpleString &albumArtist : track.getAlbumArtists()) {
 					// TODO improve performance by merging appends.
 					dest = afc::copy(R"({"name":")"_s, dest);
 					dest = writeJsonString(albumArtist, dest);

@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2014 Dźmitry Laŭčuk
+Copyright (C) 2014-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/logger.hpp>
 #include <afc/number.h>
 #include <afc/md5.hpp>
+#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <afc/UrlBuilder.hpp>
 #include <afc/utils.h>
@@ -86,8 +87,8 @@ namespace
 		const char *albumTitleData;
 		std::size_t albumTitleSize;
 		if (track.hasAlbumTitle()) {
-			const string &str = track.getAlbumTitle();
-			albumTitleData = str.data();
+			const afc::SimpleString &str = track.getAlbumTitle();
+			albumTitleData = str.value();
 			albumTitleSize = str.size();
 		} else {
 			albumTitleData = nullptr;
@@ -177,11 +178,12 @@ namespace
 		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
 		ScrobbleParamName scrobbleParamName(index);
 
+		// TODO optimise parameter passing
 		builder.params(
 				// The artist name. Required.
-				scrobbleParamName, UrlPart<>(track.getArtists()[0]),
+				scrobbleParamName, UrlPart<>(track.getArtists()[0].value(), track.getArtists()[0].size()),
 				// The track title. Required.
-				scrobbleParamName, UrlPart<>(track.getTitle()),
+				scrobbleParamName, UrlPart<>(track.getTitle().value(), track.getTitle().size()),
 				// The time the track started playing, in UNIX timestamp format. Required.
 				scrobbleParamName, scrobbleStartTs,
 				// The source of the track. Required. 'Chosen by the user' in all cases.
@@ -244,11 +246,12 @@ void LastfmScrobbler::submitNowPlayingTrack()
 
 	const Track &track = m_nowPlayingTrack;
 
+	// TODO optimise parameter passing
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId),
-			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0]),
-			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle()),
+			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0].value(), track.getArtists()[0].size()),
+			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().value(), track.getTitle().size()),
 			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
 			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
 			// TODO Support track numbers.
