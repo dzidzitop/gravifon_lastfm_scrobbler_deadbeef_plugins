@@ -107,7 +107,7 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 	afc::FastStringBuffer<char> tmpUrl(serverUrlSize + "scrobbles"_s.size() + 1);
 	tmpUrl.append(serverUrl, serverUrlSize);
 	if (serverUrlSize > 0) {
-		appendToPath(tmpUrl, "scrobbles", "scrobbles"_s.size());
+		appendToPath(tmpUrl, "scrobbles"_s);
 	}
 
 	// Curl expects the basic charset in headers.

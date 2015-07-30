@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,7 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <utility>
 
+#include <afc/FastStringBuffer.hpp>
 #include <afc/logger.hpp>
+
 #include <deadbeef.h>
 
 #include "ScrobbleInfo.hpp"
@@ -113,15 +115,16 @@ namespace
 		logDebugMsg("[lastfm_scrobbler] Starting..."_s);
 
 		// TODO think of making it configurable.
-		string dataFilePath;
-		if (::getDataFilePath("deadbeef/lastfm_scrobbler_data", dataFilePath) != 0) {
+		afc::FastStringBuffer<char> dataFilePath;
+		if (::getDataFilePath("deadbeef/lastfm_scrobbler_data"_s, dataFilePath) != 0) {
 			return 1;
 		}
 
 		/* must be invoked before lastfmClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		lastfmClient.setDataFilePath(move(dataFilePath));
+		const std::size_t dataFilePathSize = dataFilePath.size();
+		lastfmClient.setDataFilePath(afc::SimpleString(dataFilePath.detach(), dataFilePathSize));
 
 		const bool enabled = deadbeef->conf_get_int("lastfmScrobbler.enabled", 0);
 		if (enabled && !lastfmClient.start()) {

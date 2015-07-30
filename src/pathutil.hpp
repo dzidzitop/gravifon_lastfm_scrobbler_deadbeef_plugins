@@ -16,31 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef PATHUTIL_HPP_
 #define PATHUTIL_HPP_
 
-#include <string>
 #include <cassert>
 
 #include <afc/FastStringBuffer.hpp>
+#include <afc/StringRef.hpp>
 
 // Removes trailing slash if it is not the only character in the path.
-inline void appendToPath(std::string &path, const char *child)
-{
-	const bool needsSeparator = path.size() > 1 && path.back() != '/';
-	const bool childHasSeparator = child[0] == '/';
-	if (needsSeparator) {
-		if (!childHasSeparator) {
-			path += '/';
-		}
-	} else {
-		if (childHasSeparator) {
-			/* This works even if the path is an empty string.
-			 * Child's heading separator is deleted.
-			 */
-			++child;
-		}
-	}
-	path += child;
-}
-
 inline void appendToPath(afc::FastStringBuffer<char> &path, const char *child, const std::size_t childSize)
 {
 	path.reserve(childSize + 1); // '/' and whole child are to be appended at mos.
@@ -64,13 +45,23 @@ inline void appendToPath(afc::FastStringBuffer<char> &path, const char *child, c
 	path.append(child, effectiveChildSize);
 }
 
-inline int getDataFilePath(const char * const shortFilePath, std::string &dest)
+inline void appendToPath(afc::FastStringBuffer<char> &path, afc::ConstStringRef str)
 {
+	appendToPath(path, str.value(), str.size());
+}
+
+inline int getDataFilePath(afc::ConstStringRef shortFilePath, afc::FastStringBuffer<char> &dest)
+{
+	using afc::operator"" _s;
+
 	assert(shortFilePath != nullptr);
 
 	const char * const dataDir = getenv("XDG_DATA_HOME");
 	if (dataDir != nullptr && dataDir[0] != '\0') {
-		dest.append(dataDir);
+		const std::size_t dataDirSize = std::strlen(dataDir);
+		dest.reserve(dest.size() + dataDirSize);
+		dest.returnTail(
+				std::copy_n(dataDir, dataDirSize, dest.borrowTail()));
 	} else {
 		// Trying to assign the default data dir ($HOME/.local/share/).
 		const char * const homeDir = getenv("HOME");
@@ -78,9 +69,10 @@ inline int getDataFilePath(const char * const shortFilePath, std::string &dest)
 			return 1;
 		}
 		const std::size_t homeDirSize = std::strlen(homeDir);
+		dest.reserve(dest.size() + homeDirSize + ".local/share"_s.size());
 		dest.append(homeDir, homeDirSize);
 		// TODO Optimise this call w.r.t. memory realloc
-		appendToPath(dest, ".local/share");
+		appendToPath(dest, ".local/share"_s);
 	}
 	appendToPath(dest, shortFilePath);
 	return 0;

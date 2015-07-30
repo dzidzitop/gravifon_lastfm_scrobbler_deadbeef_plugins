@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2014 Dźmitry Laŭčuk
+Copyright (C) 2014-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,7 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <string>
 #include <utility>
+
 #include <afc/ensure_ascii.hpp>
+#include <afc/SimpleString.hpp>
 
 /* For Last.fm submission API v1.2.1 the scrobbles submitted are either all accepted or
  * all rejected, so they are removed all at once strictly from the front of the queue.
@@ -57,12 +59,12 @@ public:
 	// username and password should be in UTF-8; serverUrl must be in ASCII.
 	void configure(const char *serverUrl, std::size_t serverUrlSize, const char *username, const char *password);
 
-	void setDataFilePath(const std::string &dataFilePath)
+	void setDataFilePath(afc::SimpleString &dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = dataFilePath;
 	}
 
-	void setDataFilePath(std::string &&dataFilePath)
+	void setDataFilePath(afc::SimpleString &&dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = std::move(dataFilePath);
 	}
@@ -77,7 +79,7 @@ protected:
 	virtual void preSleep() override { submitNowPlayingTrack(); }
 	virtual void postSleep() override { submitNowPlayingTrack(); }
 
-	virtual const std::string &getDataFilePath() const override { return m_dataFilePath; }
+	virtual const afc::SimpleString &getDataFilePath() const override { return m_dataFilePath; }
 
 	virtual void stopExtra() override;
 private:
@@ -92,7 +94,7 @@ private:
 	std::string m_username;
 	std::string m_password;
 
-	std::string m_dataFilePath;
+	afc::SimpleString m_dataFilePath;
 
 	std::string m_sessionId;
 	std::string m_submissionUrl;

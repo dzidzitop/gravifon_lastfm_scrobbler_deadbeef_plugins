@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <afc/FastStringBuffer.hpp>
 #include <afc/logger.hpp>
+#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <sys/stat.h>
 #include "ScrobbleInfo.hpp"
@@ -99,12 +100,12 @@ private:
 	// Used by openDataFile().
 	enum OpenResult {O_ERROR, O_OPENED, O_NOTEXIST};
 
-	static OpenResult openDataFile(const std::string &path, const char * const mode, const bool storeMode,
-			std::FILE *&dest);
-	static bool createParentDirs(const std::string &path);
+	static OpenResult openDataFile(const char *path, std::size_t pathSize, const char * const mode,
+			const bool storeMode, std::FILE *&dest);
+	static bool createParentDirs(const char *path, std::size_t pathSize);
 
 	template<typename Iterator>
-	static bool storeScrobbles(Iterator begin, const Iterator end, const std::string &dataFilePath,
+	static bool storeScrobbles(Iterator begin, const Iterator end, const afc::SimpleString &dataFilePath,
 			const char * const storeMode);
 protected:
 	// Returns the number of scrobbles completed (successful and non-processable).
@@ -114,7 +115,7 @@ protected:
 	 * Returns the path to the file where to store pending scrobbles to.
 	 * It should be a non-empty string.
 	 */
-	virtual const std::string &getDataFilePath() const = 0;
+	virtual const afc::SimpleString &getDataFilePath() const = 0;
 
 	/**
 	 * Routine to be executed while Scrobbler is about to finish stopping itself.
@@ -176,14 +177,14 @@ protected:
 template<typename ScrobbleQueue>
 template<typename Iterator>
 inline bool Scrobbler<ScrobbleQueue>::storeScrobbles(Iterator begin, const Iterator end,
-		const std::string &dataFilePath, const char * const storeMode)
+		const afc::SimpleString &dataFilePath, const char * const storeMode)
 {
 	static_assert(std::is_convertible<decltype(*begin), const ScrobbleInfo &>::value,
 			"An iterator over ScrobbleInfo objects is expected.");
 	assert(storeMode != nullptr);
 
 	std::FILE *dataFile; // initialised by openDataFile();
-	if (openDataFile(dataFilePath, storeMode, true, dataFile) != O_OPENED) {
+	if (openDataFile(dataFilePath.c_str(), dataFilePath.size(), storeMode, true, dataFile) != O_OPENED) {
 		return false;
 	}
 
@@ -424,29 +425,39 @@ bool Scrobbler<ScrobbleQueue>::stop()
 
 template<typename ScrobbleQueue>
 // The last path element is considered as a file and therefore is not created.
-inline bool Scrobbler<ScrobbleQueue>::createParentDirs(const std::string &path)
+inline bool Scrobbler<ScrobbleQueue>::createParentDirs(const char * const path, const std::size_t pathSize)
 {
-	if (path.empty()) {
+	if (pathSize == 0) {
 		return true;
 	}
-	for (std::size_t start = path[0] == '/' ? 1 : 0;;) {
-		const std::size_t end = path.find_first_of('/', start);
-		if (end == std::string::npos) {
+
+	const char *start = path;
+	afc::FastStringBuffer<char> pathElementBuf(pathSize);
+	if (*path == '/') {
+		++start;
+		pathElementBuf.append('/');
+	}
+
+	for (;;) {
+		const char * const end = std::strchr(start, '/');
+		if (end == nullptr) {
 			return true;
 		}
-		if (mkdir(path.substr(0, end).c_str(), 0775) != 0 && errno != EEXIST) {
+		pathElementBuf.append(start, end);
+		if (mkdir(pathElementBuf.c_str(), 0775) != 0 && errno != EEXIST) {
 			return false;
 		}
 		start = end + 1;
+		pathElementBuf.append('/');
 	}
 }
 
 template<typename ScrobbleQueue>
 inline typename Scrobbler<ScrobbleQueue>::OpenResult
-Scrobbler<ScrobbleQueue>::openDataFile(const std::string &path, const char * const mode, const bool storeMode,
-		std::FILE *&dest)
+Scrobbler<ScrobbleQueue>::openDataFile(const char *path, std::size_t pathSize, const char * const mode,
+		const bool storeMode, std::FILE *&dest)
 {
-	if (path.empty()) {
+	if (pathSize) {
 		return O_ERROR;
 	}
 
@@ -457,14 +468,13 @@ Scrobbler<ScrobbleQueue>::openDataFile(const std::string &path, const char * con
 	 * - if the file exists and it a regular file or a symbolic link then proceed with
 	 *   loading/storing pending scrobbles from/into it
 	 */
-	const char * const cPath = path.c_str();
 	struct stat fileStatus;
-	if (stat(cPath, &fileStatus) != 0) {
+	if (stat(path, &fileStatus) != 0) {
 		if (errno == ENOTDIR || errno == ENOENT) {
 			if (!storeMode) {
 				return O_NOTEXIST;
 			}
-			if (!createParentDirs(path)) {
+			if (!createParentDirs(path, pathSize)) {
 				return O_ERROR;
 			}
 		} else {
@@ -475,7 +485,7 @@ Scrobbler<ScrobbleQueue>::openDataFile(const std::string &path, const char * con
 	}
 
 	// If we are here then the file either exists or the store mode is enabled.
-	dest = fopen(cPath, mode);
+	dest = fopen(path, mode);
 	// If the file is not opened here then reporting an error for both cases.
 	return dest != nullptr ? O_OPENED : O_ERROR;
 }
@@ -490,7 +500,8 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 	afc::logger::logDebugMsg("[Scrobbler] Loading pending scrobbles..."_s);
 
 	std::FILE *dataFile; // initialised by openDataFile();
-	const OpenResult openResult = openDataFile(getDataFilePath(), "rb", false, dataFile);
+	const afc::SimpleString &dataFilePath = getDataFilePath();
+	const OpenResult openResult = openDataFile(dataFilePath.c_str(), dataFilePath.size(), "rb", false, dataFile);
 	if (openResult == O_ERROR) {
 		return false;
 	} else if (openResult == O_NOTEXIST) {

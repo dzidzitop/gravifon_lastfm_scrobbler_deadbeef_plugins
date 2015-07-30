@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -129,15 +129,16 @@ namespace
 		logDebugMsg("[gravifon_scrobbler] Starting...");
 
 		// TODO think of making it configurable.
-		string dataFilePath;
-		if (::getDataFilePath("deadbeef/gravifon_scrobbler_data", dataFilePath) != 0) {
+		afc::FastStringBuffer<char> dataFilePath(255);
+		if (::getDataFilePath("deadbeef/gravifon_scrobbler_data"_s, dataFilePath) != 0) {
 			return 1;
 		}
 
 		/* must be invoked before gravifonClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		gravifonClient.setDataFilePath(move(dataFilePath));
+		const std::size_t dataFilePathSize = dataFilePath.size();
+		gravifonClient.setDataFilePath(afc::SimpleString(dataFilePath.detach(), dataFilePathSize));
 
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		if (enabled && !gravifonClient.start()) {
