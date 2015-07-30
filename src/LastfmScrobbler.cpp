@@ -88,7 +88,7 @@ namespace
 		std::size_t albumTitleSize;
 		if (track.hasAlbumTitle()) {
 			const afc::SimpleString &str = track.getAlbumTitle();
-			albumTitleData = str.value();
+			albumTitleData = str.data();
 			albumTitleSize = str.size();
 		} else {
 			albumTitleData = nullptr;
@@ -181,9 +181,9 @@ namespace
 		// TODO optimise parameter passing
 		builder.params(
 				// The artist name. Required.
-				scrobbleParamName, UrlPart<>(track.getArtists()[0].value(), track.getArtists()[0].size()),
+				scrobbleParamName, UrlPart<>(track.getArtists()[0].data(), track.getArtists()[0].size()),
 				// The track title. Required.
-				scrobbleParamName, UrlPart<>(track.getTitle().value(), track.getTitle().size()),
+				scrobbleParamName, UrlPart<>(track.getTitle().data(), track.getTitle().size()),
 				// The time the track started playing, in UNIX timestamp format. Required.
 				scrobbleParamName, scrobbleStartTs,
 				// The source of the track. Required. 'Chosen by the user' in all cases.
@@ -250,8 +250,8 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId),
-			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0].value(), track.getArtists()[0].size()),
-			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().value(), track.getTitle().size()),
+			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0].data(), track.getArtists()[0].size()),
+			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().data(), track.getTitle().size()),
 			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
 			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
 			// TODO Support track numbers.
