@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <string>
 #include <cassert>
+
+#include <afc/FastStringBuffer.hpp>
 
 // Removes trailing slash if it is not the only character in the path.
 inline void appendToPath(std::string &path, const char *child)
@@ -39,20 +41,45 @@ inline void appendToPath(std::string &path, const char *child)
 	path += child;
 }
 
+inline void appendToPath(afc::FastStringBuffer<char> &path, const char *child, const std::size_t childSize)
+{
+	path.reserve(childSize + 1); // '/' and whole child are to be appended at mos.
+
+	const bool needsSeparator = path.size() > 1 && *(path.end() - 1) != '/';
+	const bool childHasSeparator = child[0] == '/';
+	std::size_t effectiveChildSize = childSize;
+	if (needsSeparator) {
+		if (!childHasSeparator) {
+			path.append('/');
+		}
+	} else {
+		if (childHasSeparator) {
+			/* This works even if the path is an empty string.
+			 * Child's heading separator is deleted.
+			 */
+			++child;
+			--effectiveChildSize;
+		}
+	}
+	path.append(child, effectiveChildSize);
+}
+
 inline int getDataFilePath(const char * const shortFilePath, std::string &dest)
 {
 	assert(shortFilePath != nullptr);
 
 	const char * const dataDir = getenv("XDG_DATA_HOME");
 	if (dataDir != nullptr && dataDir[0] != '\0') {
-		dest = dataDir;
+		dest.append(dataDir);
 	} else {
 		// Trying to assign the default data dir ($HOME/.local/share/).
 		const char * const homeDir = getenv("HOME");
 		if (homeDir == nullptr || homeDir == '\0') {
 			return 1;
 		}
-		dest = homeDir;
+		const std::size_t homeDirSize = std::strlen(homeDir);
+		dest.append(homeDir, homeDirSize);
+		// TODO Optimise this call w.r.t. memory realloc
 		appendToPath(dest, ".local/share");
 	}
 	appendToPath(dest, shortFilePath);

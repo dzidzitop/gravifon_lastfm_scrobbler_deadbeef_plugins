@@ -104,9 +104,10 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 		const char * const username, const std::size_t usernameSize,
 		const char * const password, const std::size_t passwordSize)
 { lock_guard<mutex> lock(m_mutex);
-	string tmpUrl(serverUrl, serverUrlSize);
+	afc::FastStringBuffer<char> tmpUrl(serverUrlSize + "scrobbles"_s.size() + 1);
+	tmpUrl.append(serverUrl, serverUrlSize);
 	if (serverUrlSize > 0) {
-		appendToPath(tmpUrl, "scrobbles");
+		appendToPath(tmpUrl, "scrobbles", "scrobbles"_s.size());
 	}
 
 	// Curl expects the basic charset in headers.
@@ -124,13 +125,16 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 
 	tmpAuthHeader += encodeBase64(token);
 
-	const bool sameScrobblerUrl = m_scrobblerUrl == tmpUrl;
-	const bool sameAuthHeader = m_authHeader == tmpAuthHeader;
+	const bool sameScrobblerUrl = afc::equal(m_scrobblerUrl.begin(), m_scrobblerUrl.size(),
+			tmpUrl.begin(), tmpUrl.size());
+	const bool sameAuthHeader = afc::equal(m_authHeader.begin(), m_scrobblerUrl.size(),
+			tmpAuthHeader.begin(), tmpAuthHeader.size());
 
 	if (!sameScrobblerUrl || !sameAuthHeader) {
 		// The configuration has changed. Updating it as well as resetting the 'scrobbles to wait' counter.
 		if (!sameScrobblerUrl) {
-			m_scrobblerUrl = std::move(tmpUrl);
+			const std::size_t urlSize = tmpUrl.size();
+			m_scrobblerUrl.attach(tmpUrl.detach(), urlSize);
 		}
 		if (!sameAuthHeader) {
 			m_authHeader = std::move(tmpAuthHeader);
@@ -189,7 +193,8 @@ size_t GravifonScrobbler::doScrobbling()
 	request.headers.push_back("Accept-Charset: utf-8");
 
 	// Making a copy of shared data to pass outside the critical section.
-	const string scrobblerUrlCopy = m_scrobblerUrl;
+	afc::FastStringBuffer<char> scrobblerUrlCopy(m_scrobblerUrl.size());
+	scrobblerUrlCopy.append(m_scrobblerUrl.data(), m_scrobblerUrl.size());
 
 #ifndef NDEBUG
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();

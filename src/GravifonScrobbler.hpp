@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2014 Dźmitry Laŭčuk
+Copyright (C) 2014-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <mutex>
 #include <string>
 #include <utility>
+
+#include <afc/SimpleString.hpp>
 
 // TODO think of choosing a better in-memory container for pending scrobbles (issue #16).
 class GravifonScrobbler : public Scrobbler<std::list<ScrobbleInfo>>
@@ -65,7 +67,7 @@ protected:
 
 	virtual void stopExtra() override;
 private:
-	std::string m_scrobblerUrl;
+	afc::SimpleString m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
 	std::string m_authHeader;
 
