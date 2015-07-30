@@ -193,8 +193,7 @@ size_t GravifonScrobbler::doScrobbling()
 	request.headers.push_back("Accept-Charset: utf-8");
 
 	// Making a copy of shared data to pass outside the critical section.
-	afc::FastStringBuffer<char> scrobblerUrlCopy(m_scrobblerUrl.size());
-	scrobblerUrlCopy.append(m_scrobblerUrl.data(), m_scrobblerUrl.size());
+	afc::SimpleString scrobblerUrlCopy(m_scrobblerUrl);
 
 #ifndef NDEBUG
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();

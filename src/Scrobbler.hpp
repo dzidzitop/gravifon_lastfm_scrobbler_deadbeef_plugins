@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstdio>
 #include <iterator>
 #include <mutex>
-#include <string>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -457,7 +456,7 @@ inline typename Scrobbler<ScrobbleQueue>::OpenResult
 Scrobbler<ScrobbleQueue>::openDataFile(const char *path, std::size_t pathSize, const char * const mode,
 		const bool storeMode, std::FILE *&dest)
 {
-	if (pathSize) {
+	if (pathSize == 0) {
 		return O_ERROR;
 	}
 
@@ -513,7 +512,7 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 	assert(dataFile != nullptr);
 
 	bool result = true;
-	std::string buf;
+	afc::FastStringBuffer<char> buf;
 	for (;;) {
 		const int c = std::fgetc(dataFile);
 		if (c == EOF) {
@@ -532,7 +531,8 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 				goto finish;
 			}
 		} else {
-			buf += (char) c;
+			buf.reserve(buf.size() + 1);
+			buf.append(static_cast<char>(c));
 		}
 	}
 	if (feof(dataFile) == 0) {
@@ -541,7 +541,7 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 		/* The last byte of the data file must be either 0x0a or just the end
 		 * of the last scrobble. In either case buf is empty.
 		 */
-		result &= buf.empty();
+		result &= (buf.size() == 0);
 	}
 finish:
 	if (std::fclose(dataFile) != 0) {

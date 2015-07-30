@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <deque>
 #include <mutex>
-#include <string>
 #include <utility>
 
 #include <afc/ensure_ascii.hpp>
@@ -90,15 +89,15 @@ private:
 
 	void submitNowPlayingTrack();
 
-	std::string m_scrobblerUrl;
-	std::string m_username;
-	std::string m_password;
+	afc::SimpleString m_scrobblerUrl;
+	afc::SimpleString m_username;
+	afc::SimpleString m_password;
 
 	afc::SimpleString m_dataFilePath;
 
-	std::string m_sessionId;
-	std::string m_submissionUrl;
-	std::string m_nowPlayingUrl;
+	afc::SimpleString m_sessionId;
+	afc::SimpleString m_submissionUrl;
+	afc::SimpleString m_nowPlayingUrl;
 
 	Track m_nowPlayingTrack;
 

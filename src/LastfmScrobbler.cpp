@@ -50,7 +50,8 @@ using namespace afc::url;
 
 namespace
 {
-	inline UrlBuilder<webForm> buildAuthUrl(const string &scrobblerUrl, const string &username, const string &password)
+	inline UrlBuilder<webForm> buildAuthUrl(const afc::SimpleString &scrobblerUrl, const afc::SimpleString &username,
+			const afc::SimpleString &password)
 	{
 		constexpr size_t maxTimestampSize = afc::maxPrintedSize<long, 10>();
 
@@ -61,7 +62,7 @@ namespace
 		char tmp[digestSize + maxTimestampSize];
 		// md5(password). In addition, the timestamp is stored right after the end of this digest.
 		// TODO check that this reinterpret_cast conforms to the C++11 standard.
-		char * const timestampStart = md5String(reinterpret_cast<const unsigned char *>(password.c_str()), password.size(), tmp);
+		char * const timestampStart = md5String(reinterpret_cast<const unsigned char *>(password.data()), password.size(), tmp);
 		// md5(password) + timestamp
 		char * const timestampEnd = printNumber<10>(now().millis() / 1000, timestampStart);
 		// Finally, generating authToken.
@@ -69,12 +70,12 @@ namespace
 		md5String(reinterpret_cast<const unsigned char *>(tmp), timestampEnd - tmp, authToken);
 
 		// TODO set real client ID and version.
-		return UrlBuilder<webForm>(scrobblerUrl,
+		return UrlBuilder<webForm>(scrobblerUrl.data(), scrobblerUrl.size(),
 				UrlPart<raw>("hs"_s), UrlPart<raw>("true"_s),
 				UrlPart<raw>("p"_s), UrlPart<raw>("1.2.1"_s),
 				UrlPart<raw>("c"_s), UrlPart<raw>("tst"_s),
 				UrlPart<raw>("v"_s), UrlPart<raw>("1.0"_s),
-				UrlPart<raw>("u"_s), UrlPart<>(username),
+				UrlPart<raw>("u"_s), UrlPart<>(username.data(), username.size()),
 				/* Neither timestamp nor authToken need to be URL-encoded since they are
 				 * decimal and hex numbers, respectively.
 				 */
@@ -249,7 +250,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	// TODO optimise parameter passing
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
-			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId),
+			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId.data(), m_sessionId.size()),
 			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0].data(), track.getArtists()[0].size()),
 			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().data(), track.getTitle().size()),
 			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
@@ -265,7 +266,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
-	const string nowPlayingUrlCopy(m_nowPlayingUrl);
+	const afc::SimpleString nowPlayingUrlCopy(m_nowPlayingUrl);
 
 	/* No conversion to the system encoding is used as the response body is assumed to be in
 	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
@@ -365,25 +366,19 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 
 	bool reconfigured = false;
 
-	const bool urlsEqual = serverUrlSize == m_scrobblerUrl.size() &&
-			std::equal(serverUrl, serverUrl + serverUrlSize, m_scrobblerUrl.begin());
-	if (!urlsEqual) {
+	if (!afc::equal(serverUrl, serverUrlSize, m_scrobblerUrl.begin(), m_scrobblerUrl.size())) {
 		m_scrobblerUrl.assign(serverUrl, serverUrlSize);
 		reconfigured = true;
 	}
 
 	const std::size_t usernameSize = std::strlen(username);
-	const bool usernamesEqual = usernameSize == m_username.size() &&
-			std::equal(username, username + usernameSize, m_username.begin());
-	if (!usernamesEqual) {
+	if (!afc::equal(username, usernameSize, m_username.begin(), m_username.size())) {
 		m_username.assign(username, usernameSize);
 		reconfigured = true;
 	}
 
 	const std::size_t passwordSize = std::strlen(password);
-	const bool passwordsEqual = passwordSize == m_password.size() &&
-			std::equal(password, password + passwordSize, m_password.begin());
-	if (!passwordsEqual) {
+	if (!afc::equal(password, passwordSize, m_password.begin(), m_password.size())) {
 		m_password.assign(password, passwordSize);
 		reconfigured = true;
 	}
@@ -427,7 +422,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	// Adding up to maxScrobblesPerRequest scrobbles to the request.
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
-			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId));
+			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId.data(), m_sessionId.size()));
 
 	/* Points to the position after the end of the chunk of scrobbles submitted and is used
 	 * to remove these scrobbles from the queue if they are submitted successfully.
@@ -443,7 +438,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
-	const string submissionUrlCopy(m_submissionUrl);
+	const afc::SimpleString submissionUrlCopy(m_submissionUrl);
 
 #ifndef NDEBUG
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();

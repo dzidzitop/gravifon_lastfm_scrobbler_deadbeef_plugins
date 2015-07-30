@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <memory>
 #include <chrono>
 #include <cstring>
-#include <string>
 #include <utility>
 
 #include <afc/logger.hpp>
