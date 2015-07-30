@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <list>
 #include <mutex>
-#include <string>
 #include <utility>
 
 #include <afc/SimpleString.hpp>
@@ -69,7 +68,7 @@ protected:
 private:
 	afc::SimpleString m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
-	std::string m_authHeader;
+	afc::SimpleString m_authHeader;
 
 	afc::SimpleString m_dataFilePath;
 };

@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2015 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonScrobbler.hpp"
 #include <cassert>
+#include <string>
 #include <afc/base64.hpp>
 #include "HttpClient.hpp"
 #include <jsoncpp/json/value.h>
@@ -111,7 +112,8 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 	}
 
 	// Curl expects the basic charset in headers.
-	string tmpAuthHeader("Authorization: Basic "); // HTTP Basic authentication is used.
+	afc::FastStringBuffer<char> tmpAuthHeader("Authorization: Basic "_s.size() + 2 * (usernameSize + passwordSize + 1)); // base64 makes 4 bytes out of 3.
+	tmpAuthHeader.append("Authorization: Basic "_s); // HTTP Basic authentication is used.
 
 	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
@@ -122,8 +124,9 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 	token.append(username, usernameSize);
 	token += ':';
 	token.append(password, passwordSize);
+	string encodedToken = encodeBase64(token);
 
-	tmpAuthHeader += encodeBase64(token);
+	tmpAuthHeader.append(encodedToken.data(), encodedToken.size());
 
 	const bool sameScrobblerUrl = afc::equal(m_scrobblerUrl.begin(), m_scrobblerUrl.size(),
 			tmpUrl.begin(), tmpUrl.size());
@@ -137,7 +140,8 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 			m_scrobblerUrl.attach(tmpUrl.detach(), urlSize);
 		}
 		if (!sameAuthHeader) {
-			m_authHeader = std::move(tmpAuthHeader);
+			const std::size_t authHeaderSize = tmpAuthHeader.size();
+			m_authHeader.attach(tmpAuthHeader.detach(), authHeaderSize);
 		}
 		m_scrobblesToWait = minScrobblesToWait();
 	}
