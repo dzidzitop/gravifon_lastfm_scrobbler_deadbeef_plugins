@@ -86,7 +86,7 @@ namespace
 				"lastfmScrobbler.lastfmUrl", u8"http://post.audioscrobbler.com");
 		const std::size_t lastfmUrlSize = std::strlen(lastfmUrl);
 		if (!isAscii(lastfmUrl, lastfmUrlSize)) {
-			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Last.fm."_s);
+			logErrorMsg("[lastfm_scrobbler] Non-ASCII characters are present in the URL to Last.fm."_s);
 			lastfmClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
