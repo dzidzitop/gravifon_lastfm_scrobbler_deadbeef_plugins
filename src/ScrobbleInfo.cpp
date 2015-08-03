@@ -21,20 +21,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/json.hpp>
 #include <afc/logger.hpp>
 #include <afc/number.h>
 #include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
-#include <jsoncpp/json/value.h>
-#include <jsoncpp/json/reader.h>
-#include "jsonutil.hpp"
+#include <afc/utils.h>"
 
 using namespace std;
 
 using afc::operator"" _s;
-
-using Json::Value;
-using Json::ValueType;
 
 namespace
 {
@@ -202,122 +198,449 @@ namespace
 		return dest;
 	}
 
-	inline bool parseDateTime(const Value &dateTimeObject, afc::TimestampTZ &dest) noexcept
+	template<typename ErrorHandler>
+	inline const char *parseText(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
 	{
-		return likely(isType(dateTimeObject, stringValue)) &&
-				likely(parseISODateTime(dateTimeObject.asCString(), dest));
+		assert(dest.size() == 0);
+
+		return afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return afc::json::parseCharsToUTF8(begin, end, [&](const char c) { dest.reserve(dest.size() + 1); dest.append(c); }, errorHandler);
+		}, errorHandler);
 	}
 
-	inline bool parseDuration(const Value &durationObject, long &dest)
+	template<typename ErrorHandler>
+	inline const char *parseDateTime(const char * const begin, const char * const end, afc::TimestampTZ &dest, ErrorHandler &errorHandler) noexcept
 	{
-		if (unlikely(!isType(durationObject, objectValue))) {
-			return false;
-		}
-		const Value &amount = getField(durationObject, "amount");
-		const Value &unit = getField(durationObject, "unit");
-		if (unlikely(!isType(amount, intValue)) || unlikely(!isType(unit, stringValue))) {
-			return false;
-		}
-		const long val = amount.asInt();
-		const char * const unitValue = unit.asCString();
-		if (unitValue[0] == 'm' && likely(unitValue[1] == 's' && unitValue[2] == '\0')) { // == "ms"
-			dest = val;
-			return true;
-		} else if (unitValue[0] == 's' && likely(unitValue[1] == '\0')) { // == "s"
-			dest = val * 1000;
-			return true;
-		}
-		return false;
+		return afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					const char * const valueEnd = std::find(begin, end, u8"\""[0]);
+					if (valueEnd == end) {
+						errorHandler.prematureEnd();
+						return end;
+					}
+					if (likely(parseISODateTime(afc::SimpleString(begin, valueEnd).c_str(), dest))) {
+						return valueEnd;
+					} else {
+						errorHandler.malformedJson(begin);
+						return end;
+					}
+				}, errorHandler);
 	}
 
-	template<typename AddArtistOp>
-	inline bool parseArtists(const Value &artists, const bool artistsRequired, AddArtistOp addArtistOp)
+	// TOOD defined noexcept
+	template<typename ErrorHandler>
+	inline const char *parseDuration(const char * const begin, const char * const end, long &dest, ErrorHandler &errorHandler)
 	{
-		typedef decltype(Value::size()) artistSize_t;
+		unsigned multiplier = 0;
+		auto durationParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			const char *p = begin;
+			for (std::size_t fieldsToParse = 1 | (1 << 1);;) { // All fields are required.
+				// TODO optimise property name matching.
+				const char *propNameBegin;
+				std::size_t propNameSize;
 
-		const ValueType valueType = artists.type();
-		if (unlikely(valueType != nullValue && valueType != arrayValue)) {
-			return false;
-		}
-		const artistSize_t artistCount = artists.size();
-		if (artistCount == 0) {
-			return !artistsRequired;
-		}
+				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+						{
+							propNameBegin = begin;
+							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+							propNameSize = propNameEnd - propNameBegin;
+							return propNameEnd;
+						}, errorHandler);
 
-		artistSize_t i = 0;
-		do {
-			const Value &artist = artists[i];
-			if (unlikely(!isType(artist, objectValue))) {
-				return false;
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				if (afc::equal("amount", "amount"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1);
+
+					auto durationAmountParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
+							{
+								const char * const p = afc::parseNumber<10>(begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
+								if (unlikely(!errorHandler.valid())) {
+									return end;
+								}
+								return p;
+							};
+
+					p = afc::json::parseNumber(p, end, durationAmountParser, errorHandler);
+					// TODO handle errors.
+				} else if (afc::equal("unit", "unit"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1 << 1);
+
+					auto unitValueParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+					{
+						const char * const unitEnd = std::find(begin, end, u8"\""[0]);
+						if (unitEnd == end) {
+							return end;
+						}
+						switch (unitEnd - begin) {
+						case 1:
+							if (likely(begin[0] == u8"s"[0])) {
+								multiplier = 1000;
+								return unitEnd;
+							} else {
+								errorHandler.malformedJson(begin);
+								return end;
+							}
+						case 2:
+							if (unlikely(begin[0] != u8"m"[0] || begin[1] != u8"s"[0])) {
+								errorHandler.malformedJson(begin);
+								return end;
+							}
+							multiplier = 1;
+							return unitEnd;
+						default:
+							errorHandler.malformedJson(begin);
+							return end;
+						}
+					};
+
+					p = afc::json::parseString(p, end, unitValueParser, errorHandler);
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+
+				if (fieldsToParse == 0) {
+					return p;
+				}
+
+				if (unlikely(p == end)) {
+					errorHandler.prematureEnd();
+					return end;
+				}
+				const char c = *p;
+				if (likely(c == u8","[0])) {
+					++p;
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
 			}
-			const Value &artistName = getField(artist, "name");
-			if (unlikely(!isType(artistName, stringValue))) {
-				return false;
-			}
-			addArtistOp(artistName.asCString());
-		} while (++i < artistCount);
+		};
 
-		return true;
+		return afc::json::parseObject(begin, end, durationParser, errorHandler);
+	}
+
+	template<typename AddArtistOp, typename ErrorHandler>
+	inline const char *parseArtists(const char * const begin, const char * const end, AddArtistOp addArtistOp, ErrorHandler &errorHandler)
+	{
+		auto artistParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return afc::json::parseObject(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
+					{
+						const char *p = afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+								{
+									if (unlikely(end - begin < 4 || begin[0] != u8"n"[0] || begin[1] != u8"a"[0] || begin[2] != u8"m"[0] || begin[3] != u8"e"[0])) {
+										errorHandler.malformedJson(begin);
+										return end;
+									} else {
+										return begin + 4;
+									}
+								}, errorHandler);
+
+						if (unlikely(!errorHandler.valid())) {
+							return end;
+						}
+
+						p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+						if (unlikely(!errorHandler.valid())) {
+							return end;
+						}
+
+						afc::FastStringBuffer<char> buf(0);
+						p = parseText(p, end, buf, errorHandler);
+
+						if (unlikely(!errorHandler.valid())) {
+							return end;
+						}
+
+						std::size_t bufSize = buf.size();
+						addArtistOp(afc::SimpleString(buf.detach(), bufSize));
+
+						return p;
+					}, errorHandler);
+		};
+
+		return afc::json::parseArray(begin, end, artistParser, errorHandler);
+	}
+
+	template<typename ErrorHandler>
+	inline const char *parseAlbum(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	{
+		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			const char *p = begin;
+			for (std::size_t fieldsToParse = 1;;) {
+				// TODO optimise property name matching.
+				const char *propNameBegin;
+				std::size_t propNameSize;
+
+				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+						{
+							propNameBegin = begin;
+							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+							propNameSize = propNameEnd - propNameBegin;
+							return propNameEnd;
+						}, errorHandler);
+
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1);
+
+					afc::FastStringBuffer<char> buf;
+					p = parseText(p, end, buf, errorHandler);
+
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+
+					std::size_t bufSize = buf.size();
+					dest.setAlbumTitle(afc::SimpleString(buf.detach(), bufSize));
+				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
+					p = parseArtists(p, end, [&](afc::SimpleString &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+
+				if (p == end) {
+					errorHandler.prematureEnd();
+					return end;
+				}
+				const char c = *p;
+				if (c == u8","[0]) {
+					++p;
+				} else if (c == u8"}"[0]) {
+					if (unlikely(fieldsToParse != 0)) {
+						errorHandler.malformedJson(p);
+						return end;
+					}
+
+					return p;
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+			}
+		};
+
+		return afc::json::parseObject(begin, end, trackParser, errorHandler);
+	}
+
+	template<typename ErrorHandler>
+	inline const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	{
+		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			const char *p = begin;
+			for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2);;) {
+				// TODO optimise property name matching.
+				const char *propNameBegin;
+				std::size_t propNameSize;
+
+				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+						{
+							propNameBegin = begin;
+							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+							propNameSize = propNameEnd - propNameBegin;
+							return propNameEnd;
+						}, errorHandler);
+
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1);
+
+					afc::FastStringBuffer<char> buf(0);
+					p = parseText(p, end, buf, errorHandler);
+
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+
+					std::size_t bufSize = buf.size();
+					dest.setTitle(afc::SimpleString(buf.detach(), bufSize));
+				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1 << 1);
+
+					p = parseArtists(p, end, [&](afc::SimpleString &&artistName) { dest.addArtist(std::move(artistName)); }, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+				} else if (afc::equal("length", "length"_s.size(), propNameBegin, propNameSize)) {
+					fieldsToParse &= ~std::size_t(1 << 2);
+
+					long trackDuration;
+					p = parseDuration(p, end, trackDuration, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+
+					dest.setDurationMillis(trackDuration);
+				} else if (afc::equal("album", "album"_s.size(), propNameBegin, propNameSize)) {
+					p = parseAlbum(p, end, dest, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+
+				if (p == end) {
+					errorHandler.prematureEnd();
+					return end;
+				}
+				const char c = *p;
+				if (c == u8","[0]) {
+					++p;
+				} else if (c == u8"}"[0]) {
+					if (unlikely(fieldsToParse != 0)) {
+						errorHandler.malformedJson(p);
+						return end;
+					}
+
+					return p;
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+			}
+		};
+
+		return afc::json::parseObject(begin, end, trackParser, errorHandler);
 	}
 }
 
 bool ScrobbleInfo::parse(const char * const begin, const char * const end, ScrobbleInfo &dest)
 {
-	Json::Reader jsonReader;
-	Value object;
+	class ErrorHandler
+	{
+	public:
+		ErrorHandler(void) : m_valid(true) {}
 
-	if (unlikely(!jsonReader.parse(begin, end, object, false))) {
-		afc::logger::logError("[Scrobbler] Unable to parse the scrobble JSON object: '#'.",
-				jsonReader.getFormatedErrorMessages().c_str());
-		return false;
-	}
-	if (unlikely(!isType(object, objectValue))) {
-		return false;
-	}
-	if (unlikely(!parseDateTime(getField(object, "scrobble_start_datetime"), dest.scrobbleStartTimestamp)) ||
-			unlikely(!parseDateTime(getField(object, "scrobble_end_datetime"), dest.scrobbleEndTimestamp)) ||
-			unlikely(!parseDuration(getField(object, "scrobble_duration"), dest.scrobbleDuration))) {
-		return false;
-	}
-
-	Track &track = dest.track;
-
-	const Value &trackObject = getField(object, "track");
-	if (unlikely(!isType(trackObject, objectValue))) {
-		return false;
-	}
-	const Value &trackTitle = getField(trackObject, "title");
-	if (unlikely(!isType(trackTitle, stringValue))) {
-		return false;
-	}
-	track.setTitle(trackTitle.asCString());
-
-	const Value &trackAlbum = getField(trackObject, "album");
-	const ValueType trackAlbumObjType = trackAlbum.type();
-	if (trackAlbumObjType != nullValue) {
-		if (unlikely(trackAlbumObjType != objectValue)) {
-			return false;
+		void malformedJson(const char *pos)
+		{
+			// TODO handle error;
+			m_valid = false;
 		}
-		const Value &trackAlbumTitle = getField(trackAlbum, "title");
-		if (unlikely(!isType(trackAlbumTitle, stringValue))) {
-			return false;
+
+		void prematureEnd()
+		{
+			// TODO handle error;
+			m_valid = false;
 		}
-		track.setAlbumTitle(trackAlbumTitle.asCString());
 
-		if (unlikely(!parseArtists(getField(trackAlbum, "artists"), false,
-				[&](const char * const artistName) { track.addAlbumArtist(artistName); }))) {
-			return false;
+		bool valid() { return m_valid; }
+	private:
+		bool m_valid;
+	} errorHandler;
+
+	auto scrobbleParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+	{
+		const char *p = begin;
+		// TODO handle properties.
+		for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2) | (1 << 3); fieldsToParse != 0;) { // All fields are required.
+			// TODO optimise property name matching.
+			const char *propNameBegin;
+			std::size_t propNameSize;
+
+			p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+					{
+						propNameBegin = begin;
+						const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+						propNameSize = propNameEnd - propNameBegin;
+						return propNameEnd;
+					}, errorHandler);
+
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			if (afc::equal("scrobble_start_datetime", "scrobble_start_datetime"_s.size(), propNameBegin, propNameSize)) {
+				fieldsToParse &= ~std::size_t(1);
+
+				p = parseDateTime(p, end, dest.scrobbleStartTimestamp, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+			} else if (afc::equal("scrobble_end_datetime", "scrobble_end_datetime"_s.size(), propNameBegin, propNameSize)) {
+				fieldsToParse &= ~std::size_t(1 << 1);
+
+				p = parseDateTime(p, end, dest.scrobbleEndTimestamp, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+			} else if (afc::equal("scrobble_duration", "scrobble_duration"_s.size(), propNameBegin, propNameSize)) {
+				fieldsToParse &= ~std::size_t(1 << 2);
+
+				p = parseDuration<ErrorHandler &>(p, end, dest.scrobbleDuration, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+			} else if (afc::equal("track", "track"_s.size(), propNameBegin, propNameSize)) {
+				fieldsToParse &= ~std::size_t(1 << 3);
+
+				p = parseTrack<ErrorHandler &>(p, end, dest.track, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+			}
+
+			if (fieldsToParse == 0) {
+				return p;
+			}
+
+			if (unlikely(p == end)) {
+				errorHandler.prematureEnd();
+				return end;
+			}
+			const char c = *p;
+			if (likely(c == u8","[0])) {
+				++p;
+			} else {
+				errorHandler.malformedJson(p);
+				return end;
+			}
 		}
-	}
+	};
 
-	long trackDuration;
-	if (unlikely(!parseDuration(getField(trackObject, "length"), trackDuration))) {
-		return false;
-	}
-	track.setDurationMillis(trackDuration);
+	const char * const p = afc::json::parseObject(begin, end, scrobbleParser, errorHandler);
 
-	if (unlikely(!parseArtists(getField(trackObject, "artists"), true,
-			[&](const char * const artistName) { track.addArtist(artistName); }))) {
+	if (unlikely(!errorHandler.valid() || p != end)) {
+		// TODO handle error.
 		return false;
 	}
 

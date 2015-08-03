@@ -38,6 +38,7 @@ public:
 
 	Track &operator=(Track &&) = default;
 
+	void setTitle(afc::SimpleString &&trackTitle) { m_title = std::move(trackTitle); m_titleSet = true; }
 	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
 	afc::SimpleString &getTitle() noexcept { assert(m_titleSet); return m_title; }
 	const afc::SimpleString &getTitle() const noexcept { assert(m_titleSet); return m_title; }
@@ -55,6 +56,7 @@ public:
 	const std::vector<afc::SimpleString> &getAlbumArtists() const noexcept { return m_albumArtists; }
 	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
 
+	void setAlbumTitle(afc::SimpleString &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
 	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
 	afc::SimpleString &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
 	const afc::SimpleString &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
