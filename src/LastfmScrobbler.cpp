@@ -364,6 +364,8 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 	assert(username != nullptr);
 	assert(password != nullptr);
 
+	logDebugMsg("[LastfmScrobbler] Configuring..."_s);
+
 	bool reconfigured = false;
 
 	if (!afc::equal(serverUrl, serverUrlSize, m_scrobblerUrl.begin(), m_scrobblerUrl.size())) {
@@ -390,6 +392,8 @@ void LastfmScrobbler::configure(const char * const serverUrl, const std::size_t 
 	}
 
 	m_configured = true;
+
+	logDebugMsg("[LastfmScrobbler] Configuring completed."_s);
 }
 
 std::size_t LastfmScrobbler::doScrobbling()
