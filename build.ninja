@@ -42,7 +42,7 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
     $buildDir/ScrobbleInfo.o
-  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
+  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl
 
 build $buildDir/unit_tests: bin $
     $buildDir/GravifonScrobbler.o $
