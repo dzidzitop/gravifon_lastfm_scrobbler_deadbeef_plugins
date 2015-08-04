@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/number.h>
 #include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
-#include <afc/utils.h>"
+#include <afc/utils.h>
 
 using namespace std;
 
@@ -203,29 +203,35 @@ namespace
 	{
 		assert(dest.size() == 0);
 
-		return afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		auto textParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			return afc::json::parseCharsToUTF8(begin, end, [&](const char c) { dest.reserve(dest.size() + 1); dest.append(c); }, errorHandler);
-		}, errorHandler);
+		};
+
+		return afc::json::parseString<const char *, decltype(textParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, textParser, errorHandler);
 	}
 
 	template<typename ErrorHandler>
 	inline const char *parseDateTime(const char * const begin, const char * const end, afc::TimestampTZ &dest, ErrorHandler &errorHandler) noexcept
 	{
-		return afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-				{
-					const char * const valueEnd = std::find(begin, end, u8"\""[0]);
-					if (valueEnd == end) {
-						errorHandler.prematureEnd();
-						return end;
-					}
-					if (likely(parseISODateTime(afc::SimpleString(begin, valueEnd).c_str(), dest))) {
-						return valueEnd;
-					} else {
-						errorHandler.malformedJson(begin);
-						return end;
-					}
-				}, errorHandler);
+		auto timestampParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			const char * const valueEnd = std::find(begin, end, u8"\""[0]);
+			if (valueEnd == end) {
+				errorHandler.prematureEnd();
+				return end;
+			}
+			if (likely(parseISODateTime(afc::SimpleString(begin, valueEnd).c_str(), dest))) {
+				return valueEnd;
+			} else {
+				errorHandler.malformedJson(begin);
+				return end;
+			}
+		};
+
+		return afc::json::parseString<const char *, decltype(timestampParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, timestampParser, errorHandler);
 	}
 
 	// TOOD defined noexcept
@@ -241,13 +247,16 @@ namespace
 				const char *propNameBegin;
 				std::size_t propNameSize;
 
-				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-						{
-							propNameBegin = begin;
-							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-							propNameSize = propNameEnd - propNameBegin;
-							return propNameEnd;
-						}, errorHandler);
+				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					propNameBegin = begin;
+					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+					propNameSize = propNameEnd - propNameBegin;
+					return propNameEnd;
+				};
+
+				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+						(p, end, propNameParser, errorHandler);
 
 				if (unlikely(!errorHandler.valid())) {
 					return end;
@@ -262,15 +271,16 @@ namespace
 					fieldsToParse &= ~std::size_t(1);
 
 					auto durationAmountParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
-							{
-								const char * const p = afc::parseNumber<10>(begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
-								if (unlikely(!errorHandler.valid())) {
-									return end;
-								}
-								return p;
-							};
+					{
+						const char * const p = afc::parseNumber<10>(begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
+						if (unlikely(!errorHandler.valid())) {
+							return end;
+						}
+						return p;
+					};
 
-					p = afc::json::parseNumber(p, end, durationAmountParser, errorHandler);
+					p = afc::json::parseNumber<const char *, decltype(durationAmountParser) &, ErrorHandler, afc::json::noSpaces>
+							(p, end, durationAmountParser, errorHandler);
 					// TODO handle errors.
 				} else if (afc::equal("unit", "unit"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
@@ -303,7 +313,8 @@ namespace
 						}
 					};
 
-					p = afc::json::parseString(p, end, unitValueParser, errorHandler);
+					p = afc::json::parseString<const char *, decltype(unitValueParser) &, ErrorHandler, afc::json::noSpaces>
+							(p, end, unitValueParser, errorHandler);
 				} else {
 					errorHandler.malformedJson(p);
 					return end;
@@ -327,56 +338,64 @@ namespace
 			}
 		};
 
-		return afc::json::parseObject(begin, end, durationParser, errorHandler);
+		return afc::json::parseObject<const char *, decltype(durationParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, durationParser, errorHandler);
 	}
 
 	template<typename AddArtistOp, typename ErrorHandler>
 	inline const char *parseArtists(const char * const begin, const char * const end, AddArtistOp addArtistOp, ErrorHandler &errorHandler)
 	{
-		auto artistParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		auto artistElementParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
-			return afc::json::parseObject(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
-					{
-						const char *p = afc::json::parseString(begin, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-								{
-									if (unlikely(end - begin < 4 || begin[0] != u8"n"[0] || begin[1] != u8"a"[0] || begin[2] != u8"m"[0] || begin[3] != u8"e"[0])) {
-										errorHandler.malformedJson(begin);
-										return end;
-									} else {
-										return begin + 4;
-									}
-								}, errorHandler);
+			auto artistParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
+			{
+				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					if (unlikely(end - begin < 4 || begin[0] != u8"n"[0] || begin[1] != u8"a"[0] || begin[2] != u8"m"[0] || begin[3] != u8"e"[0])) {
+						errorHandler.malformedJson(begin);
+						return end;
+					} else {
+						return begin + 4;
+					}
+				};
 
-						if (unlikely(!errorHandler.valid())) {
-							return end;
-						}
+				const char *p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+						(begin, end, propNameParser, errorHandler);
 
-						p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
-						if (unlikely(!errorHandler.valid())) {
-							return end;
-						}
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
 
-						afc::FastStringBuffer<char> buf(0);
-						p = parseText(p, end, buf, errorHandler);
+				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
 
-						if (unlikely(!errorHandler.valid())) {
-							return end;
-						}
+				afc::FastStringBuffer<char> buf(0);
+				p = parseText(p, end, buf, errorHandler);
 
-						std::size_t bufSize = buf.size();
-						addArtistOp(afc::SimpleString(buf.detach(), bufSize));
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
 
-						return p;
-					}, errorHandler);
+				std::size_t bufSize = buf.size();
+				addArtistOp(afc::SimpleString(buf.detach(), bufSize));
+
+				return p;
+			};
+
+			return afc::json::parseObject<const char *, decltype(artistParser) &, ErrorHandler, afc::json::noSpaces>
+					(begin, end, artistParser, errorHandler);
 		};
 
-		return afc::json::parseArray(begin, end, artistParser, errorHandler);
+		return afc::json::parseArray<const char *, decltype(artistElementParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, artistElementParser, errorHandler);
 	}
 
 	template<typename ErrorHandler>
 	inline const char *parseAlbum(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
 	{
-		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		auto albumParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			const char *p = begin;
 			for (std::size_t fieldsToParse = 1;;) {
@@ -384,13 +403,16 @@ namespace
 				const char *propNameBegin;
 				std::size_t propNameSize;
 
-				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-						{
-							propNameBegin = begin;
-							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-							propNameSize = propNameEnd - propNameBegin;
-							return propNameEnd;
-						}, errorHandler);
+				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					propNameBegin = begin;
+					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+					propNameSize = propNameEnd - propNameBegin;
+					return propNameEnd;
+				};
+
+				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+						(p, end, propNameParser, errorHandler);
 
 				if (unlikely(!errorHandler.valid())) {
 					return end;
@@ -444,7 +466,8 @@ namespace
 			}
 		};
 
-		return afc::json::parseObject(begin, end, trackParser, errorHandler);
+		return afc::json::parseObject<const char *, decltype(albumParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, albumParser, errorHandler);
 	}
 
 	template<typename ErrorHandler>
@@ -458,13 +481,16 @@ namespace
 				const char *propNameBegin;
 				std::size_t propNameSize;
 
-				p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-						{
-							propNameBegin = begin;
-							const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-							propNameSize = propNameEnd - propNameBegin;
-							return propNameEnd;
-						}, errorHandler);
+				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					propNameBegin = begin;
+					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+					propNameSize = propNameEnd - propNameBegin;
+					return propNameEnd;
+				};
+
+				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+						(p, end, propNameParser, errorHandler);
 
 				if (unlikely(!errorHandler.valid())) {
 					return end;
@@ -535,7 +561,8 @@ namespace
 			}
 		};
 
-		return afc::json::parseObject(begin, end, trackParser, errorHandler);
+		return afc::json::parseObject<const char *, decltype(trackParser) &, ErrorHandler, afc::json::noSpaces>
+				(begin, end, trackParser, errorHandler);
 	}
 }
 
@@ -567,18 +594,21 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	{
 		const char *p = begin;
 		// TODO handle properties.
-		for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2) | (1 << 3); fieldsToParse != 0;) { // All fields are required.
+		for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2) | (1 << 3);;) { // All fields are required.
 			// TODO optimise property name matching.
 			const char *propNameBegin;
 			std::size_t propNameSize;
 
-			p = afc::json::parseString(p, end, [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-					{
-						propNameBegin = begin;
-						const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-						propNameSize = propNameEnd - propNameBegin;
-						return propNameEnd;
-					}, errorHandler);
+			auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				propNameBegin = begin;
+				const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+				propNameSize = propNameEnd - propNameBegin;
+				return propNameEnd;
+			};
+
+			p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+					(p, end, propNameParser, errorHandler);
 
 			if (unlikely(!errorHandler.valid())) {
 				return end;
@@ -637,7 +667,8 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 		}
 	};
 
-	const char * const p = afc::json::parseObject(begin, end, scrobbleParser, errorHandler);
+	const char * const p = afc::json::parseObject<const char *, decltype(scrobbleParser) &, ErrorHandler, afc::json::noSpaces>
+			(begin, end, scrobbleParser, errorHandler);
 
 	if (unlikely(!errorHandler.valid() || p != end)) {
 		// TODO handle error.
