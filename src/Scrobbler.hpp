@@ -531,7 +531,7 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 				goto finish;
 			}
 		} else {
-			buf.reserve(buf.size() + 1);
+			buf.reserveForOne();
 			buf.append(static_cast<char>(c));
 		}
 	}

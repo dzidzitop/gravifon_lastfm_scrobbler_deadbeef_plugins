@@ -205,7 +205,7 @@ namespace
 
 		auto textParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
-			return afc::json::parseCharsToUTF8(begin, end, [&](const char c) { dest.reserve(dest.size() + 1); dest.append(c); }, errorHandler);
+			return afc::json::parseCharsToUTF8(begin, end, [&](const char c) { dest.reserveForOne(); dest.append(c); }, errorHandler);
 		};
 
 		return afc::json::parseString<const char *, decltype(textParser) &, ErrorHandler, afc::json::noSpaces>
@@ -681,9 +681,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 afc::FastStringBuffer<char, afc::AllocMode::accurate> serialiseAsJson(const ScrobbleInfo &scrobbleInfo)
 {
 	const std::size_t maxSize = maxJsonSize(scrobbleInfo);
-	asm("nop");
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(maxSize);
-	asm("nop");
 
 	buf.returnTail(appendAsJsonImpl(scrobbleInfo, buf.borrowTail()));
 
