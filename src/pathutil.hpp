@@ -17,7 +17,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define PATHUTIL_HPP_
 
 #include <algorithm>
-#include <cassert>
 
 #include <afc/FastStringBuffer.hpp>
 #include <afc/StringRef.hpp>
