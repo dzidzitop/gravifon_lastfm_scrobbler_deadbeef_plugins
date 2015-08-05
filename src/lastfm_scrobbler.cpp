@@ -15,12 +15,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <mutex>
 #include <utility>
 
 #include <afc/FastStringBuffer.hpp>
 #include <afc/logger.hpp>
+#include <afc/SimpleString.hpp>
+#include <afc/utils.h>
 
 #include <deadbeef.h>
 
@@ -156,14 +157,14 @@ namespace
 
 			ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
 
-			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
-			if (scrobbleInfo != nullptr) {
-				lastfmClient.scrobble(std::move(*scrobbleInfo), safeScrobbling);
+			afc::Optional<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
+			if (scrobbleInfo.hasValue()) {
+				lastfmClient.scrobble(std::move(scrobbleInfo.value()), safeScrobbling);
 			}
 
-			const unique_ptr<Track> nowPlayingTrack = getTrackInfo(event->to, *deadbeef);
-			if (nowPlayingTrack != nullptr) {
-				lastfmClient.playStarted(std::move(*nowPlayingTrack));
+			afc::Optional<Track> nowPlayingTrack = getTrackInfo(event->to, *deadbeef);
+			if (nowPlayingTrack.hasValue()) {
+				lastfmClient.playStarted(std::move(nowPlayingTrack.value()));
 			}
 
 			return 0;

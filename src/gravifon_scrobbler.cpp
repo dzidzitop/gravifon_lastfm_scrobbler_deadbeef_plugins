@@ -16,12 +16,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <deadbeef.h>
 #include <cstdint>
 #include <cstring>
-#include <memory>
 #include <mutex>
 #include <utility>
 #include <afc/ensure_ascii.hpp>
 #include <afc/logger.hpp>
 #include <afc/StringRef.hpp>
+#include <afc/utils.h>
 #include "deadbeef_util.hpp"
 #include "GravifonScrobbler.hpp"
 #include "pathutil.hpp"
@@ -168,10 +168,10 @@ namespace
 			}
 
 			ddb_event_trackchange_t * const event = reinterpret_cast<ddb_event_trackchange_t *>(ctx);
-			const unique_ptr<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
+			afc::Optional<ScrobbleInfo> scrobbleInfo = getScrobbleInfo(event, *deadbeef, scrobbleThreshold);
 
-			if (scrobbleInfo != nullptr) {
-				gravifonClient.scrobble(std::move(*scrobbleInfo), safeScrobbling);
+			if (scrobbleInfo.hasValue()) {
+				gravifonClient.scrobble(std::move(scrobbleInfo.value()), safeScrobbling);
 			}
 			return 0;
 		}

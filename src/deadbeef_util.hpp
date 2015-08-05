@@ -18,13 +18,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <cstddef>
 #include <deadbeef.h>
-#include <memory>
 #include <chrono>
 #include <cstring>
 #include <utility>
 
 #include <afc/logger.hpp>
 #include <afc/SimpleString.hpp>
+#include <afc/utils.h>
 
 #include "HttpClient.hpp"
 #include "Scrobbler.hpp"
@@ -68,18 +68,18 @@ inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
 	addTagOp(afc::SimpleString(start));
 }
 
-inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
+inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
 {
 	if (track == nullptr) {
 		// No new track is started.
-		return nullptr;
+		return afc::Optional<Track>::none();
 	}
 
 	// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
 	const char * const title = deadbeef.pl_find_meta(track, "title");
 	if (title == nullptr) {
 		// Track title is a required field.
-		return nullptr;
+		return afc::Optional<Track>::none();
 	}
 
 	const char *albumArtist = deadbeef.pl_find_meta(track, "album artist");
@@ -95,35 +95,36 @@ inline std::unique_ptr<Track> getTrackInfo(DB_playItem_t * const track, DB_funct
 		artist = albumArtist;
 		if (artist == nullptr) {
 			// Track artist is a required field.
-			return nullptr;
+			return afc::Optional<Track>::none();
 		}
 	}
 	const char * const album = deadbeef.pl_find_meta(track, "album");
 
-	std::unique_ptr<Track> trackInfo(new Track());
-	asm("nop");
-	trackInfo->setTitle(title);
-	asm("nop");
+	afc::Optional<Track> result;
+	Track &trackInfo = result.value();
+
+	trackInfo.setTitle(title);
 	if (album != nullptr) {
-		trackInfo->setAlbumTitle(album);
+		trackInfo.setAlbumTitle(album);
 	}
 	/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
 	 * Moreover, if the track is played from start to end without rewinding
 	 * then the play time could be different from the track duration.
 	 */
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
-	trackInfo->setDurationMillis(toLongMillis(trackDuration));
+	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo->addArtist(std::move(artistName)); });
+	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo.addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo->addAlbumArtist(std::move(artistName)); });
+		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
-	return trackInfo;
+	// TODO avoid unnecessary moving.
+	return result;
 }
 
-inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent,
+inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * const trackChangeEvent,
 		DB_functions_t &deadbeef, const double scrobbleThreshold)
 { PlaylistLock lock(deadbeef);
 	using std::chrono::system_clock;
@@ -132,7 +133,7 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 
 	if (track == nullptr) {
 		// Nothing to scrobble.
-		return nullptr;
+		return afc::Optional<ScrobbleInfo>::none();
 	}
 
 	/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
@@ -147,14 +148,14 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 		afc::logger::logDebug(
 				"The track is played not long enough to be scrobbled (play duration: #s; track duration: #s).",
 				trackPlayDuration, trackDuration);
-		return nullptr;
+		return afc::Optional<ScrobbleInfo>::none();
 	}
 
 	// DeaDBeeF track metadata are returned in UTF-8. No additional conversion is needed.
 	const char * const title = deadbeef.pl_find_meta(track, "title");
 	if (title == nullptr) {
 		// Track title is a required field.
-		return nullptr;
+		return afc::Optional<ScrobbleInfo>::none();
 	}
 
 	const char *albumArtist = deadbeef.pl_find_meta(track, "album artist");
@@ -170,16 +171,17 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 		artist = albumArtist;
 		if (artist == nullptr) {
 			// Track artist is a required field.
-			return nullptr;
+			return afc::Optional<ScrobbleInfo>::none();
 		}
 	}
 	const char * const album = deadbeef.pl_find_meta(track, "album");
 
-	std::unique_ptr<ScrobbleInfo> scrobbleInfo(new ScrobbleInfo());
-	scrobbleInfo->scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
-	scrobbleInfo->scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
-	scrobbleInfo->scrobbleDuration = toLongMillis(trackPlayDuration);
-	Track &trackInfo = scrobbleInfo->track;
+	afc::Optional<ScrobbleInfo> result;
+	ScrobbleInfo &scrobbleInfo = result.value();
+	scrobbleInfo.scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
+	scrobbleInfo.scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
+	scrobbleInfo.scrobbleDuration = toLongMillis(trackPlayDuration);
+	Track &trackInfo = scrobbleInfo.track;
 	trackInfo.setTitle(title);
 	if (album != nullptr) {
 		trackInfo.setAlbumTitle(album);
@@ -192,7 +194,8 @@ inline std::unique_ptr<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * c
 		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
-	return scrobbleInfo;
+	// TODO avoid unnecessary moving.
+	return result;
 }
 
 inline bool isAscii(const char * const str, const std::size_t n) noexcept
