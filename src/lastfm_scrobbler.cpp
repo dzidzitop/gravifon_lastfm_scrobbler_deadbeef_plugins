@@ -115,16 +115,16 @@ namespace
 		logDebugMsg("[lastfm_scrobbler] Starting..."_s);
 
 		// TODO think of making it configurable.
-		afc::FastStringBuffer<char> dataFilePath;
-		if (::getDataFilePath("deadbeef/lastfm_scrobbler_data"_s, dataFilePath) != 0) {
+		afc::FastStringBuffer<char, afc::AllocMode::accurate> dataFilePath;
+		if (!::getDataFilePath("deadbeef/lastfm_scrobbler_data"_s, dataFilePath)) {
 			return 1;
 		}
+		const std::size_t dataFilePathSize = dataFilePath.size();
 
 		/* must be invoked before lastfmClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		const std::size_t dataFilePathSize = dataFilePath.size();
-		lastfmClient.setDataFilePath(afc::SimpleString(dataFilePath.detach(), dataFilePathSize));
+		lastfmClient.setDataFilePath(std::move(afc::SimpleString().attach(dataFilePath.detach(), dataFilePathSize)));
 
 		const bool enabled = deadbeef->conf_get_int("lastfmScrobbler.enabled", 0);
 		if (enabled && !lastfmClient.start()) {

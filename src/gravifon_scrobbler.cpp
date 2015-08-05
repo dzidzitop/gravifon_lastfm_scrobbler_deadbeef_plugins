@@ -129,16 +129,15 @@ namespace
 		logDebugMsg("[gravifon_scrobbler] Starting...");
 
 		// TODO think of making it configurable.
-		afc::FastStringBuffer<char> dataFilePath(255);
-		if (::getDataFilePath("deadbeef/gravifon_scrobbler_data"_s, dataFilePath) != 0) {
+		afc::FastStringBuffer<char, afc::AllocMode::accurate> dataFilePath;
+		if (!::getDataFilePath("deadbeef/gravifon_scrobbler_data"_s, dataFilePath)) {
 			return 1;
 		}
-
+		const std::size_t dataFilePathSize = dataFilePath.size();
 		/* must be invoked before gravifonClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		const std::size_t dataFilePathSize = dataFilePath.size();
-		gravifonClient.setDataFilePath(afc::SimpleString(dataFilePath.detach(), dataFilePathSize));
+		gravifonClient.setDataFilePath(std::move(afc::SimpleString().attach(dataFilePath.detach(), dataFilePathSize)));
 
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		if (enabled && !gravifonClient.start()) {

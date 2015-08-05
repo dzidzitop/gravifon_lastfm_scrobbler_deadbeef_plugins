@@ -16,22 +16,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef PATHUTIL_HPP_
 #define PATHUTIL_HPP_
 
+#include <algorithm>
 #include <cassert>
 
 #include <afc/FastStringBuffer.hpp>
 #include <afc/StringRef.hpp>
 
 // Removes trailing slash if it is not the only character in the path.
-inline void appendToPath(afc::FastStringBuffer<char> &path, const char *child, const std::size_t childSize)
+// @param pathLastChar the last char in the destination path to append to. '\0' indicates an empty path.
+template<typename Iterator>
+inline Iterator appendToPath(const char pathLastChar, const char *child, const std::size_t childSize, Iterator dest)
 {
-	path.reserve(path.size() + childSize + 1); // '/' and whole child are to be appended at mos.
-
-	const bool needsSeparator = path.size() > 1 && *(path.end() - 1) != '/';
+	const bool needsSeparator = pathLastChar != '\0' && pathLastChar != '/';
 	const bool childHasSeparator = child[0] == '/';
 	std::size_t effectiveChildSize = childSize;
 	if (needsSeparator) {
 		if (!childHasSeparator) {
-			path.append('/');
+			*dest = '/';
+			++dest;
 		}
 	} else {
 		if (childHasSeparator) {
@@ -42,38 +44,42 @@ inline void appendToPath(afc::FastStringBuffer<char> &path, const char *child, c
 			--effectiveChildSize;
 		}
 	}
-	path.append(child, effectiveChildSize);
+	return std::copy_n(child, effectiveChildSize, dest);
 }
 
-inline void appendToPath(afc::FastStringBuffer<char> &path, afc::ConstStringRef str)
+template<typename Iterator>
+inline Iterator appendToPath(const char pathLastChar, afc::ConstStringRef str, Iterator dest)
 {
-	appendToPath(path, str.value(), str.size());
+	return appendToPath(pathLastChar, str.value(), str.size(), dest);
 }
 
-inline int getDataFilePath(afc::ConstStringRef shortFilePath, afc::FastStringBuffer<char> &dest)
+inline bool getDataFilePath(afc::ConstStringRef shortFilePath,
+		afc::FastStringBuffer<char, afc::AllocMode::accurate> &dest)
 {
 	using afc::operator"" _s;
 
 	const char * const dataDir = getenv("XDG_DATA_HOME");
 	if (dataDir != nullptr && dataDir[0] != '\0') {
 		const std::size_t dataDirSize = std::strlen(dataDir);
-		dest.reserve(dest.size() + dataDirSize);
-		dest.returnTail(
-				std::copy_n(dataDir, dataDirSize, dest.borrowTail()));
+		dest.reserve(dest.size() + dataDirSize + 1 + shortFilePath.size()); // {dataDir}/{shortFilePath} in the worst case.
+		auto p = std::copy_n(dataDir, dataDirSize, dest.borrowTail());
+		p = appendToPath(dataDirSize == 0 ? '\0' : *(p - 1), shortFilePath, p);
+		dest.returnTail(p);
+		return true;
 	} else {
 		// Trying to assign the default data dir ($HOME/.local/share/).
 		const char * const homeDir = getenv("HOME");
 		if (homeDir == nullptr || homeDir == '\0') {
-			return 1;
+			return false;
 		}
 		const std::size_t homeDirSize = std::strlen(homeDir);
-		dest.reserve(dest.size() + homeDirSize + ".local/share"_s.size());
-		dest.append(homeDir, homeDirSize);
-		// TODO Optimise this call w.r.t. memory realloc
-		appendToPath(dest, ".local/share"_s);
+		dest.reserve(dest.size() + homeDirSize + 1 + ".local/share"_s.size() + 1 + shortFilePath.size()); // {homeDir}/.local/share/{shortFilePath} in the worst case.
+		auto p = std::copy_n(homeDir, homeDirSize, dest.borrowTail());
+		p = appendToPath(homeDirSize == 0 ? '\0' : *(p - 1), ".local/share"_s, p);
+		p = appendToPath('e', shortFilePath, p);
+		dest.returnTail(p);
+		return true;
 	}
-	appendToPath(dest, shortFilePath);
-	return 0;
 }
 
 #endif /* PATHUTIL_HPP_ */

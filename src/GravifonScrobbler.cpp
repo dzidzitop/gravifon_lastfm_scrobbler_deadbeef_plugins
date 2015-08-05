@@ -14,6 +14,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonScrobbler.hpp"
+#include <algorithm>
 #include <cassert>
 #include <string>
 #include <afc/base64.hpp>
@@ -105,11 +106,12 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 		const char * const username, const std::size_t usernameSize,
 		const char * const password, const std::size_t passwordSize)
 { lock_guard<mutex> lock(m_mutex);
-	afc::FastStringBuffer<char> tmpUrl(serverUrlSize + "scrobbles"_s.size() + 1);
-	tmpUrl.append(serverUrl, serverUrlSize);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> tmpUrl(serverUrlSize + "scrobbles"_s.size() + 1);
+	auto p = std::copy_n(serverUrl, serverUrlSize, tmpUrl.borrowTail());
 	if (serverUrlSize > 0) {
-		appendToPath(tmpUrl, "scrobbles"_s);
+		p = appendToPath(*(p - 1), "scrobbles"_s, p);
 	}
+	tmpUrl.returnTail(p);
 
 	// Curl expects the basic charset in headers.
 	afc::FastStringBuffer<char> tmpAuthHeader("Authorization: Basic "_s.size() + 2 * (usernameSize + passwordSize + 1)); // base64 makes 4 bytes out of 3.
