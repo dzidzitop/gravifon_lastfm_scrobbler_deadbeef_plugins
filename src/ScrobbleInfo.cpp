@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <algorithm>
 #include <bitset>
 #include <cstddef>
+#include <utility>
 #include <afc/builtin.hpp>
 #include <afc/dateutil.hpp>
 #include <afc/ensure_ascii.hpp>
@@ -379,7 +380,7 @@ namespace
 				}
 
 				std::size_t bufSize = buf.size();
-				addArtistOp(afc::SimpleString(buf.detach(), bufSize));
+				addArtistOp(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
 
 				return p;
 			};
@@ -434,7 +435,7 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setAlbumTitle(afc::SimpleString(buf.detach(), bufSize));
+					dest.setAlbumTitle(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					p = parseArtists(p, end, [&](afc::SimpleString &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
 					if (unlikely(!errorHandler.valid())) {
@@ -512,7 +513,7 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setTitle(afc::SimpleString(buf.detach(), bufSize));
+					dest.setTitle(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
 
