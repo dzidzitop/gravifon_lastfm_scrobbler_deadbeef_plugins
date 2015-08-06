@@ -282,7 +282,9 @@ namespace
 
 					p = afc::json::parseNumber<const char *, decltype(durationAmountParser) &, ErrorHandler, afc::json::noSpaces>
 							(p, end, durationAmountParser, errorHandler);
-					// TODO handle errors.
+					if (!errorHandler.valid()) {
+						return end;
+					}
 				} else if (afc::equal("unit", "unit"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
 
@@ -316,6 +318,9 @@ namespace
 
 					p = afc::json::parseString<const char *, decltype(unitValueParser) &, ErrorHandler, afc::json::noSpaces>
 							(p, end, unitValueParser, errorHandler);
+					if (!errorHandler.valid()) {
+						return end;
+					}
 				} else {
 					errorHandler.malformedJson(p);
 					return end;
@@ -594,7 +599,6 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 	auto scrobbleParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 	{
 		const char *p = begin;
-		// TODO handle properties.
 		for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2) | (1 << 3);;) { // All fields are required.
 			// TODO optimise property name matching.
 			const char *propNameBegin;
