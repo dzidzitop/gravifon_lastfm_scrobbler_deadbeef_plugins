@@ -19,8 +19,8 @@ CPPUNIT_TEST_SUITE_REGISTRATION(ScrobbleInfoTest);
 
 #include <ScrobbleInfo.hpp>
 #include <ctime>
-#include <utility>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/utils.h>
 
 using namespace std;
 
@@ -72,11 +72,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(result.second);
+	CPPUNIT_ASSERT(result.hasValue());
 
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.first);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T13:40:04+0130",)"
@@ -95,11 +95,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(result.second);
+	CPPUNIT_ASSERT(result.hasValue());
 
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.first);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0100",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -118,11 +118,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumAr
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"},{"name":"Scorpions"}]},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(result.second);
+	CPPUNIT_ASSERT(result.hasValue());
 
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.first);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -140,11 +140,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(result.second);
+	CPPUNIT_ASSERT(result.hasValue());
 
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.first);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T13:12:33+0300",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -162,11 +162,11 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 			u8R"("album":{"title":"A Night at the Opera"},)"
 			u8R"("length":{"amount":207026,"unit":"ms"}}})");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(result.second);
+	CPPUNIT_ASSERT(result.hasValue());
 
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.first);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
 
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
@@ -184,9 +184,9 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("length":{"amount":207026,"unit":"ms")");
 
-	const std::pair<ScrobbleInfo, bool> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
 
-	CPPUNIT_ASSERT(!result.second);
+	CPPUNIT_ASSERT(!result.hasValue());
 }
 
 void ScrobbleInfoTest::testSerialiseAsJson_ScrobbleInfoWithAllFields()

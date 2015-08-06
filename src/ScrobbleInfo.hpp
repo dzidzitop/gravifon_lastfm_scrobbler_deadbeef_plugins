@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/dateutil.hpp>
 #include <afc/FastStringBuffer.hpp>
 #include <afc/SimpleString.hpp>
+#include <afc/utils.h>
 
 // All strings are utf8-encoded.
 class Track
@@ -91,11 +92,14 @@ public:
 
 	ScrobbleInfo &operator=(ScrobbleInfo &&) = default;
 
-	static std::pair<ScrobbleInfo, bool> parse(const char * const begin, const char * const end)
+	static afc::Optional<ScrobbleInfo> parse(const char * const begin, const char * const end)
 	{
-		std::pair<ScrobbleInfo, bool> result;
-		result.second = parse(begin, end, result.first);
-		return result;
+		ScrobbleInfo result;
+		if (parse(begin, end, result)) {
+			return afc::Optional<ScrobbleInfo>(std::move(result));
+		} else {
+			return afc::Optional<ScrobbleInfo>::none();
+		}
 	}
 
 	static bool parse(const char *begin, const char *end, ScrobbleInfo &dest);
