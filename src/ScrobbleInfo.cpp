@@ -372,7 +372,7 @@ namespace
 					return end;
 				}
 
-				afc::FastStringBuffer<char> buf(0);
+				afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
 				p = parseText(p, end, buf, errorHandler);
 
 				if (unlikely(!errorHandler.valid())) {
@@ -427,7 +427,7 @@ namespace
 				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1);
 
-					afc::FastStringBuffer<char> buf;
+					afc::FastStringBuffer<char> buf(15); // Reasonable album title buffer size to keep balance between re-allocs and memory usage overhead.
 					p = parseText(p, end, buf, errorHandler);
 
 					if (unlikely(!errorHandler.valid())) {
@@ -505,7 +505,7 @@ namespace
 				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1);
 
-					afc::FastStringBuffer<char> buf(0);
+					afc::FastStringBuffer<char> buf(15); // Reasonable track title buffer size to keep balance between re-allocs and memory usage overhead.
 					p = parseText(p, end, buf, errorHandler);
 
 					if (unlikely(!errorHandler.valid())) {
