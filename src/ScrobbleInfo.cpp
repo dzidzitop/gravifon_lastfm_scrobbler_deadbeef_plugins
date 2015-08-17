@@ -273,7 +273,8 @@ namespace
 
 					auto durationAmountParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
 					{
-						const char * const p = afc::parseNumber<10>(begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
+						const char * const p = afc::parseNumber<10, afc::ParseMode::scan>(
+								begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
 						if (unlikely(!errorHandler.valid())) {
 							return end;
 						}
