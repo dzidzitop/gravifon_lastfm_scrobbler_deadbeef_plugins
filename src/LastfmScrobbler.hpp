@@ -58,12 +58,12 @@ public:
 	// username and password should be in UTF-8; serverUrl must be in ASCII.
 	void configure(const char *serverUrl, std::size_t serverUrlSize, const char *username, const char *password);
 
-	void setDataFilePath(afc::SimpleString &dataFilePath)
+	void setDataFilePath(afc::String &dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = dataFilePath;
 	}
 
-	void setDataFilePath(afc::SimpleString &&dataFilePath)
+	void setDataFilePath(afc::String &&dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = std::move(dataFilePath);
 	}
@@ -78,7 +78,7 @@ protected:
 	virtual void preSleep() override { submitNowPlayingTrack(); }
 	virtual void postSleep() override { submitNowPlayingTrack(); }
 
-	virtual const afc::SimpleString &getDataFilePath() const override { return m_dataFilePath; }
+	virtual const afc::String &getDataFilePath() const override { return m_dataFilePath; }
 
 	virtual void stopExtra() override;
 private:
@@ -89,15 +89,15 @@ private:
 
 	void submitNowPlayingTrack();
 
-	afc::SimpleString m_scrobblerUrl;
-	afc::SimpleString m_username;
-	afc::SimpleString m_password;
+	afc::String m_scrobblerUrl;
+	afc::String m_username;
+	afc::String m_password;
 
-	afc::SimpleString m_dataFilePath;
+	afc::String m_dataFilePath;
 
-	afc::SimpleString m_sessionId;
-	afc::SimpleString m_submissionUrl;
-	afc::SimpleString m_nowPlayingUrl;
+	afc::String m_sessionId;
+	afc::String m_submissionUrl;
+	afc::String m_nowPlayingUrl;
 
 	Track m_nowPlayingTrack;
 

@@ -50,8 +50,8 @@ using namespace afc::url;
 
 namespace
 {
-	inline UrlBuilder<webForm> buildAuthUrl(const afc::SimpleString &scrobblerUrl, const afc::SimpleString &username,
-			const afc::SimpleString &password)
+	inline UrlBuilder<webForm> buildAuthUrl(const afc::String &scrobblerUrl, const afc::String &username,
+			const afc::String &password)
 	{
 		constexpr size_t maxTimestampSize = afc::maxPrintedSize<long, 10>();
 
@@ -88,7 +88,7 @@ namespace
 		const char *albumTitleData;
 		std::size_t albumTitleSize;
 		if (track.hasAlbumTitle()) {
-			const afc::SimpleString &str = track.getAlbumTitle();
+			const afc::String &str = track.getAlbumTitle();
 			albumTitleData = str.data();
 			albumTitleSize = str.size();
 		} else {
@@ -266,7 +266,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
-	const afc::SimpleString nowPlayingUrlCopy(m_nowPlayingUrl);
+	const afc::String nowPlayingUrlCopy(m_nowPlayingUrl);
 
 	/* No conversion to the system encoding is used as the response body is assumed to be in
 	 * an ASCII-compatible encoding. It contains status codes (in ASCII), and some reason
@@ -442,7 +442,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 	request.setBody(builder.data(), builder.size());
 
 	// Making a copy of shared data to pass outside the critical section.
-	const afc::SimpleString submissionUrlCopy(m_submissionUrl);
+	const afc::String submissionUrlCopy(m_submissionUrl);
 
 #ifndef NDEBUG
 	const size_t pendingScrobbleCount = m_pendingScrobbles.size();

@@ -61,11 +61,11 @@ inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
 	 */
 	const char *start = multiTag, *end;
 	while ((end = std::strchr(start, UTF8_LF)) != nullptr) {
-		addTagOp(afc::SimpleString(start, end));
+		addTagOp(afc::String(start, end));
 		start = end + 1;
 	}
 	// Adding the last tag.
-	addTagOp(afc::SimpleString(start));
+	addTagOp(afc::String(start));
 }
 
 inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
@@ -114,10 +114,10 @@ inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functio
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo.addArtist(std::move(artistName)); });
+	addMultiTag(artist, [&](afc::String &&artistName) { trackInfo.addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
+		addMultiTag(albumArtist, [&](afc::String &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
 	// TODO avoid unnecessary moving.
@@ -188,10 +188,10 @@ inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * con
 	}
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](afc::SimpleString &&artistName) { trackInfo.addArtist(std::move(artistName)); });
+	addMultiTag(artist, [&](afc::String &&artistName) { trackInfo.addArtist(std::move(artistName)); });
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](afc::SimpleString &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
+		addMultiTag(albumArtist, [&](afc::String &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
 	}
 
 	// TODO avoid unnecessary moving.

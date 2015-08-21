@@ -104,7 +104,7 @@ private:
 	static bool createParentDirs(const char *path, std::size_t pathSize);
 
 	template<typename Iterator>
-	static bool storeScrobbles(Iterator begin, const Iterator end, const afc::SimpleString &dataFilePath,
+	static bool storeScrobbles(Iterator begin, const Iterator end, const afc::String &dataFilePath,
 			const char * const storeMode);
 protected:
 	// Returns the number of scrobbles completed (successful and non-processable).
@@ -114,7 +114,7 @@ protected:
 	 * Returns the path to the file where to store pending scrobbles to.
 	 * It should be a non-empty string.
 	 */
-	virtual const afc::SimpleString &getDataFilePath() const = 0;
+	virtual const afc::String &getDataFilePath() const = 0;
 
 	/**
 	 * Routine to be executed while Scrobbler is about to finish stopping itself.
@@ -176,7 +176,7 @@ protected:
 template<typename ScrobbleQueue>
 template<typename Iterator>
 inline bool Scrobbler<ScrobbleQueue>::storeScrobbles(Iterator begin, const Iterator end,
-		const afc::SimpleString &dataFilePath, const char * const storeMode)
+		const afc::String &dataFilePath, const char * const storeMode)
 {
 	static_assert(std::is_convertible<decltype(*begin), const ScrobbleInfo &>::value,
 			"An iterator over ScrobbleInfo objects is expected.");
@@ -499,7 +499,7 @@ inline bool Scrobbler<ScrobbleQueue>::loadPendingScrobbles()
 	afc::logger::logDebugMsg("[Scrobbler] Loading pending scrobbles..."_s);
 
 	std::FILE *dataFile; // initialised by openDataFile();
-	const afc::SimpleString &dataFilePath = getDataFilePath();
+	const afc::String &dataFilePath = getDataFilePath();
 	const OpenResult openResult = openDataFile(dataFilePath.c_str(), dataFilePath.size(), "rb", false, dataFile);
 	if (openResult == O_ERROR) {
 		return false;

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include <afc/ensure_ascii.hpp>
 #include <afc/logger.hpp>
+#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <afc/utils.h>
 #include "deadbeef_util.hpp"
@@ -137,7 +138,7 @@ namespace
 		/* must be invoked before gravifonClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		gravifonClient.setDataFilePath(std::move(afc::SimpleString().attach(dataFilePath.detach(), dataFilePathSize)));
+		gravifonClient.setDataFilePath(std::move(afc::String().attach(dataFilePath.detach(), dataFilePathSize)));
 
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		if (enabled && !gravifonClient.start()) {

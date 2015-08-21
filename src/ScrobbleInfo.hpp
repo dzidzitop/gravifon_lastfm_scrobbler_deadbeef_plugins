@@ -39,38 +39,38 @@ public:
 
 	Track &operator=(Track &&) = default;
 
-	void setTitle(afc::SimpleString &&trackTitle) { m_title = std::move(trackTitle); m_titleSet = true; }
+	void setTitle(afc::String &&trackTitle) { m_title = std::move(trackTitle); m_titleSet = true; }
 	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	afc::SimpleString &getTitle() noexcept { assert(m_titleSet); return m_title; }
-	const afc::SimpleString &getTitle() const noexcept { assert(m_titleSet); return m_title; }
+	afc::String &getTitle() noexcept { assert(m_titleSet); return m_title; }
+	const afc::String &getTitle() const noexcept { assert(m_titleSet); return m_title; }
 	bool hasTitle() const noexcept { return m_titleSet; }
 
-	void addArtist(afc::SimpleString &&artist) { m_artists.emplace_back(std::move(artist)); }
+	void addArtist(afc::String &&artist) { m_artists.emplace_back(std::move(artist)); }
 	void addArtist(const char * const artist) { m_artists.emplace_back(artist); }
-	std::vector<afc::SimpleString> &getArtists() noexcept { return m_artists; }
-	const std::vector<afc::SimpleString> &getArtists() const noexcept { return m_artists; }
+	std::vector<afc::String> &getArtists() noexcept { return m_artists; }
+	const std::vector<afc::String> &getArtists() const noexcept { return m_artists; }
 	bool hasArtist() const noexcept { return !m_artists.empty(); }
 
-	void addAlbumArtist(afc::SimpleString &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
+	void addAlbumArtist(afc::String &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
 	void addAlbumArtist(const char * const artist) { m_albumArtists.emplace_back(artist); }
-	std::vector<afc::SimpleString> &getAlbumArtists() noexcept { return m_albumArtists; }
-	const std::vector<afc::SimpleString> &getAlbumArtists() const noexcept { return m_albumArtists; }
+	std::vector<afc::String> &getAlbumArtists() noexcept { return m_albumArtists; }
+	const std::vector<afc::String> &getAlbumArtists() const noexcept { return m_albumArtists; }
 	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
 
-	void setAlbumTitle(afc::SimpleString &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
+	void setAlbumTitle(afc::String &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
 	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
-	afc::SimpleString &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
-	const afc::SimpleString &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
+	afc::String &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
+	const afc::String &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
 	bool hasAlbumTitle() const noexcept { return m_albumSet; }
 
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
 private:
-	afc::SimpleString m_title;
-	std::vector<afc::SimpleString> m_artists;
-	std::vector<afc::SimpleString> m_albumArtists;
-	afc::SimpleString m_album;
+	afc::String m_title;
+	std::vector<afc::String> m_artists;
+	std::vector<afc::String> m_albumArtists;
+	afc::String m_album;
 	// Track duration in milliseconds.
 	long m_duration;
 	bool m_titleSet = false;

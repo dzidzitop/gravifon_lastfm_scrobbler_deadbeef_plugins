@@ -50,27 +50,27 @@ public:
 	void configure(const char *serverUrl, std::size_t serverUrlSize, const char *username, std::size_t usernameSize,
 			const char *password, std::size_t passwordSize);
 
-	void setDataFilePath(const afc::SimpleString &dataFilePath)
+	void setDataFilePath(const afc::String &dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = dataFilePath;
 	}
 
-	void setDataFilePath(afc::SimpleString &&dataFilePath)
+	void setDataFilePath(afc::String &&dataFilePath)
 	{ std::lock_guard<std::mutex> lock(m_mutex);
 		m_dataFilePath = std::move(dataFilePath);
 	}
 protected:
 	virtual std::size_t doScrobbling() override;
 
-	virtual const afc::SimpleString &getDataFilePath() const override { return m_dataFilePath; }
+	virtual const afc::String &getDataFilePath() const override { return m_dataFilePath; }
 
 	virtual void stopExtra() override;
 private:
-	afc::SimpleString m_scrobblerUrl;
+	afc::String m_scrobblerUrl;
 	// The authentication header encoded in the basic charset.
-	afc::SimpleString m_authHeader;
+	afc::String m_authHeader;
 
-	afc::SimpleString m_dataFilePath;
+	afc::String m_dataFilePath;
 };
 
 #endif /* GRAVIFONSCROBBLER_HPP_ */

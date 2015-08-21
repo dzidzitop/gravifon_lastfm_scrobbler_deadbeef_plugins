@@ -51,7 +51,7 @@ namespace
 	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
 	template<typename Iterator>
-	Iterator writeJsonString(const afc::SimpleString &src, register Iterator dest)
+	Iterator writeJsonString(const afc::String &src, register Iterator dest)
 	{
 		for (const char c : src) {
 			// Truncated to an octet just in case non-octet bytes are used.
@@ -91,10 +91,10 @@ namespace
 		return dest;
 	}
 
-	inline std::size_t totalStringSize(const std::vector<afc::SimpleString> &strings) noexcept
+	inline std::size_t totalStringSize(const std::vector<afc::String> &strings) noexcept
 	{
 		std::size_t totalSize = 0;
-		for (const afc::SimpleString &s : strings) {
+		for (const afc::String &s : strings) {
 			totalSize += s.size();
 		}
 		return totalSize;
@@ -127,7 +127,7 @@ namespace
 
 		{ // artists
 			maxSize += R"("artists":[])"_s.size();
-			const std::vector<afc::SimpleString> &artists = track.getArtists();
+			const std::vector<afc::String> &artists = track.getArtists();
 			maxSize += R"({"name":""},)"_s.size() * artists.size() - 1; // With commas; the last comma is removed.
 			maxSize += maxPrintedCharSize * totalStringSize(artists);
 			maxSize += 1; // ,
@@ -139,7 +139,7 @@ namespace
 			if (track.hasAlbumArtist()) {
 				maxSize += 1; // ,
 				maxSize += R"("artists":[])"_s.size();
-				const std::vector<afc::SimpleString> &albumArtists = track.getAlbumArtists();
+				const std::vector<afc::String> &albumArtists = track.getAlbumArtists();
 				maxSize += R"({"name":""},)"_s.size() * albumArtists.size() - 1; // With commas; the last comma is removed.
 				maxSize += maxPrintedCharSize * totalStringSize(albumArtists);
 			}
@@ -167,7 +167,7 @@ namespace
 		dest = writeJsonString(track.getTitle(), dest);
 		// At least single artist is expected.
 		dest = afc::copy(R"(","artists":[)"_s, dest);
-		for (const afc::SimpleString &artist : track.getArtists()) {
+		for (const afc::String &artist : track.getArtists()) {
 			// TODO improve performance by merging appends.
 			dest = afc::copy(R"({"name":")"_s, dest);
 			dest = writeJsonString(artist, dest);
@@ -179,7 +179,7 @@ namespace
 			dest = writeJsonString(track.getAlbumTitle(), dest);
 			if (track.hasAlbumArtist()) {
 				dest = afc::copy(R"(","artists":[)"_s, dest);
-				for (const afc::SimpleString &albumArtist : track.getAlbumArtists()) {
+				for (const afc::String &albumArtist : track.getAlbumArtists()) {
 					// TODO improve performance by merging appends.
 					dest = afc::copy(R"({"name":")"_s, dest);
 					dest = writeJsonString(albumArtist, dest);
@@ -223,7 +223,7 @@ namespace
 				errorHandler.prematureEnd();
 				return end;
 			}
-			if (likely(parseISODateTime(afc::SimpleString(begin, valueEnd).c_str(), dest))) {
+			if (likely(parseISODateTime(afc::String(begin, valueEnd).c_str(), dest))) {
 				return valueEnd;
 			} else {
 				errorHandler.malformedJson(begin);
@@ -386,7 +386,7 @@ namespace
 				}
 
 				std::size_t bufSize = buf.size();
-				addArtistOp(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
+				addArtistOp(std::move(afc::String().attach(buf.detach(), bufSize)));
 
 				return p;
 			};
@@ -441,9 +441,9 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setAlbumTitle(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
+					dest.setAlbumTitle(std::move(afc::String().attach(buf.detach(), bufSize)));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
-					p = parseArtists(p, end, [&](afc::SimpleString &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
+					p = parseArtists(p, end, [&](afc::String &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
 					if (unlikely(!errorHandler.valid())) {
 						return end;
 					}
@@ -519,11 +519,11 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setTitle(std::move(afc::SimpleString().attach(buf.detach(), bufSize)));
+					dest.setTitle(std::move(afc::String().attach(buf.detach(), bufSize)));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
 
-					p = parseArtists(p, end, [&](afc::SimpleString &&artistName) { dest.addArtist(std::move(artistName)); }, errorHandler);
+					p = parseArtists(p, end, [&](afc::String &&artistName) { dest.addArtist(std::move(artistName)); }, errorHandler);
 					if (unlikely(!errorHandler.valid())) {
 						return end;
 					}

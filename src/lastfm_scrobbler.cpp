@@ -125,7 +125,7 @@ namespace
 		/* must be invoked before lastfmClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		lastfmClient.setDataFilePath(std::move(afc::SimpleString().attach(dataFilePath.detach(), dataFilePathSize)));
+		lastfmClient.setDataFilePath(std::move(afc::String().attach(dataFilePath.detach(), dataFilePathSize)));
 
 		const bool enabled = deadbeef->conf_get_int("lastfmScrobbler.enabled", 0);
 		if (enabled && !lastfmClient.start()) {
