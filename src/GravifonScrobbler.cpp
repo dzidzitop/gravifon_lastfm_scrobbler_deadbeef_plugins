@@ -16,7 +16,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonScrobbler.hpp"
 #include <algorithm>
 #include <cassert>
-#include <string>
 #include <afc/base64.hpp>
 #include "HttpClient.hpp"
 #include <jsoncpp/json/value.h>
@@ -113,22 +112,18 @@ void GravifonScrobbler::configure(const char * const serverUrl, const std::size_
 	}
 	tmpUrl.returnTail(p);
 
-	// Curl expects the basic charset in headers.
-	afc::FastStringBuffer<char> tmpAuthHeader("Authorization: Basic "_s.size() + 2 * (usernameSize + passwordSize + 1)); // base64 makes 4 bytes out of 3.
-	tmpAuthHeader.append("Authorization: Basic "_s); // HTTP Basic authentication is used.
-
 	/* Colon (':') is not allowed to be in a username by Gravifon. This concatenation is safe.
 	 * In addition, the character 'colon' in UTF-8 is equivalent to those in ISO-8859-1.
 	 */
-	// TODO replace with FastStringBuffer.
-	string token;
-	token.reserve(usernameSize + passwordSize + 1);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> token(usernameSize + passwordSize + 1);
 	token.append(username, usernameSize);
-	token += ':';
+	token.append(':');
 	token.append(password, passwordSize);
-	string encodedToken = encodeBase64(token);
 
-	tmpAuthHeader.append(encodedToken.data(), encodedToken.size());
+	// Curl expects the basic charset in headers.
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> tmpAuthHeader("Authorization: Basic "_s.size() + token.size() * 4 / 3); // base64 makes 4 bytes out of 3.
+	tmpAuthHeader.append("Authorization: Basic "_s); // HTTP Basic authentication is used.
+	tmpAuthHeader.returnTail(afc::encodeBase64(token.begin(), token.size(), tmpAuthHeader.borrowTail()));
 
 	const bool sameScrobblerUrl = afc::equal(m_scrobblerUrl.begin(), m_scrobblerUrl.size(),
 			tmpUrl.begin(), tmpUrl.size());
