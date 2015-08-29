@@ -59,10 +59,10 @@ namespace
 						const unsigned long errorCode = static_cast<unsigned long>(errCodeValue.asInt());
 						const Value &errorDescription = status["error_description"];
 						if (isType(errorDescription, stringValue)) {
-							failureOp(errorCode, errorDescription.asString());
+							failureOp(errorCode, errorDescription.asCString());
 							return;
 						} else if (isType(errorDescription, nullValue)) {
-							failureOp(errorCode, string());
+							failureOp(errorCode, "");
 							return;
 						} // else invalid error description type
 					}
@@ -167,8 +167,8 @@ size_t GravifonScrobbler::doScrobbling()
 	}
 
 	// TODO replace it with buffer.
-	string body;
-	body += u8"[";
+	afc::FastStringBuffer<char> body(127); // 127 is a reasonable starting capacity.
+	body.append(u8"["[0]);
 
 	afc::FastStringBuffer<char> buf;
 	// Adding up to 20 scrobbles to the request.
@@ -176,13 +176,11 @@ size_t GravifonScrobbler::doScrobbling()
 	unsigned submittedCount = 0;
 	for (auto it = m_pendingScrobbles.begin(), end = m_pendingScrobbles.end();
 			submittedCount < 20 && it != end; ++submittedCount, ++it) {
-		appendAsJson(*it, buf);
-		// TODO Use FastStringBuffer to build body.
-		body.append(buf.data(), buf.size());
-		body += u8",";
+		appendAsJson(*it, body);
+		body.reserveForOne();
+		body.append(u8","[0]);
 	}
-	body.pop_back(); // Removing the redundant comma.
-	body += u8"]";
+	*(body.end() - 1) = u8"]"[0]; // Removing the redundant comma at the same time.
 
 	HttpRequest request;
 	request.setBody(body.data(), body.size());
@@ -274,7 +272,7 @@ size_t GravifonScrobbler::doScrobbling()
 					 * otherwise another attempt will be done to submit it.
 					 */
 					[&responseBody, &it, &completedCount, this](
-							const unsigned long errorCode, const string &errorDescription)
+							const unsigned long errorCode, const char * const errorDescription)
 					{
 						afc::FastStringBuffer<char, afc::AllocMode::accurate> scrobbleAsStr = serialiseAsJson(*it);
 						if (isRecoverableError(errorCode)) {
@@ -315,7 +313,7 @@ size_t GravifonScrobbler::doScrobbling()
 				},
 
 				// Error status: report an error and finish processing.
-				[&responseBody](const unsigned long errorCode, const string &errorDescription)
+				[&responseBody](const unsigned long errorCode, const char * const errorDescription)
 				{
 					logError("[GravifonScrobbler] Error global status response: '#'. Error: '#' (#).",
 							responseBody.c_str(), errorDescription, errorCode);
