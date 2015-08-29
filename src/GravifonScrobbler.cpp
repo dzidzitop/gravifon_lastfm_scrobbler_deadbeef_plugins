@@ -166,9 +166,8 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	// TODO replace it with buffer.
 	afc::FastStringBuffer<char> body(127); // 127 is a reasonable starting capacity.
-	body.append(u8"["[0]);
+	body.append(u8"["[0]); // Space is known to be reserved.
 
 	afc::FastStringBuffer<char> buf;
 	// Adding up to 20 scrobbles to the request.
