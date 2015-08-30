@@ -52,7 +52,7 @@ build $buildDir/unit_tests: bin $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/ScrobbleInfo.o $
     $buildDir/run_tests.o
-  libs=-lcppunit -lcurl -lafc -ljsoncpp
+  libs=-lcppunit -lcurl -lafc -lssl -lcrypto -lpthread
 
 build sharedLib: phony $buildDir/gravifon_scrobbler.so $
     $buildDir/lastfm_scrobbler.so

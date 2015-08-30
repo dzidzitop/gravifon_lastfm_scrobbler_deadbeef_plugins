@@ -16,15 +16,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "GravifonScrobbler.hpp"
 #include <algorithm>
 #include <cassert>
+#include <vector>
+
 #include <afc/base64.hpp>
 #include "HttpClient.hpp"
-#include <jsoncpp/json/value.h>
-#include <jsoncpp/json/reader.h>
 #include <utility>
-#include "jsonutil.hpp"
 #include "pathutil.hpp"
 #include <afc/FastStringBuffer.hpp>
 #include <afc/ensure_ascii.hpp>
+#include <afc/json.hpp>
 #include <afc/logger.hpp>
 #include <afc/StringRef.hpp>
 #include <afc/utils.h>
@@ -39,37 +39,155 @@ using afc::logger::logDebugMsg;
 using afc::logger::logError;
 using afc::logger::logErrorMsg;
 
-using Json::Value;
 using StatusCode = HttpClient::StatusCode;
 
 namespace
 {
-	template<typename SuccessOp, typename FailureOp, typename InvalidOp>
-	inline void processStatus(const Value &status, SuccessOp successOp, FailureOp failureOp, InvalidOp invalidOp)
+	class ErrorHandler
 	{
-		if (isType(status, objectValue)) {
-			const Value &success = status["ok"];
-			if (isType(success, booleanValue)) {
-				if (success.asBool() == true) {
-					successOp();
-					return;
-				} else {
-					const Value &errCodeValue = status["error_code"];
-					if (isType(errCodeValue, intValue)) {
-						const unsigned long errorCode = static_cast<unsigned long>(errCodeValue.asInt());
-						const Value &errorDescription = status["error_description"];
-						if (isType(errorDescription, stringValue)) {
-							failureOp(errorCode, errorDescription.asCString());
-							return;
-						} else if (isType(errorDescription, nullValue)) {
-							failureOp(errorCode, "");
-							return;
-						} // else invalid error description type
+	public:
+		ErrorHandler(void) : m_valid(true) {}
+
+		void malformedJson(const char *pos)
+		{
+			// TODO handle error;
+			m_valid = false;
+		}
+
+		void prematureEnd()
+		{
+			// TODO handle error;
+			m_valid = false;
+		}
+
+		bool valid() { return m_valid; }
+	private:
+		bool m_valid;
+	} errorHandler;
+
+	struct RawResponseRecord {
+		const char *errorDescBegin;
+		const char *errorDescEnd;
+		unsigned long errorCode;
+		bool success;
+	};
+
+	inline const char *parseResponseRecord(const char * const begin, const char * const end, ErrorHandler &errorHandler,
+			RawResponseRecord &record)
+	{
+		auto responseRecordBodyParser = [&record](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			bool okParsed = false;
+			bool errorCodeParsed = false;
+			bool errorDescriptionParsed = false;
+
+			const char *p = begin;
+			for (;;) { // All fields are required.
+				// TODO optimise property name matching.
+				const char *propNameBegin;
+				std::size_t propNameSize;
+
+				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					propNameBegin = begin;
+					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+					propNameSize = propNameEnd - propNameBegin;
+					return propNameEnd;
+				};
+
+				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::spaces>
+						(p, end, propNameParser, errorHandler);
+
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				if (afc::equal("ok", "ok"_s.size(), propNameBegin, propNameSize)) {
+					p = afc::json::parseBoolean(p, end, record.success, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
 					}
+
+					okParsed = true;
+				} else if (afc::equal("error_code", "error_code"_s.size(), propNameBegin, propNameSize)) {
+					auto errorCodeParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+					{
+						const char * const p = afc::parseNumber<10, afc::ParseMode::scan>(
+								begin, end, record.errorCode, [&](const char * const pos) { errorHandler.malformedJson(pos); });
+						if (unlikely(!errorHandler.valid())) {
+							return end;
+						}
+						return p;
+					};
+
+					p = afc::json::parseNumber(p, end, errorCodeParser, errorHandler);
+					if (!errorHandler.valid()) {
+						return end;
+					}
+
+					errorCodeParsed = true;
+				} else if (afc::equal("error_description", "error_description"_s.size(), propNameBegin, propNameSize)) {
+					auto errorDescParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+					{
+						record.errorDescBegin = begin;
+						const char * const stringEnd = std::find(begin, end, u8"\""[0]);
+						record.errorDescEnd = stringEnd;
+						return stringEnd;
+					};
+
+					p = afc::json::parseString(p, end, errorDescParser, errorHandler);
+					if (unlikely(!errorHandler.valid())) {
+						return end;
+					}
+
+					errorDescriptionParsed = true;
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
+				}
+
+				if (unlikely(p == end)) {
+					errorHandler.prematureEnd();
+					return end;
+				}
+				if (!okParsed || (record.success && (!errorCodeParsed || !errorDescriptionParsed))) {
+					errorHandler.malformedJson(p);
+					return p;
+				}
+
+				const char c = *p;
+				if (likely(c == u8","[0])) {
+					++p;
+				} else {
+					errorHandler.malformedJson(p);
+					return end;
 				}
 			}
-		}
-		invalidOp();
+		};
+
+		// TODO optimise space parsing.
+		return afc::json::parseObject(begin, end, responseRecordBodyParser, errorHandler);
+	}
+
+	inline const char *parseOKResponse(const char * const begin, const char * const end, ErrorHandler &errorHandler,
+			std::vector<RawResponseRecord> &dest)
+	{
+		auto responseRecordParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			RawResponseRecord record;
+			const char * const p = parseResponseRecord(begin, end, errorHandler, record);
+			if (errorHandler.valid()) {
+				dest.push_back(record);
+			}
+			return p;
+		};
+
+		return afc::json::parseArray(begin, end, responseRecordParser, errorHandler);
 	}
 
 	inline void reportHttpClientError(const StatusCode result)
@@ -243,57 +361,48 @@ size_t GravifonScrobbler::doScrobbling()
 
 	logDebug("[GravifonScrobbler] Response status code: '#'.", response.statusCode);
 
-	Value rs;
-	if (!Json::Reader().parse(responseBody.data(), responseBody.data() + responseBody.size(), rs, false)) {
-		logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
-		return 0;
-	}
-
+	ErrorHandler errorHandler;
 	if (response.statusCode == 200) {
+		std::vector<RawResponseRecord> records;
+		records.reserve(submittedCount);
+		const char * p = parseOKResponse(responseBody.begin(), responseBody.end(), errorHandler, records);
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
-		if (!isType(rs, arrayValue) || rs.size() != submittedCount) {
+		if (!errorHandler.valid() || p != responseBody.end()
+				|| !records.size() != submittedCount) {
 			logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
 			return 0;
 		}
 
 		size_t completedCount = 0;
 		auto it = m_pendingScrobbles.begin();
-		for (auto i = 0u, n = rs.size(); i < n; ++i) {
-			processStatus(rs[i],
-					// Successful status: if the track is scrobbled successfully then it is removed from the list.
-					[&it, &completedCount, this]()
-					{
-						it = m_pendingScrobbles.erase(it);
-						++completedCount;
-					},
-
-					/* Error status. If the error is unprocessable then the scrobble is removed from the list;
-					 * otherwise another attempt will be done to submit it.
-					 */
-					[&responseBody, &it, &completedCount, this](
-							const unsigned long errorCode, const char * const errorDescription)
-					{
-						afc::FastStringBuffer<char, afc::AllocMode::accurate> scrobbleAsStr = serialiseAsJson(*it);
-						if (isRecoverableError(errorCode)) {
-							logError("[GravifonScrobbler] Scrobble '#' is not processed. "
-									"Error: '#' (#). It will be re-submitted later.",
-									scrobbleAsStr.c_str(), errorDescription, errorCode);
-							++it;
-						} else {
-							logError("[GravifonScrobbler] Scrobble '#' cannot be processed. "
-									"Error: '#' (#). It is removed as non-processable.",
-									scrobbleAsStr.c_str(), errorDescription, errorCode);
-							it = m_pendingScrobbles.erase(it);
-							++completedCount;
-						}
-					},
-
-					// Invalid status: report an error and leave the scrobble in the list of pending scrobbles.
-					[&responseBody, &it]()
-					{
-						logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
-						++it;
-					});
+		for (const RawResponseRecord &record : records) {
+			if (record.success) {
+				// Successful status: if the track is scrobbled successfully then it is removed from the list.
+				it = m_pendingScrobbles.erase(it);
+				++completedCount;
+			} else {
+				/* Error status. If the error is unprocessable then the scrobble is removed from the list;
+				 * otherwise another attempt will be done to submit it.
+				 */
+				const unsigned long errorCode = record.errorCode;
+				afc::FastStringBuffer<char, afc::AllocMode::accurate> scrobbleAsStr = serialiseAsJson(*it);
+				if (isRecoverableError(errorCode)) {
+					logError("[GravifonScrobbler] Scrobble '#' is not processed. "
+							"Error: '#' (#). It will be re-submitted later.",
+							scrobbleAsStr.c_str(),
+							std::make_pair(record.errorDescBegin, record.errorDescEnd),
+							errorCode);
+					++it;
+				} else {
+					logError("[GravifonScrobbler] Scrobble '#' cannot be processed. "
+							"Error: '#' (#). It is removed as non-processable.",
+							scrobbleAsStr.c_str(),
+							std::make_pair(record.errorDescBegin, record.errorDescEnd),
+							errorCode);
+					it = m_pendingScrobbles.erase(it);
+					++completedCount;
+				}
+			}
 		}
 
 		if (completedCount == submittedCount) {
@@ -303,26 +412,20 @@ size_t GravifonScrobbler::doScrobbling()
 		return completedCount;
 	} else {
 		// A global status entity is expected for a non-200 response.
-		processStatus(rs,
-				// Success status. It is not expected. Report an error and finish processing.
-				[&responseBody]()
-				{
-					logError("[GravifonScrobbler] Unexpected 'ok' global status response: '#'.",
-							responseBody.c_str());
-				},
+		RawResponseRecord record;
+		const char * p = parseResponseRecord(responseBody.begin(), responseBody.end(), errorHandler, record);
+		if (!errorHandler.valid() || p != responseBody.end()) {
+			logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
+			return 0;
+		}
 
-				// Error status: report an error and finish processing.
-				[&responseBody](const unsigned long errorCode, const char * const errorDescription)
-				{
-					logError("[GravifonScrobbler] Error global status response: '#'. Error: '#' (#).",
-							responseBody.c_str(), errorDescription, errorCode);
-				},
-
-				// Invalid status: report an error and finish processing.
-				[&responseBody]()
-				{
-					logError("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
-				});
+		if (record.success) {
+			logError("[GravifonScrobbler] Unexpected 'ok' global status response: '#'.",
+					responseBody.c_str());
+		} else {
+			logError("[GravifonScrobbler] Error global status response: '#'. Error: '#' (#).",
+					responseBody.c_str(), record.errorCode, std::make_pair(record.errorDescBegin, record.errorDescEnd));
+		}
 
 		return 0;
 	}
