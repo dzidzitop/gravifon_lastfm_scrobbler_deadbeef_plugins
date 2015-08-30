@@ -29,8 +29,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/StringRef.hpp>
 #include <afc/utils.h>
 
-using namespace std;
-
 using afc::operator"" _s;
 
 namespace
