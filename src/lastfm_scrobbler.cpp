@@ -118,12 +118,11 @@ namespace
 		if (!::getDataFilePath("deadbeef/lastfm_scrobbler_data"_s, dataFilePath)) {
 			return 1;
 		}
-		const std::size_t dataFilePathSize = dataFilePath.size();
 
 		/* must be invoked before lastfmClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		lastfmClient.setDataFilePath(std::move(afc::String().attach(dataFilePath.detach(), dataFilePathSize)));
+		lastfmClient.setDataFilePath(afc::String::move(dataFilePath));
 
 		const bool enabled = deadbeef->conf_get_int("lastfmScrobbler.enabled", 0);
 		if (enabled && !lastfmClient.start()) {

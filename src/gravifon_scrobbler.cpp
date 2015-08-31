@@ -132,11 +132,10 @@ namespace
 		if (!::getDataFilePath("deadbeef/gravifon_scrobbler_data"_s, dataFilePath)) {
 			return 1;
 		}
-		const std::size_t dataFilePathSize = dataFilePath.size();
 		/* must be invoked before gravifonClient.start() to let pending scrobbles
 		 * be loaded from the data file.
 		 */
-		gravifonClient.setDataFilePath(std::move(afc::String().attach(dataFilePath.detach(), dataFilePathSize)));
+		gravifonClient.setDataFilePath(afc::String::move(dataFilePath));
 
 		const bool enabled = deadbeef->conf_get_int("gravifonScrobbler.enabled", 0);
 		if (enabled && !gravifonClient.start()) {

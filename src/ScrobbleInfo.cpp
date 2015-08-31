@@ -384,7 +384,7 @@ namespace
 				}
 
 				std::size_t bufSize = buf.size();
-				addArtistOp(std::move(afc::String().attach(buf.detach(), bufSize)));
+				addArtistOp(afc::String::move(buf));
 
 				return p;
 			};
@@ -439,7 +439,7 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setAlbumTitle(std::move(afc::String().attach(buf.detach(), bufSize)));
+					dest.setAlbumTitle(afc::String::move(buf));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					p = parseArtists(p, end, [&](afc::String &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
 					if (unlikely(!errorHandler.valid())) {
@@ -517,7 +517,7 @@ namespace
 					}
 
 					std::size_t bufSize = buf.size();
-					dest.setTitle(std::move(afc::String().attach(buf.detach(), bufSize)));
+					dest.setTitle(afc::String::move(buf));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
 
