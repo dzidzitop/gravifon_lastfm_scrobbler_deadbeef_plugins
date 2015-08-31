@@ -34,10 +34,8 @@ using namespace std;
 using namespace afc;
 
 using afc::operator"" _s;
-using afc::logger::logDebugFmt;
-using afc::logger::logDebugMsg;
-using afc::logger::logErrorFmt;
-using afc::logger::logErrorMsg;
+using afc::logger::logDebug;
+using afc::logger::logError;
 
 using StatusCode = HttpClient::StatusCode;
 
@@ -204,7 +202,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		logErrorFmt("[GravifonScrobbler] Unable to send the scrobble message: '#'.", message);
+		logError("[GravifonScrobbler] Unable to send the scrobble message: '"_s, message, "#'."_s);
 	}
 
 	inline bool isRecoverableError(const unsigned long errorCode)
@@ -270,7 +268,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assert(!m_pendingScrobbles.empty());
 
 	if (unlikely(!m_configured)) {
-		logErrorMsg("Scrobbler is not configured properly."_s);
+		logError("Scrobbler is not configured properly."_s);
 		return 0;
 	}
 
@@ -280,7 +278,7 @@ size_t GravifonScrobbler::doScrobbling()
 		 * pending scrobbles (see above) to be submitted (among other scrobbles) when
 		 * the URL is configured to point to a scrobbling server.
 		 */
-		logErrorMsg("URL to the scrobbling server is undefined."_s);
+		logError("URL to the scrobbling server is undefined."_s);
 		return 0;
 	}
 
@@ -336,7 +334,7 @@ size_t GravifonScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebugFmt("[LastfmScrobbler] Request body: #",
+		logDebug("[LastfmScrobbler] Request body: "_s,
 				std::pair<const char *, const char *>(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
@@ -351,7 +349,7 @@ size_t GravifonScrobbler::doScrobbling()
 	assert(pendingScrobbleCount <= m_pendingScrobbles.size());
 
 	if (result == StatusCode::ABORTED_BY_CLIENT) {
-		logDebugMsg("[GravifonScrobbler] An HTTP call is aborted."_s);
+		logDebug("[GravifonScrobbler] An HTTP call is aborted."_s);
 		return 0;
 	}
 	if (result != StatusCode::SUCCESS) {
@@ -359,7 +357,7 @@ size_t GravifonScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebugFmt("[GravifonScrobbler] Response status code: '#'.", response.statusCode);
+	logDebug("[GravifonScrobbler] Response status code: '"_s, response.statusCode, "#'."_s);
 
 	ErrorHandler errorHandler;
 	if (response.statusCode == 200) {
@@ -369,7 +367,8 @@ size_t GravifonScrobbler::doScrobbling()
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!errorHandler.valid() || p != responseBody.end()
 				|| !records.size() != submittedCount) {
-			logErrorFmt("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
+			logError("[GravifonScrobbler] Invalid response: "_s,
+					std::make_pair(responseBody.begin(), responseBody.end()));
 			return 0;
 		}
 
@@ -387,18 +386,16 @@ size_t GravifonScrobbler::doScrobbling()
 				const unsigned long errorCode = record.errorCode;
 				afc::FastStringBuffer<char, afc::AllocMode::accurate> scrobbleAsStr = serialiseAsJson(*it);
 				if (isRecoverableError(errorCode)) {
-					logErrorFmt("[GravifonScrobbler] Scrobble '#' is not processed. "
-							"Error: '#' (#). It will be re-submitted later.",
-							scrobbleAsStr.c_str(),
-							std::make_pair(record.errorDescBegin, record.errorDescEnd),
-							errorCode);
+					logError("[GravifonScrobbler] Scrobble '"_s,
+							std::make_pair(scrobbleAsStr.begin(), scrobbleAsStr.end()), "' is not processed. "
+							"Error: '"_s, std::make_pair(record.errorDescBegin, record.errorDescEnd), "' ("_s,
+							errorCode, "). It will be re-submitted later."_s);
 					++it;
 				} else {
-					logErrorFmt("[GravifonScrobbler] Scrobble '#' cannot be processed. "
-							"Error: '#' (#). It is removed as non-processable.",
-							scrobbleAsStr.c_str(),
-							std::make_pair(record.errorDescBegin, record.errorDescEnd),
-							errorCode);
+					logError("[GravifonScrobbler] Scrobble '"_s,
+							std::make_pair(scrobbleAsStr.begin(), scrobbleAsStr.end()), "' cannot be processed. "
+							"Error: '"_s, std::make_pair(record.errorDescBegin, record.errorDescEnd), "' ("_s,
+							errorCode, "). It is removed as non-processable."_s);
 					it = m_pendingScrobbles.erase(it);
 					++completedCount;
 				}
@@ -406,7 +403,8 @@ size_t GravifonScrobbler::doScrobbling()
 		}
 
 		if (completedCount == submittedCount) {
-			logDebugFmt("[GravifonScrobbler] Successful response: #", responseBody.c_str());
+			logDebug("[GravifonScrobbler] Successful response: "_s,
+					std::make_pair(responseBody.begin(), responseBody.end()));
 		}
 
 		return completedCount;
@@ -415,16 +413,19 @@ size_t GravifonScrobbler::doScrobbling()
 		RawResponseRecord record;
 		const char * p = parseResponseRecord(responseBody.begin(), responseBody.end(), errorHandler, record);
 		if (!errorHandler.valid() || p != responseBody.end()) {
-			logErrorFmt("[GravifonScrobbler] Invalid response: '#'.", responseBody.c_str());
+			logError("[GravifonScrobbler] Invalid response: "_s,
+					std::make_pair(responseBody.begin(), responseBody.end()));
 			return 0;
 		}
 
 		if (record.success) {
-			logErrorFmt("[GravifonScrobbler] Unexpected 'ok' global status response: '#'.",
-					responseBody.c_str());
+			logError("[GravifonScrobbler] Unexpected 'ok' global status response: '"_s,
+					std::make_pair(responseBody.begin(), responseBody.end()), "'."_s);
 		} else {
-			logErrorFmt("[GravifonScrobbler] Error global status response: '#'. Error: '#' (#).",
-					responseBody.c_str(), record.errorCode, std::make_pair(record.errorDescBegin, record.errorDescEnd));
+			logError("[GravifonScrobbler] Error global status response: '"_s,
+					std::make_pair(responseBody.begin(), responseBody.end()), "'. "
+					"Error: '"_s, std::make_pair(record.errorDescBegin, record.errorDescEnd), "' ("_s,
+					record.errorCode, ")."_s);
 		}
 
 		return 0;

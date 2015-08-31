@@ -32,8 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 using namespace std;
 
 using afc::operator"" _s;
-using afc::logger::logDebugMsg;
-using afc::logger::logErrorMsg;
+using afc::logger::logDebug;
+using afc::logger::logError;
 
 namespace
 {
@@ -65,13 +65,13 @@ namespace
 		if (!enabled) {
 			if (clientStarted) {
 				if (!gravifonClient.stop()) {
-					logErrorMsg("[gravifon_scrobbler] unable to stop Gravifon client."_s);
+					logError("[gravifon_scrobbler] unable to stop Gravifon client."_s);
 				}
 			}
 			return false;
 		} else if (!clientStarted) {
 			if (!gravifonClient.start()) {
-				logErrorMsg("[gravifon_scrobbler] unable to start Gravifon client."_s);
+				logError("[gravifon_scrobbler] unable to start Gravifon client."_s);
 				return false;
 			}
 		}
@@ -83,7 +83,7 @@ namespace
 				"gravifonScrobbler.gravifonUrl", u8"http://api.gravifon.org/v1");
 		const std::size_t gravifonUrlSize = std::strlen(gravifonUrl);
 		if (!isAscii(gravifonUrl, gravifonUrlSize)) {
-			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Gravifon."_s);
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the URL to Gravifon."_s);
 			gravifonClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
@@ -96,7 +96,7 @@ namespace
 		const char * const username = deadbeef->conf_get_str_fast("gravifonScrobbler.username", "");
 		const std::size_t usernameSize = std::strlen(username);
 		if (!isAscii(username, usernameSize)) {
-			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the username."_s);
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the username."_s);
 			gravifonClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
@@ -105,7 +105,7 @@ namespace
 		const char * const password = deadbeef->conf_get_str_fast("gravifonScrobbler.password", "");
 		const std::size_t passwordSize = std::strlen(password);
 		if (!isAscii(password, passwordSize)) {
-			logErrorMsg("[gravifon_scrobbler] Non-ASCII characters are present in the password."_s);
+			logError("[gravifon_scrobbler] Non-ASCII characters are present in the password."_s);
 			gravifonClient.invalidateConfiguration();
 			// Scrobbles are still to be recorded though not submitted.
 			return true;
@@ -125,7 +125,7 @@ namespace
 
 	int gravifonScrobblerStart()
 	{ lock_guard<mutex> lock(pluginMutex);
-		logDebugMsg("[gravifon_scrobbler] Starting...");
+		logDebug("[gravifon_scrobbler] Starting...");
 
 		// TODO think of making it configurable.
 		afc::FastStringBuffer<char, afc::AllocMode::accurate> dataFilePath;
@@ -148,7 +148,7 @@ namespace
 
 	int gravifonScrobblerStop()
 	{
-		logDebugMsg("[gravifon_scrobbler] Stopping...");
+		logDebug("[gravifon_scrobbler] Stopping...");
 		return gravifonClient.stop() ? 0 : 1;
 	}
 
