@@ -242,7 +242,7 @@ void Scrobbler<ScrobbleQueue>::scrobble(ScrobbleInfo &&scrobbleInfo, const bool 
 		 */
 		auto end = m_pendingScrobbles.cend();
 		if (storeScrobbles(std::prev(end), end, getDataFilePath(), "ab")) {
-			afc::logger::logDebug("[Scrobbler] The scrobble that has just been scrobbled "
+			afc::logger::logDebugFmt("[Scrobbler] The scrobble that has just been scrobbled "
 					"is stored (failure-safe scrobbling).");
 		} else {
 			afc::logger::logErrorMsg("[Scrobbler] Unable to store the scrobble (failure-safe scrobbling)."_s);
@@ -298,7 +298,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 
 			if (idleScrobbleCount < m_scrobblesToWait) {
 				// Idling due to failed previous attempt to scrobble tracks.
-				afc::logger::logDebug("Idling is to last for # tracks scrobbled. Scrobbles passed: #.",
+				afc::logger::logDebugFmt("Idling is to last for # tracks scrobbled. Scrobbles passed: #.",
 						m_scrobblesToWait, idleScrobbleCount);
 
 				/* Idling is forced due to some last scrobble requests failed.
@@ -321,7 +321,7 @@ void Scrobbler<ScrobbleQueue>::backgroundScrobbling()
 			 */
 			m_scrobblesToWait = std::min(m_scrobblesToWait * 2, maxScrobblesToWait());
 
-			afc::logger::logDebug("Idling is to last now for # tracks scrobbled.", m_scrobblesToWait);
+			afc::logger::logDebugFmt("Idling is to last now for # tracks scrobbled.", m_scrobblesToWait);
 		} else {
 			// If the attempt is (partially) successful then the timeout is reset.
 			m_scrobblesToWait = minScrobblesToWait();
@@ -548,7 +548,7 @@ finish:
 		result = false;
 	}
 
-	afc::logger::logDebug("[Scrobbler] Pending scrobbles loaded: #.", m_pendingScrobbles.size());
+	afc::logger::logDebugFmt("[Scrobbler] Pending scrobbles loaded: #.", m_pendingScrobbles.size());
 	return result;
 }
 
@@ -566,7 +566,7 @@ inline bool Scrobbler<ScrobbleQueue>::storePendingScrobbles()
 	 */
 	const bool result = storeScrobbles(m_pendingScrobbles.cbegin(), m_pendingScrobbles.cend(), getDataFilePath(), "wb");
 
-	afc::logger::logDebug("[Scrobbler] Pending scrobbles stored: #.", m_pendingScrobbles.size());
+	afc::logger::logDebugFmt("[Scrobbler] Pending scrobbles stored: #.", m_pendingScrobbles.size());
 
 	return result;
 }

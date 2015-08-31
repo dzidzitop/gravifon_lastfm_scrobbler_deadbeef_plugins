@@ -34,9 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 using namespace std;
 
 using afc::operator"" _s;
-using afc::logger::logDebug;
 using afc::logger::logDebugMsg;
-using afc::logger::logError;
 using afc::logger::logErrorMsg;
 
 namespace

@@ -42,9 +42,9 @@ using namespace std;
 using namespace afc;
 using StatusCode = HttpClient::StatusCode;
 
-using afc::logger::logDebug;
+using afc::logger::logDebugFmt;
 using afc::logger::logDebugMsg;
-using afc::logger::logError;
+using afc::logger::logErrorFmt;
 using afc::logger::logErrorMsg;
 using namespace afc::url;
 
@@ -218,7 +218,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		logError("[LastfmScrobbler] Unable to send the request: '#'.", message);
+		logErrorFmt("[LastfmScrobbler] Unable to send the request: '#'.", message);
 	}
 
 	static constexpr auto lastfmResponseDelim = [](const char c) noexcept { return c == '\n'; };
@@ -228,7 +228,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 {
 	assertLocked();
 
-	logDebug("[LastfmScrobbler] Trying to submit the now-playing notification to the scrobbling server.");
+	logDebugFmt("[LastfmScrobbler] Trying to submit the now-playing notification to the scrobbling server.");
 
 	if (unlikely(!m_configured)) {
 		logErrorMsg("[LastfmScrobbler] Scrobbler is not configured properly."_s);
@@ -236,7 +236,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	}
 
 	if (!m_hasNowPlayingTrack) {
-		logDebug("[LastfmScrobbler] There is no now-playing track to submit.");
+		logDebugFmt("[LastfmScrobbler] There is no now-playing track to submit.");
 		return;
 	}
 
@@ -293,8 +293,8 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Now-playing URL: '#'.", nowPlayingUrlCopy);
-		logDebug("[LastfmScrobbler] Now-playing request body: '#'.",
+		logDebugFmt("[LastfmScrobbler] Now-playing URL: '#'.", nowPlayingUrlCopy);
+		logDebugFmt("[LastfmScrobbler] Now-playing request body: '#'.",
 				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
@@ -311,8 +311,8 @@ void LastfmScrobbler::submitNowPlayingTrack()
 		return;
 	}
 
-	logDebug("[LastfmScrobbler] Now-playing response status code: '#'.", response.statusCode);
-	logDebug("[LastfmScrobbler] Now-playing response body: #", responseBody.c_str());
+	logDebugFmt("[LastfmScrobbler] Now-playing response status code: '#'.", response.statusCode);
+	logDebugFmt("[LastfmScrobbler] Now-playing response body: #", responseBody.c_str());
 
 	if (response.statusCode == 200) {
 		/* Using find_if to tokenise response instead of find since the former
@@ -321,7 +321,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 		const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
 		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 		if (unlikely(seqEnd == end)) {
-			logError("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
+			logErrorFmt("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
 			return;
 		}
 		const std::size_t tokenSize = seqEnd - seqBegin;
@@ -339,7 +339,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 			} else {
 				// TODO think of counting hard failures, as the specification suggests.
 				// A hard failure or an unknown status is reported.
-				logError("[LastfmScrobbler] Unable to submit the now-playing track to Last.fm. Reason: '#'.",
+				logErrorFmt("[LastfmScrobbler] Unable to submit the now-playing track to Last.fm. Reason: '#'.",
 						std::make_pair(seqBegin, seqEnd));
 				return;
 			}
@@ -473,8 +473,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Submission URL: '#'.", submissionUrlCopy);
-		logDebug("[LastfmScrobbler] Submission request body: '#'.",
+		logDebugFmt("[LastfmScrobbler] Submission URL: '#'.", submissionUrlCopy);
+		logDebugFmt("[LastfmScrobbler] Submission request body: '#'.",
 				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
@@ -497,8 +497,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug("[LastfmScrobbler] Submission response status code: '#'.", response.statusCode);
-	logDebug("[LastfmScrobbler] Submission response body: #", responseBody.c_str());
+	logDebugFmt("[LastfmScrobbler] Submission response status code: '#'.", response.statusCode);
+	logDebugFmt("[LastfmScrobbler] Submission response body: #", responseBody.c_str());
 
 	if (response.statusCode == 200) {
 		/* Using find_if to tokenise response instead of find since the former
@@ -507,7 +507,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 		const char *seqBegin = responseBody.data(), *seqEnd, *end = responseBody.data() + responseBody.size();
 		seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 		if (unlikely(seqEnd == end)) {
-			logError("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
+			logErrorFmt("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
 			return 0;
 		}
 		const std::size_t tokenSize = seqEnd - seqBegin;
@@ -527,7 +527,7 @@ std::size_t LastfmScrobbler::doScrobbling()
 			} else {
 				// TODO think of counting hard failures, as the specification suggests.
 				// A hard failure or an unknown status is reported.
-				logError("[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '#'.",
+				logErrorFmt("[LastfmScrobbler] Unable to submit scrobbles to Last.fm. Reason: '#'.",
 						std::make_pair(seqBegin, seqEnd));
 				return 0;
 			}
@@ -575,7 +575,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Authentication URL: '#'.", url.c_str());
+		logDebugFmt("[LastfmScrobbler] Authentication URL: '#'.", url.c_str());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().get(url.c_str(), HttpRequest(), response,
@@ -591,8 +591,8 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
-	logDebug("[LastfmScrobbler] Authentication response status code: '#'.", response.statusCode);
-	logDebug("[LastfmScrobbler] Authentication response body: #", responseBody.c_str());
+	logDebugFmt("[LastfmScrobbler] Authentication response status code: '#'.", response.statusCode);
+	logDebugFmt("[LastfmScrobbler] Authentication response body: #", responseBody.c_str());
 
 	if (unlikely(response.statusCode != 200)) {
 		logErrorMsg("[LastfmScrobbler] An error is encountered while authenticating the user to Last.fm."_s);
@@ -608,12 +608,12 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 
 	if (unlikely(seqEnd == end)) {
-		logError("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
+		logErrorFmt("[LastfmScrobbler] Invalid response body (missing line feed): '#'.", responseBody.c_str());
 		return false;
 	}
 	if (unlikely(seqEnd - seqBegin != 2 || *seqBegin != 'O' || *(seqBegin + 1) != 'K')) {
 		// TODO handle non-OK responses differently (e.g. if BANNED then disable the plugin).
-		logError("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '#'.",
+		logErrorFmt("[LastfmScrobbler] Unable to authenticate the user to Last.fm. Reason: '#'.",
 				std::make_pair(seqBegin, seqEnd));
 		return false;
 	}
@@ -624,7 +624,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	m_sessionId.assign(seqBegin, seqEnd);
 
 	if (unlikely(seqEnd == end)) {
-		logError("[LastfmScrobbler] Invalid response body: '#'.", responseBody.c_str());
+		logErrorFmt("[LastfmScrobbler] Invalid response body: '#'.", responseBody.c_str());
 		return false;
 	}
 
@@ -634,7 +634,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	m_nowPlayingUrl.assign(seqBegin, seqEnd);
 
 	if (unlikely(seqEnd == end)) {
-		logError("[LastfmScrobbler] Invalid response body: '#'.", responseBody.c_str());
+		logErrorFmt("[LastfmScrobbler] Invalid response body: '#'.", responseBody.c_str());
 		return false;
 	}
 

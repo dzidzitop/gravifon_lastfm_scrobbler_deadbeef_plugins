@@ -145,7 +145,7 @@ inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * con
 
 	if (trackDuration <= 0.d || trackPlayDuration < (scrobbleThreshold * trackDuration)) {
 		// The track was not played long enough to be scrobbled or its duration is zero or negative.
-		afc::logger::logDebug(
+		afc::logger::logDebugFmt(
 				"The track is played not long enough to be scrobbled (play duration: #s; track duration: #s).",
 				trackPlayDuration, trackDuration);
 		return afc::Optional<ScrobbleInfo>::none();
