@@ -36,7 +36,7 @@ public:
 		 */
 	}
 
-	virtual ~GravifonScrobbler()
+	~GravifonScrobbler()
 	{
 		// Synchronising memory before destructing the member fields of this GravifonScrobbler.
 		std::lock_guard<std::mutex> lock(m_mutex);

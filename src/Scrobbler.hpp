@@ -58,7 +58,8 @@ public:
 		 */
 	}
 
-	virtual ~Scrobbler()
+	// Non-virtual by design. Inheritance is used for the sake of code re-use. Polymorphism is not used.
+	~Scrobbler()
 	{
 		// Synchronising memory before destructing the member fields of this Scrobbler.
 		std::lock_guard<std::mutex> lock(m_mutex);
