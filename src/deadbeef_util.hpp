@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #ifndef DEADBEEF_UTIL_HPP_
 #define DEADBEEF_UTIL_HPP_
 
+#include <algorithm>
 #include <cstddef>
 #include <deadbeef.h>
 #include <chrono>
@@ -31,9 +32,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include "Scrobbler.hpp"
 
 using afc::operator"" _s;
-
-// The character 'Line Feed' in UTF-8.
-static const char UTF8_LF = 0x0a;
 
 struct ConfLock
 {
@@ -56,19 +54,25 @@ constexpr inline long toLongMillis(const double seconds)
 	return static_cast<long>(seconds * 1000.d);
 }
 
-template<typename AddTagOp>
-inline void addMultiTag(const char * const multiTag, AddTagOp addTagOp)
+inline afc::String convertMultiTag(const char * const multiTag)
 {
-	/* Adding tags one by one. DeaDBeeF returns them as
-	 * '\n'-separated values within a single string.
+	/* Converts \n to \0. The former is used by DeaDBeeF as the value separator,
+	 * the latter is used by ScrobbleInfo.
 	 */
+	std::size_t n = std::strlen(multiTag);
+	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(n);
+	auto p = buf.borrowTail();
 	const char *start = multiTag, *end;
-	while ((end = std::strchr(start, UTF8_LF)) != nullptr) {
-		addTagOp(afc::String(start, end));
+	while ((end = std::strchr(start, Track::multiTagSeparator())) != nullptr) {
+		p = std::copy(start, end, p);
+		*p = u8"\0"[0];
+		++p;
 		start = end + 1;
 	}
 	// Adding the last tag.
-	addTagOp(afc::String(start));
+	p = std::copy_n(start, &(*p) - buf.data(), p);
+	buf.returnTail(p);
+	return afc::String::move(buf);
 }
 
 inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
@@ -117,10 +121,13 @@ inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functio
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](afc::String &&artistName) { trackInfo.addArtist(std::move(artistName)); });
+	/* Adding artists. DeaDBeeF returns them as '\n'-separated values within a single string.
+	 * This is the format used by Track so no conversion is required.
+	 */
+	trackInfo.setArtists(convertMultiTag(artist));
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](afc::String &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
+		trackInfo.setAlbumArtists(convertMultiTag(albumArtist));
 	}
 
 	// TODO avoid unnecessary moving.
@@ -191,10 +198,13 @@ inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * con
 	}
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
-	addMultiTag(artist, [&](afc::String &&artistName) { trackInfo.addArtist(std::move(artistName)); });
+	/* Adding artists. DeaDBeeF returns them as '\n'-separated values within a single string.
+	 * This is the format used by Track so no conversion is required.
+	 */
+	trackInfo.setArtists(convertMultiTag(artist));
 
 	if (albumArtist != nullptr) {
-		addMultiTag(albumArtist, [&](afc::String &&artistName) { trackInfo.addAlbumArtist(std::move(artistName)); });
+		trackInfo.setAlbumArtists(convertMultiTag(albumArtist));
 	}
 
 	// TODO avoid unnecessary moving.

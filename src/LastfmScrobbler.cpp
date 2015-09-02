@@ -168,7 +168,7 @@ namespace
 
 		const Track &track = scrobbleInfo.track;
 		assert(track.hasTitle());
-		assert(track.hasArtist());
+		assert(track.getArtists().size() > 0);
 
 		const NumberUrlPart<afc::Timestamp::time_type> scrobbleStartTs(
 				scrobbleInfo.scrobbleStartTimestamp.millis() / 1000);
@@ -180,7 +180,7 @@ namespace
 		// TODO optimise parameter passing
 		builder.params(
 				// The artist name. Required.
-				scrobbleParamName, UrlPart<>(track.getArtists()[0].data(), track.getArtists()[0].size()),
+				scrobbleParamName, UrlPart<>(track.getFirstArtist()),
 				// The track title. Required.
 				scrobbleParamName, UrlPart<>(track.getTitle().data(), track.getTitle().size()),
 				// The time the track started playing, in UNIX timestamp format. Required.
@@ -249,7 +249,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId.data(), m_sessionId.size()),
-			UrlPart<raw>("a"_s), UrlPart<>(track.getArtists()[0].data(), track.getArtists()[0].size()),
+			UrlPart<raw>("a"_s), UrlPart<>(track.getFirstArtist()),
 			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().data(), track.getTitle().size()),
 			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
 			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
@@ -577,7 +577,7 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Authentication URL: "_s, url);
+		logDebug("[LastfmScrobbler] Authentication URL: "_s, url.c_str());
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().get(url.c_str(), HttpRequest(), response,

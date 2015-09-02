@@ -49,9 +49,10 @@ namespace
 	static const std::bitset<256> jsonCharsToEscape = initJsonCharsToEscape();
 
 	template<typename Iterator>
-	Iterator writeJsonString(const afc::String &src, register Iterator dest)
+	Iterator writeJsonString(const char * const srcBegin, const char * const srcEnd, register Iterator dest)
 	{
-		for (const char c : src) {
+		for (auto p = srcBegin; p < srcEnd; ++p) {
+			const char c = *p;
 			// Truncated to an octet just in case non-octet bytes are used.
 			const unsigned char uc = static_cast<unsigned char>(c) & 0xff;
 			if (!jsonCharsToEscape[uc]) {
@@ -89,13 +90,36 @@ namespace
 		return dest;
 	}
 
-	inline std::size_t totalStringSize(const std::vector<afc::String> &strings) noexcept
+	template<typename Iterator>
+	inline Iterator writeJsonString(const afc::String &src, register Iterator dest)
 	{
-		std::size_t totalSize = 0;
-		for (const afc::String &s : strings) {
-			totalSize += s.size();
+		return writeJsonString(src.begin(), src.end(), dest);
+	}
+
+	inline std::size_t artistCount(const afc::String &artists)
+	{
+		return std::count_if(artists.begin(), artists.end(),
+				[](const char c) -> bool { return c == Track::multiTagSeparator(); }) + 1;
+	}
+
+	template<typename Iterator>
+	Iterator writeArtists(const afc::String &artists, register Iterator dest)
+	{
+		// Artists are '\n'-separated values within a single string.
+		const char *start = artists.begin(), *end = artists.end();
+		for (const char *p = start; p != end; ++p) {
+			if (*p == Track::multiTagSeparator()) {
+				dest = afc::copy(R"({"name":")"_s, dest);
+				dest = writeJsonString(start, p, dest);
+				dest = afc::copy(R"("},)"_s, dest);
+				start = p + 1;
+			}
 		}
-		return totalSize;
+		// Adding the last tag.
+		dest = afc::copy(R"({"name":")"_s, dest);
+		dest = writeJsonString(start, artists.end(), dest);
+		dest = afc::copy(R"("})"_s, dest);
+		return dest;
 	}
 
 	inline std::size_t maxJsonSize(const ScrobbleInfo &scrobbleInfo) noexcept
@@ -103,7 +127,7 @@ namespace
 		const Track &track = scrobbleInfo.track;
 
 		assert(track.hasTitle());
-		assert(track.hasArtist());
+		assert(track.getArtists().size() > 0);
 
 		/* Each free-text label can be escaped so it is multiplied by six to cover the case
 		 * when each character is unicode-escaped.
@@ -124,22 +148,24 @@ namespace
 		maxSize += 1; // ,
 
 		{ // artists
+			const afc::String &artists = track.getArtists();
+			const std::size_t count= artistCount(artists);
 			maxSize += R"("artists":[])"_s.size();
-			const std::vector<afc::String> &artists = track.getArtists();
-			maxSize += R"({"name":""},)"_s.size() * artists.size() - 1; // With commas; the last comma is removed.
-			maxSize += maxPrintedCharSize * totalStringSize(artists);
+			maxSize += R"({"name":""},)"_s.size() * count - 1; // With commas; the last comma is removed.
+			maxSize += maxPrintedCharSize * (artists.size() - count);
 			maxSize += 1; // ,
 		}
 
 		if (track.hasAlbumTitle()) {
 			maxSize += R"("album":{"title":""})"_s.size();
 			maxSize += maxPrintedCharSize * track.getAlbumTitle().size();
-			if (track.hasAlbumArtist()) {
+			if (track.getAlbumArtists().size() > 0) {
+				const afc::String &albumArtists = track.getAlbumArtists();
+				const std::size_t count= artistCount(albumArtists);
 				maxSize += 1; // ,
 				maxSize += R"("artists":[])"_s.size();
-				const std::vector<afc::String> &albumArtists = track.getAlbumArtists();
-				maxSize += R"({"name":""},)"_s.size() * albumArtists.size() - 1; // With commas; the last comma is removed.
-				maxSize += maxPrintedCharSize * totalStringSize(albumArtists);
+				maxSize += R"({"name":""},)"_s.size() * count - 1; // With commas; the last comma is removed.
+				maxSize += maxPrintedCharSize * (albumArtists.size() - count);
 			}
 			maxSize += 1; // ,
 		}
@@ -165,25 +191,13 @@ namespace
 		dest = writeJsonString(track.getTitle(), dest);
 		// At least single artist is expected.
 		dest = afc::copy(R"(","artists":[)"_s, dest);
-		for (const afc::String &artist : track.getArtists()) {
-			// TODO improve performance by merging appends.
-			dest = afc::copy(R"({"name":")"_s, dest);
-			dest = writeJsonString(artist, dest);
-			dest = afc::copy(R"("},)"_s, dest);
-		}
-		--dest; // removing the last redundant comma.
+		dest = writeArtists(track.getArtists(), dest);
 		if (track.hasAlbumTitle()) {
 			dest = afc::copy(R"(],"album":{"title":")"_s, dest);
 			dest = writeJsonString(track.getAlbumTitle(), dest);
-			if (track.hasAlbumArtist()) {
+			if (track.getAlbumArtists().size() > 0) {
 				dest = afc::copy(R"(","artists":[)"_s, dest);
-				for (const afc::String &albumArtist : track.getAlbumArtists()) {
-					// TODO improve performance by merging appends.
-					dest = afc::copy(R"({"name":")"_s, dest);
-					dest = writeJsonString(albumArtist, dest);
-					dest = afc::copy(R"("},)"_s, dest);
-				}
-				--dest; // removing the last redundant comma.
+				dest = writeArtists(track.getAlbumArtists(), dest);
 				dest = afc::copy(R"(]},"length":{"amount":)"_s, dest);
 			} else {
 				dest = afc::copy(R"("},"length":{"amount":)"_s, dest);
@@ -200,8 +214,6 @@ namespace
 	template<typename ErrorHandler>
 	inline const char *parseText(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
 	{
-		assert(dest.size() == 0);
-
 		auto textParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			return afc::json::parseCharsToUTF8(begin, end, [&](const char c) { dest.reserveForOne(); dest.append(c); }, errorHandler);
@@ -347,8 +359,8 @@ namespace
 				(begin, end, durationParser, errorHandler);
 	}
 
-	template<typename AddArtistOp, typename ErrorHandler>
-	inline const char *parseArtists(const char * const begin, const char * const end, AddArtistOp addArtistOp, ErrorHandler &errorHandler)
+	template<typename ErrorHandler>
+	inline const char *parseArtists(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
 	{
 		auto artistElementParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -376,15 +388,14 @@ namespace
 					return end;
 				}
 
-				afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
-				p = parseText(p, end, buf, errorHandler);
+				p = parseText(p, end, dest, errorHandler);
 
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				std::size_t bufSize = buf.size();
-				addArtistOp(afc::String::move(buf));
+				dest.reserveForOne();
+				dest.append(Track::multiTagSeparator());
 
 				return p;
 			};
@@ -393,8 +404,12 @@ namespace
 					(begin, end, artistParser, errorHandler);
 		};
 
-		return afc::json::parseArray<const char *, decltype(artistElementParser) &, ErrorHandler, afc::json::noSpaces>
+		const char * const p = afc::json::parseArray<const char *, decltype(artistElementParser) &, ErrorHandler, afc::json::noSpaces>
 				(begin, end, artistElementParser, errorHandler);
+		if (dest.size() > 0) { // removing extra separator
+			dest.resize(dest.size() - 1);
+		}
+		return p;
 	}
 
 	template<typename ErrorHandler>
@@ -438,13 +453,16 @@ namespace
 						return end;
 					}
 
-					std::size_t bufSize = buf.size();
 					dest.setAlbumTitle(afc::String::move(buf));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
-					p = parseArtists(p, end, [&](afc::String &&artistName) { dest.addAlbumArtist(std::move(artistName)); }, errorHandler);
+					afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
+					p = parseArtists(p, end, buf, errorHandler);
+
 					if (unlikely(!errorHandler.valid())) {
 						return end;
 					}
+
+					dest.setAlbumArtists(afc::String::move(buf));
 				} else {
 					errorHandler.malformedJson(p);
 					return end;
@@ -516,15 +534,18 @@ namespace
 						return end;
 					}
 
-					std::size_t bufSize = buf.size();
 					dest.setTitle(afc::String::move(buf));
 				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 1);
 
-					p = parseArtists(p, end, [&](afc::String &&artistName) { dest.addArtist(std::move(artistName)); }, errorHandler);
+					afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
+					p = parseArtists(p, end, buf, errorHandler);
+
 					if (unlikely(!errorHandler.valid())) {
 						return end;
 					}
+
+					dest.setArtists(afc::String::move(buf));
 				} else if (afc::equal("length", "length"_s.size(), propNameBegin, propNameSize)) {
 					fieldsToParse &= ~std::size_t(1 << 2);
 

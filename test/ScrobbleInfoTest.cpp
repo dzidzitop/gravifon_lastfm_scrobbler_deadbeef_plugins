@@ -20,8 +20,10 @@ CPPUNIT_TEST_SUITE_REGISTRATION(ScrobbleInfoTest);
 #include <ScrobbleInfo.hpp>
 #include <ctime>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/StringRef.hpp>
 #include <afc/utils.h>
 
+using afc::operator"" _s;
 using namespace std;
 
 namespace
@@ -201,8 +203,8 @@ void ScrobbleInfoTest::testSerialiseAsJson_ScrobbleInfoWithAllFields()
 	Track &track = scrobbleInfo.track;
 	track.setTitle(u8"'39");
 	track.setAlbumTitle(u8"A Night at the Opera");
-	track.addArtist(u8"Queen");
-	track.addAlbumArtist(u8"Scorpions");
+	track.setArtists(afc::String(u8"Queen\0Jones"_s));
+	track.setAlbumArtists(afc::String(u8"Scorpions"));
 	track.setDurationMillis(12);
 
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> result = serialiseAsJson(scrobbleInfo);
@@ -210,7 +212,7 @@ void ScrobbleInfoTest::testSerialiseAsJson_ScrobbleInfoWithAllFields()
 	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2000-01-02T01:42:33+0230",)"
 			u8R"("scrobble_end_datetime":"2001-02-03T14:40:04+0230",)"
 			u8R"("scrobble_duration":{"amount":1001,"unit":"ms"},)"
-			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+			u8R"("track":{"title":"'39","artists":[{"name":"Queen"},{"name":"Jones"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"}]},)"
 			u8R"("length":{"amount":12,"unit":"ms"}}})"), string(result.c_str()));
 }

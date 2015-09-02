@@ -17,8 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define SCROBBLER_INFO_HPP_
 
 #include <cassert>
+#include <cstring>
 #include <utility>
-#include <vector>
 #include <afc/dateutil.hpp>
 #include <afc/FastStringBuffer.hpp>
 #include <afc/SimpleString.hpp>
@@ -45,17 +45,12 @@ public:
 	const afc::String &getTitle() const noexcept { assert(m_titleSet); return m_title; }
 	bool hasTitle() const noexcept { return m_titleSet; }
 
-	void addArtist(afc::String &&artist) { m_artists.emplace_back(std::move(artist)); }
-	void addArtist(const char * const artist) { m_artists.emplace_back(artist); }
-	std::vector<afc::String> &getArtists() noexcept { return m_artists; }
-	const std::vector<afc::String> &getArtists() const noexcept { return m_artists; }
-	bool hasArtist() const noexcept { return !m_artists.empty(); }
+	void setArtists(afc::String &&artists) noexcept { m_artists = std::move(artists); }
+	const afc::String &getArtists() const noexcept { return m_artists; }
+	const char *getFirstArtist() const noexcept { return m_artists.data(); /* ended with '\0' */ }
 
-	void addAlbumArtist(afc::String &&artist) { m_albumArtists.emplace_back(std::move(artist)); }
-	void addAlbumArtist(const char * const artist) { m_albumArtists.emplace_back(artist); }
-	std::vector<afc::String> &getAlbumArtists() noexcept { return m_albumArtists; }
-	const std::vector<afc::String> &getAlbumArtists() const noexcept { return m_albumArtists; }
-	bool hasAlbumArtist() const noexcept { return !m_albumArtists.empty(); }
+	void setAlbumArtists(afc::String &&artists) noexcept { m_albumArtists = std::move(artists); }
+	const afc::String &getAlbumArtists() const noexcept { return m_albumArtists; }
 
 	void setAlbumTitle(afc::String &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
 	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
@@ -66,10 +61,14 @@ public:
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
+
+	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
 private:
 	afc::String m_title;
-	std::vector<afc::String> m_artists;
-	std::vector<afc::String> m_albumArtists;
+	// \0-separated list of artists. Names are rather short so processing should be efficient.
+	afc::String m_artists;
+	// \0-separated list of album artists. Names are rather short so processing should be efficient.
+	afc::String m_albumArtists;
 	afc::String m_album;
 	// Track duration in milliseconds.
 	long m_duration;
