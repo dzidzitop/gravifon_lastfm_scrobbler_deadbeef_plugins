@@ -103,7 +103,7 @@ namespace
 	}
 
 	template<typename Iterator>
-	Iterator writeArtists(const afc::String &artists, register Iterator dest)
+	inline Iterator writeArtists(const afc::String &artists, register Iterator dest)
 	{
 		// Artists are '\n'-separated values within a single string.
 		const char *start = artists.begin(), *end = artists.end();
