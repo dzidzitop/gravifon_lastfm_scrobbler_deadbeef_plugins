@@ -61,17 +61,19 @@ inline afc::String convertMultiTag(const char * const multiTag)
 	 */
 	std::size_t n = std::strlen(multiTag);
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(n);
-	auto p = buf.borrowTail();
-	const char *start = multiTag, *end;
-	while ((end = std::strchr(start, u8"\n"[0])) != nullptr) {
-		p = std::copy(start, end, p);
-		*p = u8"\0"[0];
-		++p;
-		start = end + 1;
+	if (n > 0) {
+		auto p = buf.borrowTail();
+		const char *start = multiTag, *end;
+		while ((end = std::strchr(start, u8"\n"[0])) != nullptr) {
+			p = std::copy(start, end, p);
+			*p = u8"\0"[0];
+			++p;
+			start = end + 1;
+		}
+		// Adding the last tag.
+		p = std::copy_n(start, n - (&(*p) - buf.data()), p);
+		buf.returnTail(p);
 	}
-	// Adding the last tag.
-	p = std::copy_n(start, &(*p) - buf.data(), p);
-	buf.returnTail(p);
 	return afc::String::move(buf);
 }
 

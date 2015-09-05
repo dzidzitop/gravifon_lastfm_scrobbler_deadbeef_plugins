@@ -3,7 +3,7 @@ testDir=test
 buildDir=build
 cxxFlags=-I"include" -Wall -fPIC -std=c++11 -O3 -march=native -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections -DNDEBUG
 ldFlags=-Llib -Wl,-version-script,export_symbols
-cxxFlags_test=-I"$srcDir" -I"include" -Wall -fPIC -std=c++11 -O2
+cxxFlags_test=-I"$srcDir" -I"include" -Wall -fPIC -std=c++11 -O0 -g3
 ldFlags_test=-L"$buildDir" $ldFlags
 
 rule cxx
@@ -27,6 +27,7 @@ build $buildDir/lastfm_scrobbler.o: cxx $srcDir/lastfm_scrobbler.cpp
 build $buildDir/HttpClient.o: cxx $srcDir/HttpClient.cpp
 build $buildDir/ScrobbleInfo.o: cxx $srcDir/ScrobbleInfo.cpp
 
+build $buildDir/DeadbeefUtilTest.o: cxx_test $testDir/DeadbeefUtilTest.cpp
 build $buildDir/ScrobbleInfoTest.o: cxx_test $testDir/ScrobbleInfoTest.cpp
 build $buildDir/run_tests.o: cxx_test $testDir/run_tests.cpp
 
@@ -45,6 +46,7 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
   libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -lssl
 
 build $buildDir/unit_tests: bin $
+    $buildDir/DeadbeefUtilTest.o $
     $buildDir/GravifonScrobbler.o $
     $buildDir/gravifon_scrobbler.o $
     $buildDir/HttpClient.o $
