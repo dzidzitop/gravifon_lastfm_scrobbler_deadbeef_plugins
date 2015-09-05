@@ -47,7 +47,7 @@ public:
 
 	void setArtists(afc::String &&artists) noexcept { m_artists = std::move(artists); }
 	const afc::String &getArtists() const noexcept { return m_artists; }
-	const char *getFirstArtist() const noexcept { return m_artists.data(); /* ended with '\0' */ }
+	const char *getFirstArtist() const noexcept { return m_artists.c_str(); /* ended with '\0' */ }
 
 	void setAlbumArtists(afc::String &&artists) noexcept { m_albumArtists = std::move(artists); }
 	const afc::String &getAlbumArtists() const noexcept { return m_albumArtists; }
