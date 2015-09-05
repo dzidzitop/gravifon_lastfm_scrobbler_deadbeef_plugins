@@ -15,10 +15,10 @@ rule cxx_test
   command=g++ $cxxFlags_test -MMD -MF $out.d -c $in -o $out
 
 rule linkDynamic
-  command=g++ -shared $ldFlags -o $out $in $libs
+  command=g++ -shared -o $out $in $libs $ldFlags
 
 rule bin
-  command=g++ $ldFlags_test -o $out $in $libs
+  command=g++ -o $out $in $libs $ldFlags_test
 
 build $buildDir/GravifonScrobbler.o: cxx $srcDir/GravifonScrobbler.cpp
 build $buildDir/gravifon_scrobbler.o: cxx $srcDir/gravifon_scrobbler.cpp
@@ -35,14 +35,14 @@ build $buildDir/gravifon_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/ScrobbleInfo.o $
     $buildDir/gravifon_scrobbler.o
-  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -ljsoncpp
+  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -lssl
 
 build $buildDir/lastfm_scrobbler.so: linkDynamic $
     $buildDir/HttpClient.o $
     $buildDir/LastfmScrobbler.o $
     $buildDir/lastfm_scrobbler.o $
     $buildDir/ScrobbleInfo.o
-  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl
+  libs=-Wl,-gc-sections -Wl,-Bstatic -lafc -Wl,-Bdynamic -lcurl -lssl
 
 build $buildDir/unit_tests: bin $
     $buildDir/GravifonScrobbler.o $
