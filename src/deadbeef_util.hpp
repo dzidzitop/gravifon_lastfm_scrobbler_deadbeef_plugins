@@ -63,7 +63,7 @@ inline afc::String convertMultiTag(const char * const multiTag)
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(n);
 	auto p = buf.borrowTail();
 	const char *start = multiTag, *end;
-	while ((end = std::strchr(start, Track::multiTagSeparator())) != nullptr) {
+	while ((end = std::strchr(start, u8"\n"[0])) != nullptr) {
 		p = std::copy(start, end, p);
 		*p = u8"\0"[0];
 		++p;
