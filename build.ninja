@@ -47,10 +47,6 @@ build $buildDir/lastfm_scrobbler.so: linkDynamic $
 
 build $buildDir/unit_tests: bin $
     $buildDir/DeadbeefUtilTest.o $
-    $buildDir/GravifonScrobbler.o $
-    $buildDir/gravifon_scrobbler.o $
-    $buildDir/HttpClient.o $
-    $buildDir/LastfmScrobbler.o $
     $buildDir/ScrobbleInfoTest.o $
     $buildDir/ScrobbleInfo.o $
     $buildDir/run_tests.o

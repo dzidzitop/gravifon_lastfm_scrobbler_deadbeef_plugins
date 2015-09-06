@@ -67,14 +67,14 @@ void ScrobbleInfoTest::tearDown()
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T13:40:04+0130",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"Scorpions"}]},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(result.hasValue());
 
@@ -90,14 +90,14 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_SingleArtist()
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0100",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0100",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"},{"name":"Scorpions"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"}]},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(result.hasValue());
 
@@ -113,14 +113,14 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleArtists
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumArtists()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera","artists":[{"name":"ABBA"},{"name":"Scorpions"}]},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(result.hasValue());
 
@@ -136,13 +136,13 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_WithAllFields_MultipleAlbumAr
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T13:12:33+0300",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T13:12:33+0300",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(result.hasValue());
 
@@ -157,14 +157,14 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
 			u8R"("album":{"title":"A Night at the Opera"},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})");
+			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(result.hasValue());
 
@@ -180,13 +180,13 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
 {
-	string input(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
 			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
 			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
 			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
-			u8R"("length":{"amount":207026,"unit":"ms")");
+			u8R"("length":{"amount":207026,"unit":"ms")"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.data(), input.data() + input.size());
+	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
 	CPPUNIT_ASSERT(!result.hasValue());
 }
