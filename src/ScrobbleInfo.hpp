@@ -46,11 +46,13 @@ public:
 	bool hasTitle() const noexcept { return m_titleSet; }
 
 	void setArtists(afc::String &&artists) noexcept { m_artists = std::move(artists); }
-	const afc::String &getArtists() const noexcept { return m_artists; }
+	const char *getArtistsBegin() const noexcept { return m_artists.begin(); }
+	const char *getArtistsEnd() const noexcept { return m_artists.end(); }
 	const char *getFirstArtist() const noexcept { return m_artists.c_str(); /* ended with '\0' */ }
 
 	void setAlbumArtists(afc::String &&artists) noexcept { m_albumArtists = std::move(artists); }
-	const afc::String &getAlbumArtists() const noexcept { return m_albumArtists; }
+	const char *getAlbumArtistsBegin() const noexcept { return m_albumArtists.begin(); }
+	const char *getAlbumArtistsEnd() const noexcept { return m_albumArtists.end(); }
 
 	void setAlbumTitle(afc::String &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
 	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }

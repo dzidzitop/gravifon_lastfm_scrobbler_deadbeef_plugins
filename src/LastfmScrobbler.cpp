@@ -168,7 +168,7 @@ namespace
 
 		const Track &track = scrobbleInfo.track;
 		assert(track.hasTitle());
-		assert(track.getArtists().size() > 0);
+		assert(track.getArtistsBegin() != track.getArtistsEnd());
 
 		const NumberUrlPart<afc::Timestamp::time_type> scrobbleStartTs(
 				scrobbleInfo.scrobbleStartTimestamp.millis() / 1000);

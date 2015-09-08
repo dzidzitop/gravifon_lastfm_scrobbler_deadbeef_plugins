@@ -96,17 +96,17 @@ namespace
 		return writeJsonString(src.begin(), src.end(), dest);
 	}
 
-	inline std::size_t artistCount(const afc::String &artists)
+	inline std::size_t artistCount(const char * const artistsBegin, const char * const artistsEnd) noexcept
 	{
-		return std::count_if(artists.begin(), artists.end(),
+		return std::count_if(artistsBegin, artistsEnd,
 				[](const char c) -> bool { return c == Track::multiTagSeparator(); }) + 1;
 	}
 
 	template<typename Iterator>
-	inline Iterator writeArtists(const afc::String &artists, register Iterator dest)
+	inline Iterator writeArtists(const char * const artistsBegin, const char * const artistsEnd, register Iterator dest)
 	{
 		// Artists are '\n'-separated values within a single string.
-		const char *start = artists.begin(), *end = artists.end();
+		const char *start = artistsBegin, *end = artistsEnd;
 		for (const char *p = start; p != end; ++p) {
 			if (*p == Track::multiTagSeparator()) {
 				dest = afc::copy(R"({"name":")"_s, dest);
@@ -117,7 +117,7 @@ namespace
 		}
 		// Adding the last tag.
 		dest = afc::copy(R"({"name":")"_s, dest);
-		dest = writeJsonString(start, artists.end(), dest);
+		dest = writeJsonString(start, artistsEnd, dest);
 		dest = afc::copy(R"("})"_s, dest);
 		return dest;
 	}
@@ -127,7 +127,7 @@ namespace
 		const Track &track = scrobbleInfo.track;
 
 		assert(track.hasTitle());
-		assert(track.getArtists().size() > 0);
+		assert(track.getArtistsBegin() != track.getArtistsEnd());
 
 		/* Each free-text label can be escaped so it is multiplied by six to cover the case
 		 * when each character is unicode-escaped.
@@ -148,24 +148,27 @@ namespace
 		maxSize += 1; // ,
 
 		{ // artists
-			const afc::String &artists = track.getArtists();
-			const std::size_t count= artistCount(artists);
+			const char * const artistsBegin = track.getArtistsBegin();
+			const char * const artistsEnd = track.getArtistsEnd();
+			const std::size_t count= artistCount(artistsBegin, artistsEnd);
 			maxSize += R"("artists":[])"_s.size();
 			maxSize += R"({"name":""},)"_s.size() * count - 1; // With commas; the last comma is removed.
-			maxSize += maxPrintedCharSize * (artists.size() - count);
+			maxSize += maxPrintedCharSize * (artistsEnd - artistsBegin - count);
 			maxSize += 1; // ,
 		}
 
 		if (track.hasAlbumTitle()) {
 			maxSize += R"("album":{"title":""})"_s.size();
 			maxSize += maxPrintedCharSize * track.getAlbumTitle().size();
-			if (track.getAlbumArtists().size() > 0) {
-				const afc::String &albumArtists = track.getAlbumArtists();
-				const std::size_t count= artistCount(albumArtists);
+			const char * const albumArtistsBegin = track.getAlbumArtistsBegin();
+			const char * const albumArtistsEnd = track.getAlbumArtistsEnd();
+			const std::size_t albumArtistsSize = albumArtistsEnd - albumArtistsBegin;
+			if (albumArtistsSize > 0) {
+				const std::size_t count= artistCount(albumArtistsBegin, albumArtistsEnd);
 				maxSize += 1; // ,
 				maxSize += R"("artists":[])"_s.size();
 				maxSize += R"({"name":""},)"_s.size() * count - 1; // With commas; the last comma is removed.
-				maxSize += maxPrintedCharSize * (albumArtists.size() - count);
+				maxSize += maxPrintedCharSize * (albumArtistsSize  - count);
 			}
 			maxSize += 1; // ,
 		}
@@ -191,13 +194,15 @@ namespace
 		dest = writeJsonString(track.getTitle(), dest);
 		// At least single artist is expected.
 		dest = afc::copy(R"(","artists":[)"_s, dest);
-		dest = writeArtists(track.getArtists(), dest);
+		dest = writeArtists(track.getArtistsBegin(), track.getArtistsEnd(), dest);
 		if (track.hasAlbumTitle()) {
 			dest = afc::copy(R"(],"album":{"title":")"_s, dest);
 			dest = writeJsonString(track.getAlbumTitle(), dest);
-			if (track.getAlbumArtists().size() > 0) {
+			const char * const albumArtistsBegin = track.getAlbumArtistsBegin();
+			const char * const albumArtistsEnd = track.getAlbumArtistsEnd();
+			if (albumArtistsBegin != albumArtistsEnd) {
 				dest = afc::copy(R"(","artists":[)"_s, dest);
-				dest = writeArtists(track.getAlbumArtists(), dest);
+				dest = writeArtists(albumArtistsBegin, albumArtistsEnd, dest);
 				dest = afc::copy(R"(]},"length":{"amount":)"_s, dest);
 			} else {
 				dest = afc::copy(R"("},"length":{"amount":)"_s, dest);
