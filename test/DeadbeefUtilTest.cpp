@@ -21,25 +21,28 @@ CPPUNIT_TEST_SUITE_REGISTRATION(DeadbeefUtilTest);
 #include <string>
 
 #include <deadbeef_util.hpp>
-#include <afc/SimpleString.hpp>
+#include <afc/FastStringBuffer.hpp>
 
 void DeadbeefUtilTest::testConvertMultiTag_EmptyString()
 {
-	afc::String result = convertMultiTag("");
+	afc::FastStringBuffer<char> result;
+	convertMultiTag("", result);
 
 	CPPUNIT_ASSERT_EQUAL(result.size(), std::size_t(0));
 }
 
 void DeadbeefUtilTest::testConvertMultiTag_SingleValue()
 {
-	afc::String result = convertMultiTag("Perry Como");
+	afc::FastStringBuffer<char> result;
+	convertMultiTag("Perry Como", result);
 
 	CPPUNIT_ASSERT_EQUAL(std::string(result.c_str()), std::string("Perry Como"));
 }
 
 void DeadbeefUtilTest::testConvertMultiTag_TwoValues()
 {
-	afc::String result = convertMultiTag("Perry Como\nTom Jones");
+	afc::FastStringBuffer<char> result;
+	convertMultiTag("Perry Como\nTom Jones", result);
 
 	CPPUNIT_ASSERT_EQUAL(std::string(result.begin(), result.end()),
 			(std::string("Perry Como") += u8"\0"[0]).append("Tom Jones"));
@@ -47,8 +50,20 @@ void DeadbeefUtilTest::testConvertMultiTag_TwoValues()
 
 void DeadbeefUtilTest::testConvertMultiTag_ThreeValues()
 {
-	afc::String result = convertMultiTag("Perry Como\nTom Jones\nAndy Williams");
+	afc::FastStringBuffer<char> result;
+	convertMultiTag("Perry Como\nTom Jones\nAndy Williams", result);
 
 	CPPUNIT_ASSERT_EQUAL(std::string(result.begin(), result.end()),
 			((std::string("Perry Como") += u8"\0"[0]).append("Tom Jones") += u8"\0"[0]).append("Andy Williams"));
+}
+
+void DeadbeefUtilTest::testConvertMultiTag_TwoValues_NonEmptyBuffer()
+{
+	afc::FastStringBuffer<char> result(15);
+	result.append("Elton John", 10);
+
+	convertMultiTag("Perry Como\nTom Jones", result);
+
+	CPPUNIT_ASSERT_EQUAL(std::string(result.begin(), result.end()),
+			(std::string("Elton JohnPerry Como") += u8"\0"[0]).append("Tom Jones"));
 }

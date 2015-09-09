@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 
 #include <afc/logger.hpp>
-#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <afc/utils.h>
 
@@ -54,15 +53,16 @@ constexpr inline long toLongMillis(const double seconds)
 	return static_cast<long>(seconds * 1000.d);
 }
 
-inline afc::String convertMultiTag(const char * const multiTag)
+inline void convertMultiTag(const char * const multiTag, afc::FastStringBuffer<char> &dest)
 {
 	/* Converts \n to \0. The former is used by DeaDBeeF as the value separator,
 	 * the latter is used by ScrobbleInfo.
 	 */
 	std::size_t n = std::strlen(multiTag);
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> buf(n);
 	if (n > 0) {
-		auto p = buf.borrowTail();
+		dest.reserve(dest.size() + n);
+		auto p = dest.borrowTail();
+		const char *startPos = &*p;
 		const char *start = multiTag, *end;
 		while ((end = std::strchr(start, u8"\n"[0])) != nullptr) {
 			p = std::copy(start, end, p);
@@ -71,10 +71,9 @@ inline afc::String convertMultiTag(const char * const multiTag)
 			start = end + 1;
 		}
 		// Adding the last tag.
-		p = std::copy_n(start, n - (&(*p) - buf.data()), p);
-		buf.returnTail(p);
+		p = std::copy_n(start, n - (&*p - startPos), p);
+		dest.returnTail(p);
 	}
-	return afc::String::move(buf);
 }
 
 inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functions_t &deadbeef)
@@ -111,26 +110,36 @@ inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functio
 
 	afc::Optional<Track> result;
 	Track &trackInfo = result.value();
+	TrackInfoBuilder trackInfoBuilder(trackInfo);
 
-	trackInfo.setTitle(title);
+	trackInfoBuilder.setTitle(title);
+
+	/* Adding artists. DeaDBeeF returns them as '\n'-separated values within a single string.
+	 * This is the format used by Track so no conversion is required.
+	 */
+	convertMultiTag(artist, trackInfoBuilder.getBuf());
+	trackInfoBuilder.artistsProcessed();
+
 	if (album != nullptr) {
-		trackInfo.setAlbumTitle(album);
+		trackInfoBuilder.setAlbumTitle(album);
+	} else {
+		trackInfoBuilder.noAlbumTitle();
 	}
+	if (albumArtist != nullptr) {
+		convertMultiTag(albumArtist, trackInfoBuilder.getBuf());
+		trackInfoBuilder.albumArtistsProcessed();
+	} else {
+		trackInfoBuilder.noAlbumArtists();
+	}
+
+	trackInfoBuilder.build();
+
 	/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
 	 * Moreover, if the track is played from start to end without rewinding
 	 * then the play time could be different from the track duration.
 	 */
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
 	trackInfo.setDurationMillis(toLongMillis(trackDuration));
-
-	/* Adding artists. DeaDBeeF returns them as '\n'-separated values within a single string.
-	 * This is the format used by Track so no conversion is required.
-	 */
-	trackInfo.setArtists(convertMultiTag(artist));
-
-	if (albumArtist != nullptr) {
-		trackInfo.setAlbumArtists(convertMultiTag(albumArtist));
-	}
 
 	// TODO avoid unnecessary moving.
 	return result;
@@ -193,21 +202,33 @@ inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * con
 	scrobbleInfo.scrobbleStartTimestamp = trackChangeEvent->started_timestamp;
 	scrobbleInfo.scrobbleEndTimestamp = system_clock::to_time_t(system_clock::now());
 	scrobbleInfo.scrobbleDuration = toLongMillis(trackPlayDuration);
+
 	Track &trackInfo = scrobbleInfo.track;
-	trackInfo.setTitle(title);
-	if (album != nullptr) {
-		trackInfo.setAlbumTitle(album);
-	}
-	trackInfo.setDurationMillis(toLongMillis(trackDuration));
+	TrackInfoBuilder trackInfoBuilder(trackInfo);
+
+	trackInfoBuilder.setTitle(title);
 
 	/* Adding artists. DeaDBeeF returns them as '\n'-separated values within a single string.
 	 * This is the format used by Track so no conversion is required.
 	 */
-	trackInfo.setArtists(convertMultiTag(artist));
+	convertMultiTag(artist, trackInfoBuilder.getBuf());
+	trackInfoBuilder.artistsProcessed();
 
-	if (albumArtist != nullptr) {
-		trackInfo.setAlbumArtists(convertMultiTag(albumArtist));
+	if (album != nullptr) {
+		trackInfoBuilder.setAlbumTitle(album);
+	} else {
+		trackInfoBuilder.noAlbumTitle();
 	}
+	if (albumArtist != nullptr) {
+		convertMultiTag(albumArtist, trackInfoBuilder.getBuf());
+		trackInfoBuilder.albumArtistsProcessed();
+	} else {
+		trackInfoBuilder.noAlbumArtists();
+	}
+
+	trackInfoBuilder.build();
+
+	trackInfo.setDurationMillis(toLongMillis(trackDuration));
 
 	// TODO avoid unnecessary moving.
 	return result;

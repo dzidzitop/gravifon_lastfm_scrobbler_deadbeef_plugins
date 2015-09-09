@@ -81,21 +81,6 @@ namespace
 				UrlPart<raw>("a"_s), UrlPart<raw>(authToken, digestSize));
 	}
 
-	inline UrlPart<> getAlbumTitleUrlPart(const Track &track) noexcept
-	{
-		const char *albumTitleData;
-		std::size_t albumTitleSize;
-		if (track.hasAlbumTitle()) {
-			const afc::String &str = track.getAlbumTitle();
-			albumTitleData = str.data();
-			albumTitleSize = str.size();
-		} else {
-			albumTitleData = nullptr;
-			albumTitleSize = 0;
-		}
-		return UrlPart<>(albumTitleData, albumTitleSize);
-	}
-
 	class ScrobbleParamName
 	{
 		// The same instance must be used.
@@ -167,12 +152,22 @@ namespace
 		assert(index < 50); // max amount of scrobbles per request.
 
 		const Track &track = scrobbleInfo.track;
-		assert(track.hasTitle());
+		assert(track.getTitleBegin() != track.getTitleEnd());
 		assert(track.getArtistsBegin() != track.getArtistsEnd());
 
 		const NumberUrlPart<afc::Timestamp::time_type> scrobbleStartTs(
 				scrobbleInfo.scrobbleStartTimestamp.millis() / 1000);
 		const NumberUrlPart<long> trackDurationSeconds(track.getDurationMillis() / 1000);
+
+		const char * const trackFirstArtistBegin = track.getArtistsBegin();
+		const std::size_t trackFirstArtistSize = std::find_if(trackFirstArtistBegin, track.getArtistsEnd(),
+				[](const char c) { return c == u8"\0"[0]; }) - trackFirstArtistBegin;
+
+		const char * const trackTitleBegin = track.getTitleBegin();
+		const std::size_t trackTitleSize = track.getTitleEnd() - trackTitleBegin;
+
+		const char * const albumTitleBegin = track.getAlbumTitleBegin();
+		const std::size_t albumTitleSize = track.getAlbumTitleEnd() - albumTitleBegin;
 
 		// Constructs params in form x[index] where x is changed each time ::appendTo() is invoked.
 		ScrobbleParamName scrobbleParamName(index);
@@ -180,9 +175,9 @@ namespace
 		// TODO optimise parameter passing
 		builder.params(
 				// The artist name. Required.
-				scrobbleParamName, UrlPart<>(track.getFirstArtist()),
+				scrobbleParamName, UrlPart<>(trackFirstArtistBegin, trackFirstArtistSize),
 				// The track title. Required.
-				scrobbleParamName, UrlPart<>(track.getTitle().data(), track.getTitle().size()),
+				scrobbleParamName, UrlPart<>(trackTitleBegin, trackTitleSize),
 				// The time the track started playing, in UNIX timestamp format. Required.
 				scrobbleParamName, scrobbleStartTs,
 				// The source of the track. Required. 'Chosen by the user' in all cases.
@@ -193,7 +188,7 @@ namespace
 				// The length of the track in seconds. Required for 'Chosen by the user'.
 				scrobbleParamName, trackDurationSeconds,
 				// The album title, or an empty string if not known.
-				scrobbleParamName, getAlbumTitleUrlPart(track),
+				scrobbleParamName, UrlPart<>(albumTitleBegin, albumTitleSize),
 				// TODO Support track numbers.
 				// The position of the track on the album, or an empty string if not known.
 				scrobbleParamName, UrlPart<>(""_s),
@@ -245,13 +240,23 @@ void LastfmScrobbler::submitNowPlayingTrack()
 
 	const Track &track = m_nowPlayingTrack;
 
+	const char * const trackFirstArtistBegin = track.getArtistsBegin();
+	const std::size_t trackFirstArtistSize = std::find_if(trackFirstArtistBegin, track.getArtistsEnd(),
+			[](const char c) { return c == u8"\0"[0]; }) - trackFirstArtistBegin;
+
+	const char * const trackTitleBegin = track.getTitleBegin();
+	const std::size_t trackTitleSize = track.getTitleEnd() - trackTitleBegin;
+
+	const char * const albumTitleBegin = track.getAlbumTitleBegin();
+	const std::size_t albumTitleSize = track.getAlbumTitleEnd() - albumTitleBegin;
+
 	// TODO optimise parameter passing
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId.data(), m_sessionId.size()),
-			UrlPart<raw>("a"_s), UrlPart<>(track.getFirstArtist()),
-			UrlPart<raw>("t"_s), UrlPart<>(track.getTitle().data(), track.getTitle().size()),
-			UrlPart<raw>("b"_s), getAlbumTitleUrlPart(track),
+			UrlPart<raw>("a"_s), UrlPart<>(trackFirstArtistBegin, trackFirstArtistSize),
+			UrlPart<raw>("t"_s), UrlPart<>(trackTitleBegin, trackTitleSize),
+			UrlPart<raw>("b"_s), UrlPart<>(albumTitleBegin, albumTitleSize),
 			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
 			// TODO Support track numbers.
 			// The position of the track on the album, or an empty string if not known.

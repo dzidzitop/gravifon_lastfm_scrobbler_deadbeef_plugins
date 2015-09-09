@@ -26,12 +26,14 @@ class DeadbeefUtilTest : public CppUnit::TestFixture
 	CPPUNIT_TEST(testConvertMultiTag_SingleValue);
 	CPPUNIT_TEST(testConvertMultiTag_TwoValues);
 	CPPUNIT_TEST(testConvertMultiTag_ThreeValues);
+	CPPUNIT_TEST(testConvertMultiTag_TwoValues_NonEmptyBuffer);
 	CPPUNIT_TEST_SUITE_END();
 public:
 	void testConvertMultiTag_EmptyString();
 	void testConvertMultiTag_SingleValue();
 	void testConvertMultiTag_TwoValues();
 	void testConvertMultiTag_ThreeValues();
+	void testConvertMultiTag_TwoValues_NonEmptyBuffer();
 };
 
 #endif /* DEADBEEFUTILTEST_HPP_ */

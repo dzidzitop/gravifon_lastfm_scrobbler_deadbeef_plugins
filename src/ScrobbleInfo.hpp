@@ -17,65 +17,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #define SCROBBLER_INFO_HPP_
 
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <utility>
 #include <afc/dateutil.hpp>
 #include <afc/FastStringBuffer.hpp>
-#include <afc/SimpleString.hpp>
 #include <afc/utils.h>
+
+class ScrobbleInfo;
+class TrackInfoBuilder;
 
 // All strings are utf8-encoded.
 class Track
 {
+	friend class ScrobbleInfo;
+	friend class TrackInfoBuilder;
 private:
 	// Copying scrobbles is expensive. Move semantics is forced for them.
 	Track(const Track &) = delete;
 	Track &operator=(const Track &) = default;
 public:
-	Track() = default;
+	Track() : m_data(31) {} // Reasonable buffer size to keep balance between re-allocs and memory usage overhead.
 	Track(Track &&) = default;
 
 	~Track() = default;
 
 	Track &operator=(Track &&) = default;
 
-	void setTitle(afc::String &&trackTitle) { m_title = std::move(trackTitle); m_titleSet = true; }
-	void setTitle(const char * const trackTitle) { m_title = trackTitle; m_titleSet = true; }
-	afc::String &getTitle() noexcept { assert(m_titleSet); return m_title; }
-	const afc::String &getTitle() const noexcept { assert(m_titleSet); return m_title; }
-	bool hasTitle() const noexcept { return m_titleSet; }
+	const char *getTitleBegin() const noexcept { return m_data.data(); }
+	const char *getTitleEnd() const noexcept { return m_data.data() + m_artistsBegin; }
 
-	void setArtists(afc::String &&artists) noexcept { m_artists = std::move(artists); }
-	const char *getArtistsBegin() const noexcept { return m_artists.begin(); }
-	const char *getArtistsEnd() const noexcept { return m_artists.end(); }
-	const char *getFirstArtist() const noexcept { return m_artists.c_str(); /* ended with '\0' */ }
+	const char *getArtistsBegin() const noexcept { return m_data.data() + m_artistsBegin; }
+	const char *getArtistsEnd() const noexcept { return m_data.data() + m_albumTitleBegin; }
 
-	void setAlbumArtists(afc::String &&artists) noexcept { m_albumArtists = std::move(artists); }
-	const char *getAlbumArtistsBegin() const noexcept { return m_albumArtists.begin(); }
-	const char *getAlbumArtistsEnd() const noexcept { return m_albumArtists.end(); }
+	const char *getAlbumTitleBegin() const noexcept { return m_data.data() + m_albumTitleBegin; }
+	const char *getAlbumTitleEnd() const noexcept { return m_data.data() + m_albumArtistsBegin; }
 
-	void setAlbumTitle(afc::String &&albumTitle) { m_album = std::move(albumTitle); m_albumSet = true; }
-	void setAlbumTitle(const char * const albumTitle) { m_album = albumTitle; m_albumSet = true; }
-	afc::String &getAlbumTitle() noexcept { assert(m_albumSet); return m_album; }
-	const afc::String &getAlbumTitle() const noexcept { assert(m_albumSet); return m_album; }
-	bool hasAlbumTitle() const noexcept { return m_albumSet; }
+	const char *getAlbumArtistsBegin() const noexcept { return m_data.data() + m_albumArtistsBegin; }
+	const char *getAlbumArtistsEnd() const noexcept { return m_data.data() + m_data.size(); }
 
 	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
 	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
 	bool hasDurationMillis() const noexcept { return m_durationSet; }
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
-private:
-	afc::String m_title;
-	// \0-separated list of artists. Names are rather short so processing should be efficient.
-	afc::String m_artists;
-	// \0-separated list of album artists. Names are rather short so processing should be efficient.
-	afc::String m_albumArtists;
-	afc::String m_album;
+public:
+	afc::FastStringBuffer<char> m_data;
+	std::size_t m_artistsBegin;
+	std::size_t m_albumTitleBegin;
+	std::size_t m_albumArtistsBegin;
 	// Track duration in milliseconds.
 	long m_duration;
-	bool m_titleSet = false;
-	bool m_albumSet = false;
 	bool m_durationSet = false;
 };
 
@@ -113,6 +105,83 @@ public:
 	long scrobbleDuration;
 	// Track to scrobble.
 	Track track;
+};
+
+class TrackInfoBuilder {
+public:
+	TrackInfoBuilder(Track &dest) : m_dest(dest) {}
+
+	void setTitle(const char * const begin)
+	{
+#ifndef NDEBUG
+		assert(m_state == trackTitle);
+		m_state = trackArtists;
+#endif
+		const std::size_t size = std::strlen(begin);
+		m_dest.m_data.reserve(m_dest.m_data.size() + size);
+		m_dest.m_data.append(begin, size);
+		m_dest.m_artistsBegin = size;
+	}
+
+	void artistsProcessed()
+	{
+#ifndef NDEBUG
+		assert(m_state == trackArtists);
+		m_state = albumTitle;
+#endif
+		m_dest.m_albumTitleBegin = m_dest.m_data.size();
+	}
+
+	void setAlbumTitle(const char * const begin)
+	{
+#ifndef NDEBUG
+		assert(m_state == albumTitle);
+		m_state = albumArtists;
+#endif
+		const std::size_t size = std::strlen(begin);
+		m_dest.m_data.reserve(m_dest.m_data.size() + size);
+		m_dest.m_data.append(begin, size);
+		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
+	}
+
+	void noAlbumTitle()
+	{
+#ifndef NDEBUG
+		assert(m_state == albumTitle);
+		m_state = albumArtists;
+#endif
+		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
+	}
+
+	// TODO replace with more memory-efficient addAlbumArtist
+	void albumArtistsProcessed()
+	{
+#ifndef NDEBUG
+		assert(m_state == albumArtists);
+		m_state = noAction;
+#endif
+	}
+
+	void noAlbumArtists() noexcept
+	{
+#ifndef NDEBUG
+		assert(m_state == albumArtists);
+		m_state = noAction;
+#endif
+	}
+
+	void build()
+	{
+		assert(m_state == noAction);
+	}
+
+	afc::FastStringBuffer<char> &getBuf() noexcept { return m_dest.m_data; }
+private:
+	Track &m_dest;
+#ifndef NDEBUG
+	enum state { trackTitle, trackArtists, albumTitle, albumArtists, noAction };
+	state m_state = trackTitle;
+#endif
 };
 
 // Writes this ScrobbleInfo in the JSON format to a buffer and returns the latter.

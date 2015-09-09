@@ -25,7 +25,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/json.hpp>
 #include <afc/logger.hpp>
 #include <afc/number.h>
-#include <afc/SimpleString.hpp>
 #include <afc/StringRef.hpp>
 #include <afc/utils.h>
 
@@ -90,12 +89,6 @@ namespace
 		return dest;
 	}
 
-	template<typename Iterator>
-	inline Iterator writeJsonString(const afc::String &src, register Iterator dest)
-	{
-		return writeJsonString(src.begin(), src.end(), dest);
-	}
-
 	inline std::size_t artistCount(const char * const artistsBegin, const char * const artistsEnd) noexcept
 	{
 		return std::count_if(artistsBegin, artistsEnd,
@@ -126,7 +119,7 @@ namespace
 	{
 		const Track &track = scrobbleInfo.track;
 
-		assert(track.hasTitle());
+		assert(track.getTitleBegin() != track.getTitleEnd());
 		assert(track.getArtistsBegin() != track.getArtistsEnd());
 
 		/* Each free-text label can be escaped so it is multiplied by six to cover the case
@@ -144,7 +137,7 @@ namespace
 				afc::maxPrintedSize<decltype(scrobbleInfo.scrobbleDuration), 10>();
 		maxSize += 1; // ,
 		maxSize += R"("track":{})"_s.size();
-		maxSize += R"("title":"")"_s.size() + maxPrintedCharSize * track.getTitle().size();
+		maxSize += R"("title":"")"_s.size() + maxPrintedCharSize * (track.getTitleEnd() - track.getTitleBegin());
 		maxSize += 1; // ,
 
 		{ // artists
@@ -157,9 +150,10 @@ namespace
 			maxSize += 1; // ,
 		}
 
-		if (track.hasAlbumTitle()) {
+		const std::size_t albumTitleSize = track.getAlbumTitleEnd() - track.getAlbumTitleBegin();
+		if (albumTitleSize > 0) {
 			maxSize += R"("album":{"title":""})"_s.size();
-			maxSize += maxPrintedCharSize * track.getAlbumTitle().size();
+			maxSize += maxPrintedCharSize * albumTitleSize;
 			const char * const albumArtistsBegin = track.getAlbumArtistsBegin();
 			const char * const albumArtistsEnd = track.getAlbumArtistsEnd();
 			const std::size_t albumArtistsSize = albumArtistsEnd - albumArtistsBegin;
@@ -191,13 +185,15 @@ namespace
 		dest = afc::copy(R"(","scrobble_duration":{"amount":)"_s, dest);
 		dest = afc::printNumber<10>(scrobbleInfo.scrobbleDuration, dest);
 		dest = afc::copy(R"(,"unit":"ms"},"track":{"title":")"_s, dest);
-		dest = writeJsonString(track.getTitle(), dest);
+		dest = writeJsonString(track.getTitleBegin(), track.getTitleEnd(), dest);
 		// At least single artist is expected.
 		dest = afc::copy(R"(","artists":[)"_s, dest);
 		dest = writeArtists(track.getArtistsBegin(), track.getArtistsEnd(), dest);
-		if (track.hasAlbumTitle()) {
+		const char * const albumTitleBegin = track.getAlbumTitleBegin();
+		const char * const albumTitleEnd = track.getAlbumTitleEnd();
+		if (albumTitleBegin != albumTitleEnd) {
 			dest = afc::copy(R"(],"album":{"title":")"_s, dest);
-			dest = writeJsonString(track.getAlbumTitle(), dest);
+			dest = writeJsonString(albumTitleBegin, albumTitleEnd, dest);
 			const char * const albumArtistsBegin = track.getAlbumArtistsBegin();
 			const char * const albumArtistsEnd = track.getAlbumArtistsEnd();
 			if (albumArtistsBegin != albumArtistsEnd) {
@@ -254,110 +250,72 @@ namespace
 	template<typename ErrorHandler>
 	inline const char *parseDuration(const char * const begin, const char * const end, long &dest, ErrorHandler &errorHandler)
 	{
-		unsigned multiplier = 0;
 		auto durationParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
-			const char *p = begin;
-			for (std::size_t fieldsToParse = 1 | (1 << 1);;) { // All fields are required.
-				// TODO optimise property name matching.
-				const char *propNameBegin;
-				std::size_t propNameSize;
-
-				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			auto amountValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto durationAmountParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
 				{
-					propNameBegin = begin;
-					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-					propNameSize = propNameEnd - propNameBegin;
-					return propNameEnd;
-				};
-
-				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
-						(p, end, propNameParser, errorHandler);
-
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-
-				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-
-				if (afc::equal("amount", "amount"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1);
-
-					auto durationAmountParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler)
-					{
-						const char * const p = afc::parseNumber<10, afc::ParseMode::scan>(
-								begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
-						if (unlikely(!errorHandler.valid())) {
-							return end;
-						}
-						return p;
-					};
-
-					p = afc::json::parseNumber<const char *, decltype(durationAmountParser) &, ErrorHandler, afc::json::noSpaces>
-							(p, end, durationAmountParser, errorHandler);
-					if (!errorHandler.valid()) {
+					const char * const p = afc::parseNumber<10, afc::ParseMode::scan>(
+							begin, end, dest, [&](const char * const pos) { errorHandler.malformedJson(pos); });
+					if (unlikely(!errorHandler.valid())) {
 						return end;
 					}
-				} else if (afc::equal("unit", "unit"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1 << 1);
+					return p;
+				};
 
-					auto unitValueParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-					{
-						const char * const unitEnd = std::find(begin, end, u8"\""[0]);
-						if (unitEnd == end) {
-							return end;
-						}
-						switch (unitEnd - begin) {
-						case 1:
-							if (likely(begin[0] == u8"s"[0])) {
-								multiplier = 1000;
-								return unitEnd;
-							} else {
-								errorHandler.malformedJson(begin);
-								return end;
-							}
-						case 2:
-							if (unlikely(begin[0] != u8"m"[0] || begin[1] != u8"s"[0])) {
-								errorHandler.malformedJson(begin);
-								return end;
-							}
-							multiplier = 1;
+				return afc::json::parseNumber<const char *, decltype(durationAmountParser) &, ErrorHandler, afc::json::noSpaces>
+						(begin, end, durationAmountParser, errorHandler);
+			};
+
+			auto unitValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto unitParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+				{
+					const char * const unitEnd = std::find(begin, end, u8"\""[0]);
+					if (unitEnd == end) {
+						return end;
+					}
+					switch (unitEnd - begin) {
+					case 1:
+						if (likely(begin[0] == u8"s"[0])) {
+							dest *= 1000;
 							return unitEnd;
-						default:
+						} else {
 							errorHandler.malformedJson(begin);
 							return end;
 						}
-					};
-
-					p = afc::json::parseString<const char *, decltype(unitValueParser) &, ErrorHandler, afc::json::noSpaces>
-							(p, end, unitValueParser, errorHandler);
-					if (!errorHandler.valid()) {
+					case 2:
+						if (unlikely(begin[0] != u8"m"[0] || begin[1] != u8"s"[0])) {
+							errorHandler.malformedJson(begin);
+							return end;
+						}
+						return unitEnd;
+					default:
+						errorHandler.malformedJson(begin);
 						return end;
 					}
-				} else {
-					errorHandler.malformedJson(p);
-					return end;
-				}
+				};
 
-				if (fieldsToParse == 0) {
-					return p;
-				}
+				return afc::json::parseString<const char *, decltype(unitParser) &, ErrorHandler, afc::json::noSpaces>
+						(begin, end, unitParser, errorHandler);
+			};
 
-				if (unlikely(p == end)) {
-					errorHandler.prematureEnd();
-					return end;
-				}
-				const char c = *p;
-				if (likely(c == u8","[0])) {
-					++p;
-				} else {
-					errorHandler.malformedJson(p);
-					return end;
-				}
+			const char *p = begin;
+
+			p = afc::json::parsePropertyValue<const char *, decltype(amountValueParser) &, ErrorHandler, afc::json::noSpaces>(
+					p, end, "amount", "amount"_s.size(), amountValueParser, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
 			}
+
+			p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			return afc::json::parsePropertyValue<const char *, decltype(unitValueParser) &, ErrorHandler, afc::json::noSpaces>(
+					p, end, "unit", "unit"_s.size(), unitValueParser, errorHandler);
 		};
 
 		return afc::json::parseObject<const char *, decltype(durationParser) &, ErrorHandler, afc::json::noSpaces>
@@ -423,74 +381,47 @@ namespace
 		auto albumParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			const char *p = begin;
-			for (std::size_t fieldsToParse = 1;;) {
-				// TODO optimise property name matching.
-				const char *propNameBegin;
-				std::size_t propNameSize;
 
-				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-				{
-					propNameBegin = begin;
-					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-					propNameSize = propNameEnd - propNameBegin;
-					return propNameEnd;
-				};
-
-				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
-						(p, end, propNameParser, errorHandler);
-
+			auto titleValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto p = parseText(begin, end, dest.m_data, errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				dest.m_albumArtistsBegin = dest.m_data.size();
+				return p;
+			};
+
+			auto artistsValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto p = parseArtists(begin, end, dest.m_data, errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
+				return p;
+			};
 
-				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1);
+			p = afc::json::parsePropertyValue<const char *, decltype(titleValueParser) &, ErrorHandler, afc::json::noSpaces>(
+					p, end, "title", "title"_s.size(), titleValueParser, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+			if (unlikely(p == end)) {
+				errorHandler.prematureEnd();
+				return end;
+			}
 
-					afc::FastStringBuffer<char> buf(15); // Reasonable album title buffer size to keep balance between re-allocs and memory usage overhead.
-					p = parseText(p, end, buf, errorHandler);
-
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-
-					dest.setAlbumTitle(afc::String::move(buf));
-				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
-					afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
-					p = parseArtists(p, end, buf, errorHandler);
-
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-
-					dest.setAlbumArtists(afc::String::move(buf));
-				} else {
-					errorHandler.malformedJson(p);
-					return end;
-				}
-
-				if (p == end) {
-					errorHandler.prematureEnd();
-					return end;
-				}
-				const char c = *p;
-				if (c == u8","[0]) {
-					++p;
-				} else if (c == u8"}"[0]) {
-					if (unlikely(fieldsToParse != 0)) {
-						errorHandler.malformedJson(p);
-						return end;
-					}
-
-					return p;
-				} else {
-					errorHandler.malformedJson(p);
-					return end;
-				}
+			const char c = *p;
+			if (c == u8"}"[0]) { // No artists field.
+				return p;
+			} else if (likely(c == u8","[0])) {
+				++p;
+				return afc::json::parsePropertyValue<const char *, decltype(artistsValueParser) &, ErrorHandler, afc::json::noSpaces>(
+						p, end, "artists", "artists"_s.size(), artistsValueParser, errorHandler);
+			} else {
+				errorHandler.malformedJson(p);
+				return end;
 			}
 		};
 
@@ -504,91 +435,107 @@ namespace
 		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			const char *p = begin;
-			for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2);;) {
-				// TODO optimise property name matching.
-				const char *propNameBegin;
-				std::size_t propNameSize;
 
-				auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-				{
-					propNameBegin = begin;
-					const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-					propNameSize = propNameEnd - propNameBegin;
-					return propNameEnd;
-				};
-
-				p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
-						(p, end, propNameParser, errorHandler);
-
+			auto titleValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto p = parseText(begin, end, dest.m_data, errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				dest.m_artistsBegin = dest.m_data.size();
+				return p;
+			};
+
+			auto artistsValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				auto p = parseArtists(begin, end, dest.m_data, errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				if (afc::equal("title", "title"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1);
+				dest.m_albumTitleBegin = dest.m_data.size();
+				return p;
+			};
 
-					afc::FastStringBuffer<char> buf(15); // Reasonable track title buffer size to keep balance between re-allocs and memory usage overhead.
-					p = parseText(p, end, buf, errorHandler);
-
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-
-					dest.setTitle(afc::String::move(buf));
-				} else if (afc::equal("artists", "artists"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1 << 1);
-
-					afc::FastStringBuffer<char> buf(15); // Reasonable artist name buffer size to keep balance between re-allocs and memory usage overhead.
-					p = parseArtists(p, end, buf, errorHandler);
-
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-
-					dest.setArtists(afc::String::move(buf));
-				} else if (afc::equal("length", "length"_s.size(), propNameBegin, propNameSize)) {
-					fieldsToParse &= ~std::size_t(1 << 2);
-
-					long trackDuration;
-					p = parseDuration(p, end, trackDuration, errorHandler);
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-
-					dest.setDurationMillis(trackDuration);
-				} else if (afc::equal("album", "album"_s.size(), propNameBegin, propNameSize)) {
-					p = parseAlbum(p, end, dest, errorHandler);
-					if (unlikely(!errorHandler.valid())) {
-						return end;
-					}
-				} else {
-					errorHandler.malformedJson(p);
+			auto lengthValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				long trackDuration;
+				auto p = parseDuration(begin, end, trackDuration, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				if (p == end) {
-					errorHandler.prematureEnd();
-					return end;
-				}
-				const char c = *p;
-				if (c == u8","[0]) {
-					++p;
-				} else if (c == u8"}"[0]) {
-					if (unlikely(fieldsToParse != 0)) {
-						errorHandler.malformedJson(p);
-						return end;
-					}
+				dest.setDurationMillis(trackDuration);
+				return p;
+			};
 
-					return p;
-				} else {
-					errorHandler.malformedJson(p);
+			p = afc::json::parsePropertyValue<const char *, decltype(titleValueParser) &, ErrorHandler, afc::json::noSpaces>(
+					p, end, "title", "title"_s.size(), titleValueParser, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			p = afc::json::parsePropertyValue<const char *, decltype(artistsValueParser) &, ErrorHandler, afc::json::noSpaces>(
+					p, end, "artists", "artists"_s.size(), artistsValueParser, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			// TODO optimise property name matching.
+			const char *propNameBegin;
+			std::size_t propNameSize;
+
+			auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			{
+				propNameBegin = begin;
+				const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
+				propNameSize = propNameEnd - propNameBegin;
+				return propNameEnd;
+			};
+
+			p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
+					(p, end, propNameParser, errorHandler);
+
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+			if (unlikely(!errorHandler.valid())) {
+				return end;
+			}
+
+			if (afc::equal("album", "album"_s.size(), propNameBegin, propNameSize)) {
+				p = parseAlbum(p, end, dest, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
+
+				p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+				if (unlikely(!errorHandler.valid())) {
+					return end;
+				}
+
+				return afc::json::parsePropertyValue<const char *, decltype(lengthValueParser) &, ErrorHandler, afc::json::noSpaces>(
+						p, end, "length", "length"_s.size(), lengthValueParser, errorHandler);
+			} else if (afc::equal("length", "length"_s.size(), propNameBegin, propNameSize)) {
+				dest.m_albumArtistsBegin = dest.m_albumTitleBegin = dest.m_data.size(); // No album.
+
+				return lengthValueParser(p, end, errorHandler);
+			} else {
+				errorHandler.malformedJson(p);
+				return end;
 			}
 		};
 
@@ -623,78 +570,63 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 
 	auto scrobbleParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 	{
+		auto scrobbleStartTimeValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return parseDateTime(begin, end, dest.scrobbleStartTimestamp, errorHandler);
+		};
+
+		auto scrobbleEndTimeValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return parseDateTime(begin, end, dest.scrobbleEndTimestamp, errorHandler);
+		};
+
+		auto scrobbleDurationValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return parseDuration(begin, end, dest.scrobbleDuration, errorHandler);
+		};
+
+		auto trackValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+		{
+			return parseTrack(begin, end, dest.track, errorHandler);
+		};
+
 		const char *p = begin;
-		for (std::size_t fieldsToParse = 1 | (1 << 1) | (1 << 2) | (1 << 3);;) { // All fields are required.
-			// TODO optimise property name matching.
-			const char *propNameBegin;
-			std::size_t propNameSize;
 
-			auto propNameParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
-			{
-				propNameBegin = begin;
-				const char * const propNameEnd = std::find(begin, end, u8"\""[0]);
-				propNameSize = propNameEnd - propNameBegin;
-				return propNameEnd;
-			};
-
-			p = afc::json::parseString<const char *, decltype(propNameParser) &, ErrorHandler, afc::json::noSpaces>
-					(p, end, propNameParser, errorHandler);
-
-			if (unlikely(!errorHandler.valid())) {
-				return end;
-			}
-
-			p = afc::json::parseColon<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
-			if (unlikely(!errorHandler.valid())) {
-				return end;
-			}
-
-			if (afc::equal("scrobble_start_datetime", "scrobble_start_datetime"_s.size(), propNameBegin, propNameSize)) {
-				fieldsToParse &= ~std::size_t(1);
-
-				p = parseDateTime(p, end, dest.scrobbleStartTimestamp, errorHandler);
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-			} else if (afc::equal("scrobble_end_datetime", "scrobble_end_datetime"_s.size(), propNameBegin, propNameSize)) {
-				fieldsToParse &= ~std::size_t(1 << 1);
-
-				p = parseDateTime(p, end, dest.scrobbleEndTimestamp, errorHandler);
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-			} else if (afc::equal("scrobble_duration", "scrobble_duration"_s.size(), propNameBegin, propNameSize)) {
-				fieldsToParse &= ~std::size_t(1 << 2);
-
-				p = parseDuration<ErrorHandler &>(p, end, dest.scrobbleDuration, errorHandler);
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-			} else if (afc::equal("track", "track"_s.size(), propNameBegin, propNameSize)) {
-				fieldsToParse &= ~std::size_t(1 << 3);
-
-				p = parseTrack<ErrorHandler &>(p, end, dest.track, errorHandler);
-				if (unlikely(!errorHandler.valid())) {
-					return end;
-				}
-			}
-
-			if (fieldsToParse == 0) {
-				return p;
-			}
-
-			if (unlikely(p == end)) {
-				errorHandler.prematureEnd();
-				return end;
-			}
-			const char c = *p;
-			if (likely(c == u8","[0])) {
-				++p;
-			} else {
-				errorHandler.malformedJson(p);
-				return end;
-			}
+		p = afc::json::parsePropertyValue<const char *, decltype(scrobbleStartTimeValueParser) &, ErrorHandler, afc::json::noSpaces>(
+				p, end, "scrobble_start_datetime", "scrobble_start_datetime"_s.size(), scrobbleStartTimeValueParser, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
 		}
+
+		p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
+		}
+
+		p = afc::json::parsePropertyValue<const char *, decltype(scrobbleEndTimeValueParser) &, ErrorHandler, afc::json::noSpaces>(
+				p, end, "scrobble_end_datetime", "scrobble_end_datetime"_s.size(), scrobbleEndTimeValueParser, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
+		}
+
+		p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
+		}
+
+		p = afc::json::parsePropertyValue<const char *, decltype(scrobbleDurationValueParser) &, ErrorHandler, afc::json::noSpaces>(
+				p, end, "scrobble_duration", "scrobble_duration"_s.size(), scrobbleDurationValueParser, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
+		}
+
+		p = afc::json::parseComma<const char *, ErrorHandler, afc::json::noSpaces>(p, end, errorHandler);
+		if (unlikely(!errorHandler.valid())) {
+			return end;
+		}
+
+		return afc::json::parsePropertyValue<const char *, decltype(trackValueParser) &, ErrorHandler, afc::json::noSpaces>(
+				p, end, "track", "track"_s.size(), trackValueParser, errorHandler);
 	};
 
 	const char * const p = afc::json::parseObject<const char *, decltype(scrobbleParser) &, ErrorHandler, afc::json::noSpaces>

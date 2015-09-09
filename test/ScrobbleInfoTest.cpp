@@ -157,25 +157,18 @@ void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbum()
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_NoAlbumArtists()
 {
-	afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
-			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
-			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
-			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
-			u8R"("album":{"title":"A Night at the Opera"},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
+	for (int i = 0; i < 1000; ++i) {
+		afc::ConstStringRef input = u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
+				u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
+				u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
+				u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
+				u8R"("album":{"title":"A Night at the Opera"},)"
+				u8R"("length":{"amount":207026,"unit":"ms"}}})"_s;
 
-	afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
+		afc::Optional<ScrobbleInfo> result = ScrobbleInfo::parse(input.begin(), input.end());
 
-	CPPUNIT_ASSERT(result.hasValue());
-
-	afc::FastStringBuffer<char, afc::AllocMode::accurate> serialisedScrobble = serialiseAsJson(result.value());
-
-	CPPUNIT_ASSERT_EQUAL(string(u8R"({"scrobble_start_datetime":"2002-01-01T23:12:33+0000",)"
-			u8R"("scrobble_end_datetime":"2003-02-03T12:10:04+0000",)"
-			u8R"("scrobble_duration":{"amount":1207,"unit":"ms"},)"
-			u8R"("track":{"title":"'39","artists":[{"name":"Queen"}],)"
-			u8R"("album":{"title":"A Night at the Opera"},)"
-			u8R"("length":{"amount":207026,"unit":"ms"}}})"), string(serialisedScrobble.c_str()));
+		CPPUNIT_ASSERT(result.hasValue());
+	}
 }
 
 void ScrobbleInfoTest::testDeserialiseScrobbleInfo_MalformedJson()
@@ -201,10 +194,16 @@ void ScrobbleInfoTest::testSerialiseAsJson_ScrobbleInfoWithAllFields()
 	scrobbleInfo.scrobbleEndTimestamp = scrobbleEnd;
 	scrobbleInfo.scrobbleDuration = 1001;
 	Track &track = scrobbleInfo.track;
-	track.setTitle(u8"'39");
-	track.setAlbumTitle(u8"A Night at the Opera");
-	track.setArtists(afc::String(u8"Queen\0Jones"_s));
-	track.setAlbumArtists(afc::String(u8"Scorpions"));
+	TrackInfoBuilder builder(track);
+	builder.setTitle(u8"'39");
+	builder.getBuf().reserve(builder.getBuf().size() + u8"Queen\0Jones"_s.size());
+	builder.getBuf().append(u8"Queen\0Jones", u8"Queen\0Jones"_s.size());
+	builder.artistsProcessed();
+	builder.setAlbumTitle(u8"A Night at the Opera");
+	builder.getBuf().reserve(builder.getBuf().size() + u8"Scorpions"_s.size());
+	builder.getBuf().append(u8"Scorpions", u8"Scorpions"_s.size());
+	builder.albumArtistsProcessed();
+	builder.build();
 	track.setDurationMillis(12);
 
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> result = serialiseAsJson(scrobbleInfo);
