@@ -56,19 +56,18 @@ public:
 	const char *getAlbumArtistsBegin() const noexcept { return m_data.data() + m_albumArtistsBegin; }
 	const char *getAlbumArtistsEnd() const noexcept { return m_data.data() + m_data.size(); }
 
-	void setDurationMillis(const long duration) { m_duration = duration; m_durationSet = true; }
-	long getDurationMillis() const noexcept { assert(m_durationSet); return m_duration; }
-	bool hasDurationMillis() const noexcept { return m_durationSet; }
+	void setDurationMillis(const long duration) { m_durationMillis = duration; }
+	long getDurationMillis() const noexcept { return m_durationMillis; }
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
 public:
+	// TODO replace with afc::String which is size_t more compact by sizeof(std::size_t).
 	afc::FastStringBuffer<char> m_data;
 	std::size_t m_artistsBegin;
 	std::size_t m_albumTitleBegin;
 	std::size_t m_albumArtistsBegin;
 	// Track duration in milliseconds.
-	long m_duration;
-	bool m_durationSet = false;
+	long m_durationMillis;
 };
 
 class ScrobbleInfo
