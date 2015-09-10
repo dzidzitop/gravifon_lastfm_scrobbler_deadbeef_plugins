@@ -234,7 +234,7 @@ namespace
 				errorHandler.prematureEnd();
 				return end;
 			}
-			if (likely(parseISODateTime(afc::String(begin, valueEnd).c_str(), dest))) {
+			if (likely(parseISODateTime(begin, valueEnd, dest))) {
 				return valueEnd;
 			} else {
 				errorHandler.malformedJson(begin);
