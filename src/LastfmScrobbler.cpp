@@ -147,6 +147,27 @@ namespace
 		const Number m_number;
 	};
 
+	inline void writeArtists(const Track &track, afc::FastStringBuffer<char> &dest)
+	{
+		const char * const trackArtistsEnd = track.getArtistsEnd();
+		const char *artistBegin = track.getArtistsBegin();
+		const char *artistEnd;
+		for (;;) {
+			artistEnd = std::find_if(artistBegin, trackArtistsEnd, [](const char c) { return c == u8"\0"[0]; });
+			const std::size_t artistSize = artistEnd - artistBegin;
+			if (artistEnd == trackArtistsEnd) {
+				dest.reserve(dest.size() + artistSize);
+				dest.append(artistBegin, artistSize);
+				return;
+			} else {
+				dest.reserve(dest.size() + artistSize + 3);
+				dest.append(artistBegin, artistSize);
+				dest.append(" & "_s);
+				artistBegin = artistEnd + 1;
+			}
+		}
+	}
+
 	void appendScrobbleInfo(UrlBuilder<webForm> &builder, const ScrobbleInfo &scrobbleInfo, const unsigned char index)
 	{
 		assert(index < 50); // max amount of scrobbles per request.
@@ -159,12 +180,12 @@ namespace
 				scrobbleInfo.scrobbleStartTimestamp.millis() / 1000);
 		const NumberUrlPart<long> trackDurationSeconds(track.getDurationMillis() / 1000);
 
-		const char * const trackFirstArtistBegin = track.getArtistsBegin();
-		const std::size_t trackFirstArtistSize = std::find_if(trackFirstArtistBegin, track.getArtistsEnd(),
-				[](const char c) { return c == u8"\0"[0]; }) - trackFirstArtistBegin;
-
 		const char * const trackTitleBegin = track.getTitleBegin();
 		const std::size_t trackTitleSize = track.getTitleEnd() - trackTitleBegin;
+
+		// TODO re-use buffer?
+		afc::FastStringBuffer<char> artistsTagBuf;
+		writeArtists(track, artistsTagBuf);
 
 		const char * const albumTitleBegin = track.getAlbumTitleBegin();
 		const std::size_t albumTitleSize = track.getAlbumTitleEnd() - albumTitleBegin;
@@ -175,7 +196,7 @@ namespace
 		// TODO optimise parameter passing
 		builder.params(
 				// The artist name. Required.
-				scrobbleParamName, UrlPart<>(trackFirstArtistBegin, trackFirstArtistSize),
+				scrobbleParamName, UrlPart<>(artistsTagBuf.data(), artistsTagBuf.size()),
 				// The track title. Required.
 				scrobbleParamName, UrlPart<>(trackTitleBegin, trackTitleSize),
 				// The time the track started playing, in UNIX timestamp format. Required.
@@ -240,9 +261,9 @@ void LastfmScrobbler::submitNowPlayingTrack()
 
 	const Track &track = m_nowPlayingTrack;
 
-	const char * const trackFirstArtistBegin = track.getArtistsBegin();
-	const std::size_t trackFirstArtistSize = std::find_if(trackFirstArtistBegin, track.getArtistsEnd(),
-			[](const char c) { return c == u8"\0"[0]; }) - trackFirstArtistBegin;
+	// TODO re-use buffer?
+	afc::FastStringBuffer<char> artistsTagBuf;
+	writeArtists(track, artistsTagBuf);
 
 	const char * const trackTitleBegin = track.getTitleBegin();
 	const std::size_t trackTitleSize = track.getTitleEnd() - trackTitleBegin;
@@ -254,7 +275,7 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	UrlBuilder<webForm> builder(queryOnly,
 			// TODO URL-encode session ID right after it is obtained during the authentication process.
 			UrlPart<raw>("s"_s), UrlPart<>(m_sessionId.data(), m_sessionId.size()),
-			UrlPart<raw>("a"_s), UrlPart<>(trackFirstArtistBegin, trackFirstArtistSize),
+			UrlPart<raw>("a"_s), UrlPart<>(artistsTagBuf.data(), artistsTagBuf.size()),
 			UrlPart<raw>("t"_s), UrlPart<>(trackTitleBegin, trackTitleSize),
 			UrlPart<raw>("b"_s), UrlPart<>(albumTitleBegin, albumTitleSize),
 			UrlPart<raw>("l"_s), NumberUrlPart<long>(track.getDurationMillis() / 1000),
