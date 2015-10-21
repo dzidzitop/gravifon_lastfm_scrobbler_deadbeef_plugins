@@ -60,6 +60,7 @@ public:
 	long getDurationMillis() const noexcept { return m_durationMillis; }
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
+// TODO make raw data private.
 public:
 	// TODO replace with afc::String which is size_t more compact by sizeof(std::size_t).
 	afc::FastStringBuffer<char> m_data;
