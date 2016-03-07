@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2014-2015 Dźmitry Laŭčuk
+Copyright (C) 2014-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -232,7 +232,7 @@ namespace
 		default:
 			message = "unknown error";
 		}
-		logError("[LastfmScrobbler] Unable to send the request: '"_s, message);
+		logError("[LastfmScrobbler] Unable to send the request: '"_s, message, "'."_s);
 	}
 
 	static constexpr auto lastfmResponseDelim = [](const char c) noexcept { return c == '\n'; };
@@ -254,10 +254,13 @@ void LastfmScrobbler::submitNowPlayingTrack()
 		return;
 	}
 
+	if (!ensureAuthenticated()) {
+		logDebug("[LastfmScrobbler] Not authenticated. The now-playing notification is not sent."_s);
+		return;
+	}
+
 	// Resetting the event despite of the result of the attempt to submit it to the scrobbling server.
 	m_hasNowPlayingTrack = false;
-
-	ensureAuthenticated();
 
 	const Track &track = m_nowPlayingTrack;
 
@@ -317,9 +320,9 @@ void LastfmScrobbler::submitNowPlayingTrack()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Now-playing URL: '"_s, nowPlayingUrlCopy);
+		logDebug("[LastfmScrobbler] Now-playing URL: '"_s, nowPlayingUrlCopy, "'."_s);
 		logDebug("[LastfmScrobbler] Now-playing request body: '"_s,
-				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
+				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()), "'."_s);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(nowPlayingUrlCopy.c_str(), request, response,
@@ -499,9 +502,9 @@ std::size_t LastfmScrobbler::doScrobbling()
 	 * because it is atomic.
 	 */
 	{ UnlockGuard unlockGuard(m_mutex);
-		logDebug("[LastfmScrobbler] Submission URL: "_s, submissionUrlCopy);
-		logDebug("[LastfmScrobbler] Submission request body: "_s,
-				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()));
+		logDebug("[LastfmScrobbler] Submission URL: '"_s, submissionUrlCopy, "'."_s);
+		logDebug("[LastfmScrobbler] Submission request body: '"_s,
+				std::make_pair(request.getBody(), request.getBody() + request.getBodySize()), "'."_s);
 
 		// The timeouts are set to 'infinity' since this HTTP call is interruptible.
 		result = HttpClient().post(submissionUrlCopy.c_str(), request, response,
@@ -523,8 +526,8 @@ std::size_t LastfmScrobbler::doScrobbling()
 		return 0;
 	}
 
-	logDebug("[LastfmScrobbler] Submission response status code: "_s, response.statusCode);
-	logDebug("[LastfmScrobbler] Submission response body: "_s,
+	logDebug("[LastfmScrobbler] Submission response status code: '"_s, response.statusCode, "'."_s);
+	logDebug("[LastfmScrobbler] Submission response body:\n"_s,
 			std::make_pair(responseBody.begin(), responseBody.end()));
 
 	if (response.statusCode == 200) {
@@ -659,9 +662,9 @@ inline bool LastfmScrobbler::ensureAuthenticated()
 		return false;
 	}
 
-	// Now-playing URL. It is ignored for now.
+	// Now-playing URL.
 	seqBegin = seqEnd + 1;
-	seqEnd = std::find_if(seqEnd + 1, end, lastfmResponseDelim);
+	seqEnd = std::find_if(seqBegin, end, lastfmResponseDelim);
 	m_nowPlayingUrl.assign(seqBegin, seqEnd);
 
 	if (unlikely(seqEnd == end)) {
