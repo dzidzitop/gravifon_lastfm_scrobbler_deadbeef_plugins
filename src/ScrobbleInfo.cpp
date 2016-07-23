@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2015 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -321,9 +321,12 @@ namespace
 		return afc::json::parseObject<const char *, decltype(durationParser) &, ErrorHandler, afc::json::noSpaces>
 				(begin, end, durationParser, errorHandler);
 	}
+}
 
+struct TrackJsonParser
+{
 	template<typename ErrorHandler>
-	inline const char *parseArtists(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
+	inline static const char *parseArtists(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
 	{
 		auto artistElementParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -376,7 +379,7 @@ namespace
 	}
 
 	template<typename ErrorHandler>
-	inline const char *parseAlbum(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	inline static const char *parseAlbum(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
 	{
 		auto albumParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -430,7 +433,7 @@ namespace
 	}
 
 	template<typename ErrorHandler>
-	inline const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	inline static const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
 	{
 		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -542,7 +545,7 @@ namespace
 		return afc::json::parseObject<const char *, decltype(trackParser) &, ErrorHandler, afc::json::noSpaces>
 				(begin, end, trackParser, errorHandler);
 	}
-}
+};
 
 bool ScrobbleInfo::parse(const char * const begin, const char * const end, ScrobbleInfo &dest)
 {
@@ -587,7 +590,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 
 		auto trackValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
-			return parseTrack(begin, end, dest.track, errorHandler);
+			return TrackJsonParser::parseTrack(begin, end, dest.track, errorHandler);
 		};
 
 		const char *p = begin;

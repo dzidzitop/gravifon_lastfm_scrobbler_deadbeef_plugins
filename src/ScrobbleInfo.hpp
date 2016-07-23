@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2015 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ class Track
 {
 	friend class ScrobbleInfo;
 	friend class TrackInfoBuilder;
+	friend class TrackJsonParser;
 private:
 	// Copying scrobbles is expensive. Move semantics is forced for them.
 	Track(const Track &) = delete;
@@ -60,8 +61,7 @@ public:
 	long getDurationMillis() const noexcept { return m_durationMillis; }
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
-// TODO make raw data private.
-public:
+private:
 	// TODO replace with afc::String which is size_t more compact by sizeof(std::size_t).
 	afc::FastStringBuffer<char> m_data;
 	std::size_t m_artistsBegin;
