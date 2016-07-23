@@ -24,9 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <afc/FastStringBuffer.hpp>
 #include <afc/utils.h>
 
-class ScrobbleInfo;
-class TrackInfoBuilder;
-
 // All strings are utf8-encoded.
 class Track
 {
