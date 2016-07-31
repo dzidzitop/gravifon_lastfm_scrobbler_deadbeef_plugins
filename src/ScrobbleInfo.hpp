@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 #include <utility>
 #include <afc/dateutil.hpp>
 #include <afc/FastStringBuffer.hpp>
+#include <afc/SimpleString.hpp>
 #include <afc/utils.h>
 
 // All strings are utf8-encoded.
@@ -35,7 +36,7 @@ private:
 	Track(const Track &) = delete;
 	Track &operator=(const Track &) = default;
 public:
-	Track() : m_data(31) {} // Reasonable buffer size to keep balance between re-allocs and memory usage overhead.
+	Track() : m_data() {}
 	Track(Track &&) = default;
 
 	~Track() = default;
@@ -59,8 +60,7 @@ public:
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
 private:
-	// TODO replace with afc::String which is size_t more compact by sizeof(std::size_t).
-	afc::FastStringBuffer<char> m_data;
+	afc::SimpleString<char> m_data;
 	std::size_t m_artistsBegin;
 	std::size_t m_albumTitleBegin;
 	std::size_t m_albumArtistsBegin;
@@ -106,7 +106,8 @@ public:
 
 class TrackInfoBuilder {
 public:
-	TrackInfoBuilder(Track &dest) : m_dest(dest) {}
+	TrackInfoBuilder(Track &dest) : m_data(31), // Reasonable buffer size to keep balance between re-allocs and memory usage overhead.
+			m_dest(dest) {}
 
 	void setTitle(const char * const begin)
 	{
@@ -115,8 +116,8 @@ public:
 		m_state = trackArtists;
 #endif
 		const std::size_t size = std::strlen(begin);
-		m_dest.m_data.reserve(m_dest.m_data.size() + size);
-		m_dest.m_data.append(begin, size);
+		m_data.reserve(m_data.size() + size);
+		m_data.append(begin, size);
 		m_dest.m_artistsBegin = size;
 	}
 
@@ -126,7 +127,7 @@ public:
 		assert(m_state == trackTitle);
 		m_state = trackArtists;
 #endif
-		m_dest.m_artistsBegin = m_dest.m_data.size();
+		m_dest.m_artistsBegin = m_data.size();
 	}
 
 	void artistsProcessed()
@@ -135,7 +136,7 @@ public:
 		assert(m_state == trackArtists);
 		m_state = albumTitle;
 #endif
-		m_dest.m_albumTitleBegin = m_dest.m_data.size();
+		m_dest.m_albumTitleBegin = m_data.size();
 	}
 
 	void setAlbumTitle(const char * const begin)
@@ -145,9 +146,9 @@ public:
 		m_state = albumArtists;
 #endif
 		const std::size_t size = std::strlen(begin);
-		m_dest.m_data.reserve(m_dest.m_data.size() + size);
-		m_dest.m_data.append(begin, size);
-		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
+		m_data.reserve(m_data.size() + size);
+		m_data.append(begin, size);
+		m_dest.m_albumArtistsBegin = m_data.size();
 	}
 
 	void albumTitleProcessed()
@@ -156,7 +157,7 @@ public:
 		assert(m_state == albumTitle);
 		m_state = albumArtists;
 #endif
-		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
+		m_dest.m_albumArtistsBegin = m_data.size();
 	}
 
 	void noAlbumTitle() { albumTitleProcessed(); }
@@ -184,10 +185,13 @@ public:
 	void build()
 	{
 		assert(m_state == noAction);
+		const std::size_t size = m_data.size();
+		m_dest.m_data.attach(m_data.detach(), size);
 	}
 
-	afc::FastStringBuffer<char> &getBuf() noexcept { return m_dest.m_data; }
+	afc::FastStringBuffer<char> &getBuf() noexcept { return m_data; }
 private:
+	afc::FastStringBuffer<char> m_data;
 	Track &m_dest;
 #ifndef NDEBUG
 	enum state { trackTitle, trackArtists, albumTitle, albumArtists, duration, noAction };
