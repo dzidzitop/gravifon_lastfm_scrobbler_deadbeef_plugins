@@ -379,7 +379,7 @@ struct TrackJsonParser
 	}
 
 	template<typename ErrorHandler>
-	inline static const char *parseAlbum(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	inline static const char *parseAlbum(const char * const begin, const char * const end, TrackInfoBuilder &dest, ErrorHandler &errorHandler)
 	{
 		auto albumParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -387,21 +387,23 @@ struct TrackJsonParser
 
 			auto titleValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 			{
-				auto p = parseText(begin, end, dest.m_data, errorHandler);
+				auto p = parseText(begin, end, dest.getBuf(), errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				dest.m_albumArtistsBegin = dest.m_data.size();
+				dest.albumTitleProcessed();
 				return p;
 			};
 
 			auto artistsValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 			{
-				auto p = parseArtists(begin, end, dest.m_data, errorHandler);
+				auto p = parseArtists(begin, end, dest.getBuf(), errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
+
+				dest.albumArtistsProcessed();
 				return p;
 			};
 
@@ -417,6 +419,7 @@ struct TrackJsonParser
 
 			const char c = *p;
 			if (c == u8"}"[0]) { // No artists field.
+				dest.albumArtistsProcessed();
 				return p;
 			} else if (likely(c == u8","[0])) {
 				++p;
@@ -435,33 +438,35 @@ struct TrackJsonParser
 	template<typename ErrorHandler>
 	inline static const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
 	{
+		TrackInfoBuilder builder(dest);
+
 		auto trackParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
 			const char *p = begin;
 
-			auto titleValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			auto titleValueParser = [&builder](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 			{
-				auto p = parseText(begin, end, dest.m_data, errorHandler);
+				auto p = parseText(begin, end, builder.getBuf(), errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				dest.m_artistsBegin = dest.m_data.size();
+				builder.titleProcessed();
 				return p;
 			};
 
-			auto artistsValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			auto artistsValueParser = [&builder](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 			{
-				auto p = parseArtists(begin, end, dest.m_data, errorHandler);
+				auto p = parseArtists(begin, end, builder.getBuf(), errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
 
-				dest.m_albumTitleBegin = dest.m_data.size();
+				builder.artistsProcessed();
 				return p;
 			};
 
-			auto lengthValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
+			auto lengthValueParser = [&builder](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 			{
 				long trackDuration;
 				auto p = parseDuration(begin, end, trackDuration, errorHandler);
@@ -469,7 +474,7 @@ struct TrackJsonParser
 					return end;
 				}
 
-				dest.setDurationMillis(trackDuration);
+				builder.setDurationMillis(trackDuration);
 				return p;
 			};
 
@@ -520,7 +525,7 @@ struct TrackJsonParser
 			}
 
 			if (afc::equal("album", "album"_s.size(), propNameBegin, propNameSize)) {
-				p = parseAlbum(p, end, dest, errorHandler);
+				p = parseAlbum(p, end, builder, errorHandler);
 				if (unlikely(!errorHandler.valid())) {
 					return end;
 				}
@@ -533,7 +538,8 @@ struct TrackJsonParser
 				return afc::json::parsePropertyValue<const char *, decltype(lengthValueParser) &, ErrorHandler, afc::json::noSpaces>(
 						p, end, "length", "length"_s.size(), lengthValueParser, errorHandler);
 			} else if (afc::equal("length", "length"_s.size(), propNameBegin, propNameSize)) {
-				dest.m_albumArtistsBegin = dest.m_albumTitleBegin = dest.m_data.size(); // No album.
+				builder.noAlbumTitle();
+				builder.noAlbumArtists();
 
 				return lengthValueParser(p, end, errorHandler);
 			} else {
@@ -542,8 +548,13 @@ struct TrackJsonParser
 			}
 		};
 
-		return afc::json::parseObject<const char *, decltype(trackParser) &, ErrorHandler, afc::json::noSpaces>
+		const char *result = afc::json::parseObject<const char *, decltype(trackParser) &, ErrorHandler, afc::json::noSpaces>
 				(begin, end, trackParser, errorHandler);
+
+		if (likely(errorHandler.valid())) {
+			builder.build();
+		}
+		return result;
 	}
 };
 

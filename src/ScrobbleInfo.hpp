@@ -120,6 +120,15 @@ public:
 		m_dest.m_artistsBegin = size;
 	}
 
+	void titleProcessed()
+	{
+#ifndef NDEBUG
+		assert(m_state == trackTitle);
+		m_state = trackArtists;
+#endif
+		m_dest.m_artistsBegin = m_dest.m_data.size();
+	}
+
 	void artistsProcessed()
 	{
 #ifndef NDEBUG
@@ -141,7 +150,7 @@ public:
 		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
 	}
 
-	void noAlbumTitle()
+	void albumTitleProcessed()
 	{
 #ifndef NDEBUG
 		assert(m_state == albumTitle);
@@ -150,21 +159,26 @@ public:
 		m_dest.m_albumArtistsBegin = m_dest.m_data.size();
 	}
 
+	void noAlbumTitle() { albumTitleProcessed(); }
+
 	// TODO replace with more memory-efficient addAlbumArtist
-	void albumArtistsProcessed()
+	void albumArtistsProcessed() noexcept
 	{
 #ifndef NDEBUG
 		assert(m_state == albumArtists);
-		m_state = noAction;
+		m_state = duration;
 #endif
 	}
 
-	void noAlbumArtists() noexcept
+	void noAlbumArtists() noexcept { albumArtistsProcessed(); }
+
+	void setDurationMillis(const long value) noexcept
 	{
 #ifndef NDEBUG
-		assert(m_state == albumArtists);
+		assert(m_state == duration);
 		m_state = noAction;
 #endif
+		m_dest.setDurationMillis(value);
 	}
 
 	void build()
@@ -176,7 +190,7 @@ public:
 private:
 	Track &m_dest;
 #ifndef NDEBUG
-	enum state { trackTitle, trackArtists, albumTitle, albumArtists, noAction };
+	enum state { trackTitle, trackArtists, albumTitle, albumArtists, duration, noAction };
 	state m_state = trackTitle;
 #endif
 };

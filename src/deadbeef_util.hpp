@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2015 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -132,14 +132,14 @@ inline afc::Optional<Track> getTrackInfo(DB_playItem_t * const track, DB_functio
 		trackInfoBuilder.noAlbumArtists();
 	}
 
-	trackInfoBuilder.build();
-
 	/* Note: as of DeaDBeeF 0.5.6 track duration and play time values are approximate.
 	 * Moreover, if the track is played from start to end without rewinding
 	 * then the play time could be different from the track duration.
 	 */
 	const double trackDuration = double(deadbeef.pl_get_item_duration(track)); // in seconds
-	trackInfo.setDurationMillis(toLongMillis(trackDuration));
+	trackInfoBuilder.setDurationMillis(toLongMillis(trackDuration));
+
+	trackInfoBuilder.build();
 
 	// TODO avoid unnecessary moving.
 	return result;

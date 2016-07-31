@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2014 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -203,8 +203,8 @@ void ScrobbleInfoTest::testSerialiseAsJson_ScrobbleInfoWithAllFields()
 	builder.getBuf().reserve(builder.getBuf().size() + u8"Scorpions"_s.size());
 	builder.getBuf().append(u8"Scorpions", u8"Scorpions"_s.size());
 	builder.albumArtistsProcessed();
+	builder.setDurationMillis(12);
 	builder.build();
-	track.setDurationMillis(12);
 
 	afc::FastStringBuffer<char, afc::AllocMode::accurate> result = serialiseAsJson(scrobbleInfo);
 
