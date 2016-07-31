@@ -226,9 +226,9 @@ inline afc::Optional<ScrobbleInfo> getScrobbleInfo(ddb_event_trackchange_t * con
 		trackInfoBuilder.noAlbumArtists();
 	}
 
-	trackInfoBuilder.build();
+	trackInfoBuilder.setDurationMillis(toLongMillis(trackDuration));
 
-	trackInfo.setDurationMillis(toLongMillis(trackDuration));
+	trackInfoBuilder.build();
 
 	// TODO avoid unnecessary moving.
 	return result;

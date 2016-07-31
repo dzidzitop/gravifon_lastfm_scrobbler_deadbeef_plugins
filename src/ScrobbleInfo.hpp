@@ -30,7 +30,6 @@ class Track
 {
 	friend class ScrobbleInfo;
 	friend class TrackInfoBuilder;
-	friend class TrackJsonParser;
 private:
 	// Copying scrobbles is expensive. Move semantics is forced for them.
 	Track(const Track &) = delete;
@@ -55,7 +54,6 @@ public:
 	const char *getAlbumArtistsBegin() const noexcept { return m_data.data() + m_albumArtistsBegin; }
 	const char *getAlbumArtistsEnd() const noexcept { return m_data.data() + m_data.size(); }
 
-	void setDurationMillis(const long duration) { m_durationMillis = duration; }
 	long getDurationMillis() const noexcept { return m_durationMillis; }
 
 	constexpr static char multiTagSeparator() noexcept { return u8"\0"[0]; }
@@ -179,7 +177,7 @@ public:
 		assert(m_state == duration);
 		m_state = noAction;
 #endif
-		m_dest.setDurationMillis(value);
+		m_dest.m_durationMillis = value;
 	}
 
 	void build()

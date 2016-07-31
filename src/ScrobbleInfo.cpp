@@ -321,12 +321,9 @@ namespace
 		return afc::json::parseObject<const char *, decltype(durationParser) &, ErrorHandler, afc::json::noSpaces>
 				(begin, end, durationParser, errorHandler);
 	}
-}
 
-struct TrackJsonParser
-{
 	template<typename ErrorHandler>
-	inline static const char *parseArtists(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
+	inline const char *parseArtists(const char * const begin, const char * const end, afc::FastStringBuffer<char> &dest, ErrorHandler &errorHandler)
 	{
 		auto artistElementParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -379,7 +376,7 @@ struct TrackJsonParser
 	}
 
 	template<typename ErrorHandler>
-	inline static const char *parseAlbum(const char * const begin, const char * const end, TrackInfoBuilder &dest, ErrorHandler &errorHandler)
+	inline const char *parseAlbum(const char * const begin, const char * const end, TrackInfoBuilder &dest, ErrorHandler &errorHandler)
 	{
 		auto albumParser = [&](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
@@ -436,7 +433,7 @@ struct TrackJsonParser
 	}
 
 	template<typename ErrorHandler>
-	inline static const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
+	inline const char *parseTrack(const char * const begin, const char * const end, Track &dest, ErrorHandler &errorHandler)
 	{
 		TrackInfoBuilder builder(dest);
 
@@ -556,7 +553,7 @@ struct TrackJsonParser
 		}
 		return result;
 	}
-};
+}
 
 bool ScrobbleInfo::parse(const char * const begin, const char * const end, ScrobbleInfo &dest)
 {
@@ -601,7 +598,7 @@ bool ScrobbleInfo::parse(const char * const begin, const char * const end, Scrob
 
 		auto trackValueParser = [&dest](const char * const begin, const char * const end, ErrorHandler &errorHandler) -> const char *
 		{
-			return TrackJsonParser::parseTrack(begin, end, dest.track, errorHandler);
+			return parseTrack(begin, end, dest.track, errorHandler);
 		};
 
 		const char *p = begin;
