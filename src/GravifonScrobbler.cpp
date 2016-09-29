@@ -366,7 +366,7 @@ size_t GravifonScrobbler::doScrobbling()
 		const char * p = parseOKResponse(responseBody.begin(), responseBody.end(), errorHandler, records);
 		// An array of status entities is expected for a 200 response, one per scrobble submitted.
 		if (!errorHandler.valid() || p != responseBody.end()
-				|| !records.size() != submittedCount) {
+				|| records.size() != submittedCount) {
 			logError("[GravifonScrobbler] Invalid response: "_s,
 					std::make_pair(responseBody.begin(), responseBody.end()));
 			return 0;
