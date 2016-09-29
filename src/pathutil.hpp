@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2015 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -52,6 +52,16 @@ inline Iterator appendToPath(const char pathLastChar, afc::ConstStringRef str, I
 	return appendToPath(pathLastChar, str.value(), str.size(), dest);
 }
 
+/**
+ * Constructs a path to a given data file depending on environment configuration and
+ * appends it to {@code dest}.
+ * The following rules are used:
+ * - if {@code XDG_DATA_HOME} is defined then the path is @{code $XDG_DATA_HOME/$shortFilePath};
+ * - otherwise the path is {@code $HOME/.local/share/$shortFilePath}.
+ *
+ * @return {@code true} if data file path is built successfully; {@code false} is returned
+ * 		otherwise. {@code dest} is not modified in the latter case.
+ */
 inline bool getDataFilePath(afc::ConstStringRef shortFilePath,
 		afc::FastStringBuffer<char, afc::AllocMode::accurate> &dest)
 {
@@ -68,7 +78,7 @@ inline bool getDataFilePath(afc::ConstStringRef shortFilePath,
 	} else {
 		// Trying to assign the default data dir ($HOME/.local/share/).
 		const char * const homeDir = getenv("HOME");
-		if (homeDir == nullptr || homeDir == '\0') {
+		if (homeDir == nullptr || homeDir[0] == '\0') {
 			return false;
 		}
 		const std::size_t homeDirSize = std::strlen(homeDir);
