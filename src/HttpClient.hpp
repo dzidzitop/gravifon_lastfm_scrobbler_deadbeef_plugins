@@ -1,5 +1,5 @@
 /* gravifon_scrobbler - an audio track scrobbler to Gravifon plugin to the audio player DeaDBeeF.
-Copyright (C) 2013-2015 Dźmitry Laŭčuk
+Copyright (C) 2013-2016 Dźmitry Laŭčuk
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,6 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 class HttpRequest
 {
 public:
+	HttpRequest(void) = default; // Leaves instance non-initialised.
+
 	void setBody(const char body[], const std::size_t n) noexcept { m_body = body; m_bodySize = n; }
 	const char *getBody() const noexcept { return m_body; }
 	std::size_t getBodySize() const noexcept { return m_bodySize; }
